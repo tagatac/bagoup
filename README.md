@@ -21,7 +21,7 @@ for more details.
 context menu.
 
 ## Run bagoup
-`go run bagoup.go`
+`go run main.go`
 
 # License
 This program is free software: you can redistribute it and/or modify
