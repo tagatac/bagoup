@@ -1,11 +1,16 @@
 bagoup
 ======
-*(pronounced BAAGoop)*
-
-A backup utility for Mac OS Messages, implemented in Go, inspired by
+bagoup *(pronounced BAAGoop)* is a work-in-progress backup utility for Mac OS
+Messages, implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/).
 
 # Usage
+
+## Copy chat.db
+The Messages database is a protected file in Mac OS, so to backup your messages,
+you first need to copy it to an unprotected folder outside of the terminal. See
+[this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
+for more details.
 
 1. Clone this repo into your GOPATH `git clone git@github.com:tagatac/bagoup.git`.
 1. Open Finder.
@@ -14,10 +19,11 @@ A backup utility for Mac OS Messages, implemented in Go, inspired by
 1. Navigate to your clone of this repo.
 1. Right-click in the `bagoup` directory, and click **Paste Item** in the
 context menu.
-1. `go run bagoup.go`
+
+## Run bagoup
+`go run bagoup.go`
 
 # License
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
 by the Free Software Foundation, either version 3 of the License, or
@@ -32,5 +38,4 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Author
-
 Copyright (C) 2020 [David Tagatac](david@tagatac.net)
