@@ -6,6 +6,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -13,13 +14,15 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/emersion/go-vcard"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
 
 const (
-	_dbFileName   = "chat.db"
-	_backupFolder = "backup"
+	_dbFileName       = "chat.db"
+	_contactsFileName = "contacts.vcf"
+	_backupFolder     = "backup"
 )
 
 var _reqOSVersion = semver.MustParse("10.13")
@@ -39,13 +42,18 @@ func main() {
 	}
 	dbPath := path.Join(wd, _dbFileName)
 	backupPath := path.Join(wd, _backupFolder)
+	contactsFilePath := path.Join(wd, _contactsFileName)
 
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "open DB file %q", dbPath))
 	}
 	defer db.Close()
-	cdb, err := NewChatDB(db)
+	contactMap, err := getContactMap(contactsFilePath)
+	if err != nil {
+		log.Fatal(errors.Wrapf(err, "get contacts from vcard file %q", _contactsFileName))
+	}
+	cdb, err := NewChatDB(db, contactMap)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "create ChatDB"))
 	}
@@ -94,4 +102,32 @@ func validateOSVersion() (bool, error) {
 		return false, errors.Wrapf(err, "parse semantic version %q", vstr)
 	}
 	return !v.LessThan(_reqOSVersion), nil
+}
+
+func getContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
+	f, err := os.Open(contactsFilePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "open file %q", contactsFilePath)
+	}
+	defer f.Close()
+
+	dec := vcard.NewDecoder(f)
+	contactMap := map[string]*vcard.Card{}
+	for {
+		card, err := dec.Decode()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, errors.Wrapf(err, "decode vcard")
+		}
+		phonesAndEmails := append(card.Values(vcard.FieldTelephone), card.Values(vcard.FieldEmail)...)
+		for _, phoneOrEmail := range phonesAndEmails {
+			if c, ok := contactMap[phoneOrEmail]; ok {
+				log.Printf("multiple contacts %q and %q share the same phone or email %q", c.PreferredValue(vcard.FieldFormattedName), card.PreferredValue(vcard.FieldFormattedName), phoneOrEmail)
+			}
+			contactMap[phoneOrEmail] = &card
+		}
+	}
+	return contactMap, nil
 }

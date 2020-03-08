@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 )
 
@@ -42,17 +43,18 @@ type (
 
 	chatDB struct {
 		*sql.DB
-		handleMap map[int]string
+		handleMap  map[int]string
+		contactMap map[string]*vcard.Card
 	}
 )
 
 // NewChatDB returns a ChatDB interface with a populated handle map.
-func NewChatDB(db *sql.DB) (ChatDB, error) {
-	handleMap, err := getHandles(db)
-	return &chatDB{DB: db, handleMap: handleMap}, errors.Wrap(err, "get handles")
+func NewChatDB(db *sql.DB, contactMap map[string]*vcard.Card) (ChatDB, error) {
+	handleMap, err := getHandleMap(db, contactMap)
+	return &chatDB{DB: db, handleMap: handleMap, contactMap: contactMap}, errors.Wrap(err, "get handles")
 }
 
-func getHandles(db *sql.DB) (map[int]string, error) {
+func getHandleMap(db *sql.DB, contactMap map[string]*vcard.Card) (map[int]string, error) {
 	handleMap := make(map[int]string)
 	handles, err := db.Query("SELECT ROWID, id FROM handle")
 	if err != nil {
@@ -67,6 +69,12 @@ func getHandles(db *sql.DB) (map[int]string, error) {
 		}
 		if _, ok := handleMap[handleID]; ok {
 			return nil, fmt.Errorf("multiple handles with the same ID: %d - handle ID uniqueness assumption violated - %s", handleID, _githubIssueMsg)
+		}
+		if card, ok := contactMap[handle]; ok {
+			name := card.Name()
+			if name != nil && name.GivenName != "" {
+				handle = name.GivenName
+			}
 		}
 		handleMap[handleID] = handle
 	}
@@ -88,6 +96,12 @@ func (d chatDB) GetChats() ([]Chat, error) {
 		}
 		if displayName == "" {
 			displayName = name
+		}
+		if card, ok := d.contactMap[displayName]; ok {
+			contactName := card.PreferredValue(vcard.FieldFormattedName)
+			if contactName != "" {
+				displayName = contactName
+			}
 		}
 		chats = append(chats, Chat{
 			ID:          id,
@@ -117,7 +131,7 @@ func (d chatDB) GetMessageIDs(chatID int) ([]int, error) {
 }
 
 func (d chatDB) GetMessage(messageID int) (string, error) {
-	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, DATETIME(%s) FROM message WHERE ROWID=%d", _datetimeFormula, messageID))
+	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, COALESCE(text, ''), DATETIME(%s) FROM message WHERE ROWID=%d", _datetimeFormula, messageID))
 	if err != nil {
 		return "", errors.Wrapf(err, "query message table for ID %d", messageID)
 	}
