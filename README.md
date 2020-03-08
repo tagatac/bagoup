@@ -1,7 +1,7 @@
 bagoup
 ======
-bagoup *(pronounced BAAGoop)* is a work-in-progress backup utility for Mac OS
-Messages, implemented in Go, inspired by
+bagoup *(pronounced BAAGoop)* is a backup utility for Mac OS Messages,
+implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/).
 
 # Usage
