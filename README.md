@@ -23,7 +23,7 @@ context menu.
 ## Export your contacts (optional)
 1. Export your contacts as a vCard file from e.g. the Contacts app or Google
 Contacts
-1. Copy the file to the `bagoup` directory.
+1. Copy the file to the `bagoup` directory as **contacts.vcf**.
 
 ## Run bagoup
 `go run main.go db.go`
