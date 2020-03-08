@@ -88,6 +88,7 @@ func main() {
 				log.Fatal(errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name()))
 			}
 		}
+		chatFile.Close()
 	}
 }
 
