@@ -107,6 +107,10 @@ func validateOSVersion() (bool, error) {
 
 func getContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
 	f, err := os.Open(contactsFilePath)
+	if os.IsNotExist(err) {
+		log.Print(errors.Wrapf(err, "open file %q - continuing without contacts", contactsFilePath))
+		return nil, nil
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "open file %q", contactsFilePath)
 	}

@@ -20,6 +20,11 @@ for more details.
 1. Right-click in the `bagoup` directory, and click **Paste Item** in the
 context menu.
 
+## Export your contacts (optional)
+1. Export your contacts as a vCard file from e.g. the Contacts app or Google
+Contacts
+1. Copy the file to the `bagoup` directory.
+
 ## Run bagoup
 `go run main.go db.go`
 
