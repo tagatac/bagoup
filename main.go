@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"unicode"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
@@ -121,7 +122,11 @@ func getContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "decode vcard")
 		}
-		phonesAndEmails := append(card.Values(vcard.FieldTelephone), card.Values(vcard.FieldEmail)...)
+		phones := card.Values(vcard.FieldTelephone)
+		for i, phone := range phones {
+			phones[i] = sanitizePhone(phone)
+		}
+		phonesAndEmails := append(phones, card.Values(vcard.FieldEmail)...)
 		for _, phoneOrEmail := range phonesAndEmails {
 			if c, ok := contactMap[phoneOrEmail]; ok {
 				log.Printf("multiple contacts %q and %q share the same phone or email %q", c.PreferredValue(vcard.FieldFormattedName), card.PreferredValue(vcard.FieldFormattedName), phoneOrEmail)
@@ -130,4 +135,17 @@ func getContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
 		}
 	}
 	return contactMap, nil
+}
+
+// Adapted from https://stackoverflow.com/a/44009184/5403337
+func sanitizePhone(dirty string) string {
+	return strings.Map(
+		func(r rune) rune {
+			if strings.ContainsRune("()-", r) || unicode.IsSpace(r) {
+				return -1
+			}
+			return r
+		},
+		dirty,
+	)
 }
