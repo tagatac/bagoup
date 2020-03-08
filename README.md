@@ -21,7 +21,7 @@ for more details.
 context menu.
 
 ## Run bagoup
-`go run main.go`
+`go run main.go db.go`
 
 # License
 This program is free software: you can redistribute it and/or modify
