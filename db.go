@@ -23,7 +23,6 @@ const _selfHandle = "Me"
 type Chat struct {
 	ID          int
 	GUID        string
-	Name        string
 	DisplayName string
 }
 
@@ -106,7 +105,6 @@ func (d chatDB) GetChats() ([]Chat, error) {
 		chats = append(chats, Chat{
 			ID:          id,
 			GUID:        guid,
-			Name:        name,
 			DisplayName: displayName,
 		})
 	}
