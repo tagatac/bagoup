@@ -1,7 +1,13 @@
 // Copyright (C) 2020 David Tagatac <david@tagatac.net>
 // See the COPYING and LICENSE files for full usage terms.
 
-package main
+// Package chatdb provides an interface ChatDB for interacting with the Mac OS
+// Messages database typically located at $HOME/Library/Messages/chat.db. See
+// [this Medium post](https://towardsdatascience.com/heres-how-you-can-access-your-entire-imessage-history-on-your-mac-f8878276c6e9)
+// for a decent primer on navigating the database. Specifically, this package is
+// tailored to supporting the exporting of all messages in the database to
+// readable, searchable text files.
+package chatdb
 
 import (
 	"database/sql"
@@ -25,6 +31,8 @@ type Chat struct {
 	GUID        string
 	DisplayName string
 }
+
+//go:generate mockgen -source=db.go -destination=../mocks/mock_chatdb/mock_db.go -copyright_file=../COPYING
 
 type (
 	// ChatDB extracts data from a Mac OS Messages database on disk.

@@ -18,6 +18,7 @@ import (
 	"github.com/emersion/go-vcard"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
+	"github.com/tagatac/bagoup/chatdb"
 )
 
 const (
@@ -54,7 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "get contacts from vcard file %q", _contactsFileName))
 	}
-	cdb, err := NewChatDB(db, contactMap)
+	cdb, err := chatdb.NewChatDB(db, contactMap)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "create ChatDB"))
 	}

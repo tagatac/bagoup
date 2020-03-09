@@ -30,7 +30,7 @@ Contacts
 1. Copy the file to the `bagoup` directory as **contacts.vcf**.
 
 ## Run bagoup
-`go run main.go db.go`
+`go run main.go`
 
 # License
 This program is free software: you can redistribute it and/or modify
