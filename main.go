@@ -24,13 +24,13 @@ import (
 const (
 	_dbFileName       = "chat.db"
 	_contactsFileName = "contacts.vcf"
-	_backupFolder     = "backup"
+	_exportFolder     = "backup"
 )
 
 var _reqOSVersion = semver.MustParse("10.13")
 
 func main() {
-	macOSVersion, err := getMacOSVersion()
+	macOSVersion, err := getMacOSVersion(exec.Command)
 	if err != nil {
 		log.Print(errors.Wrap(err, "failed to get Mac OS version - assuming database was copied from Mac OS 10.13 or later"))
 	}
@@ -40,7 +40,7 @@ func main() {
 		log.Fatal(errors.Wrap(err, "get working directory"))
 	}
 	dbPath := path.Join(wd, _dbFileName)
-	backupPath := path.Join(wd, _backupFolder)
+	exportPath := path.Join(wd, _exportFolder)
 	contactsFilePath := path.Join(wd, _contactsFileName)
 
 	db, err := sql.Open("sqlite3", dbPath)
@@ -48,7 +48,7 @@ func main() {
 		log.Fatal(errors.Wrapf(err, "open DB file %q", dbPath))
 	}
 	defer db.Close()
-	contactMap, err := getContactMap(contactsFilePath)
+	contactMap, err := getContactMap(contactsFilePath, os.Open)
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "get contacts from vcard file %q", _contactsFileName))
 	}
@@ -57,41 +57,13 @@ func main() {
 		log.Fatal(errors.Wrap(err, "create ChatDB"))
 	}
 
-	chats, err := cdb.GetChats()
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "get chats"))
-	}
-	for _, chat := range chats {
-		chatDirPath := path.Join(backupPath, chat.DisplayName)
-		if err := os.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-			log.Fatal(errors.Wrapf(err, "create directory %q", chatDirPath))
-		}
-		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
-		chatFile, err := os.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Fatal(errors.Wrapf(err, "open/create file %s", chatPath))
-		}
-		defer chatFile.Close()
-
-		messageIDs, err := cdb.GetMessageIDs(chat.ID)
-		if err != nil {
-			log.Fatal(errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID))
-		}
-		for _, messageID := range messageIDs {
-			msg, err := cdb.GetMessage(messageID)
-			if err != nil {
-				log.Fatal(errors.Wrapf(err, "get message with ID %d", messageID))
-			}
-			if _, err := chatFile.WriteString(msg); err != nil {
-				log.Fatal(errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name()))
-			}
-		}
-		chatFile.Close()
+	if err := exportChats(cdb, exportPath, os.OpenFile); err != nil {
+		log.Fatal(errors.Wrap(err, "export chats"))
 	}
 }
 
-func getMacOSVersion() (*semver.Version, error) {
-	cmd := exec.Command("sw_vers", "-productVersion")
+func getMacOSVersion(execCommand func(string, ...string) *exec.Cmd) (*semver.Version, error) {
+	cmd := execCommand("sw_vers", "-productVersion")
 	o, err := cmd.Output()
 	if err != nil {
 		return nil, errors.Wrap(err, "call sw_vers")
@@ -104,8 +76,8 @@ func getMacOSVersion() (*semver.Version, error) {
 	return v, nil
 }
 
-func getContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
-	f, err := os.Open(contactsFilePath)
+func getContactMap(contactsFilePath string, osOpen func(string) (*os.File, error)) (map[string]*vcard.Card, error) {
+	f, err := osOpen(contactsFilePath)
 	if os.IsNotExist(err) {
 		log.Print(errors.Wrapf(err, "open file %q - continuing without contacts", contactsFilePath))
 		return nil, nil
@@ -151,4 +123,39 @@ func sanitizePhone(dirty string) string {
 		},
 		dirty,
 	)
+}
+
+func exportChats(cdb chatdb.ChatDB, exportPath string, osOpenFile func(string, int, os.FileMode) (*os.File, error)) error {
+	chats, err := cdb.GetChats()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "get chats"))
+	}
+	for _, chat := range chats {
+		chatDirPath := path.Join(exportPath, chat.DisplayName)
+		if err := os.MkdirAll(chatDirPath, os.ModePerm); err != nil {
+			log.Fatal(errors.Wrapf(err, "create directory %q", chatDirPath))
+		}
+		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
+		chatFile, err := os.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(errors.Wrapf(err, "open/create file %s", chatPath))
+		}
+		defer chatFile.Close()
+
+		messageIDs, err := cdb.GetMessageIDs(chat.ID)
+		if err != nil {
+			log.Fatal(errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID))
+		}
+		for _, messageID := range messageIDs {
+			msg, err := cdb.GetMessage(messageID)
+			if err != nil {
+				log.Fatal(errors.Wrapf(err, "get message with ID %d", messageID))
+			}
+			if _, err := chatFile.WriteString(msg); err != nil {
+				log.Fatal(errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name()))
+			}
+		}
+		chatFile.Close()
+	}
+	return nil
 }
