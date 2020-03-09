@@ -1,5 +1,9 @@
 bagoup
 ======
+
+[![Build Status](https://travis-ci.org/tagatac/bagoup.svg?branch=master)](https://travis-ci.org/tagatac/bagoup)
+[![Coverage Status](https://coveralls.io/repos/github/tagatac/bagoup/badge.svg?branch=master)](https://coveralls.io/github/tagatac/bagoup?branch=master)
+
 bagoup *(pronounced BAAGoop)* is a backup utility for Mac OS Messages,
 implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/).
