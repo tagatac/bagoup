@@ -47,4 +47,4 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Author
-Copyright (C) 2020 [David Tagatac](david@tagatac.net)
+Copyright (C) 2020 [David Tagatac](mailto:david@tagatac.net)
