@@ -18,6 +18,7 @@ import (
 	"github.com/emersion/go-vcard"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
 )
 
@@ -48,7 +49,7 @@ func main() {
 		log.Fatal(errors.Wrapf(err, "open DB file %q", dbPath))
 	}
 	defer db.Close()
-	contactMap, err := getContactMap(contactsFilePath, os.Open)
+	contactMap, err := getContactMap(contactsFilePath, afero.NewOsFs())
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "get contacts from vcard file %q", _contactsFileName))
 	}
@@ -57,7 +58,7 @@ func main() {
 		log.Fatal(errors.Wrap(err, "create ChatDB"))
 	}
 
-	if err := exportChats(cdb, exportPath, os.OpenFile); err != nil {
+	if err := exportChats(cdb, exportPath, afero.NewOsFs()); err != nil {
 		log.Fatal(errors.Wrap(err, "export chats"))
 	}
 }
@@ -76,8 +77,8 @@ func getMacOSVersion(execCommand func(string, ...string) *exec.Cmd) (*semver.Ver
 	return v, nil
 }
 
-func getContactMap(contactsFilePath string, osOpen func(string) (*os.File, error)) (map[string]*vcard.Card, error) {
-	f, err := osOpen(contactsFilePath)
+func getContactMap(contactsFilePath string, fs afero.Fs) (map[string]*vcard.Card, error) {
+	f, err := fs.Open(contactsFilePath)
 	if os.IsNotExist(err) {
 		log.Print(errors.Wrapf(err, "open file %q - continuing without contacts", contactsFilePath))
 		return nil, nil
@@ -125,18 +126,18 @@ func sanitizePhone(dirty string) string {
 	)
 }
 
-func exportChats(cdb chatdb.ChatDB, exportPath string, osOpenFile func(string, int, os.FileMode) (*os.File, error)) error {
+func exportChats(cdb chatdb.ChatDB, exportPath string, fs afero.Fs) error {
 	chats, err := cdb.GetChats()
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "get chats"))
 	}
 	for _, chat := range chats {
 		chatDirPath := path.Join(exportPath, chat.DisplayName)
-		if err := os.MkdirAll(chatDirPath, os.ModePerm); err != nil {
+		if err := fs.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 			log.Fatal(errors.Wrapf(err, "create directory %q", chatDirPath))
 		}
 		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
-		chatFile, err := os.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		chatFile, err := fs.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal(errors.Wrapf(err, "open/create file %s", chatPath))
 		}
