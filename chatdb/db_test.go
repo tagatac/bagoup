@@ -7,6 +7,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Masterminds/semver"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/emersion/go-vcard"
 	"github.com/stretchr/testify/assert"
@@ -98,6 +100,40 @@ func TestGetHandleMap(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantMap, handleMap)
+		})
+	}
+}
+
+func TestGetDatetimeFormula(t *testing.T) {
+	tests := []struct {
+		msg         string
+		v           *semver.Version
+		wantFormula string
+	}{
+		{
+			msg:         "catalina",
+			v:           semver.MustParse("10.15.3"),
+			wantFormula: _datetimeFormula,
+		},
+		{
+			msg:         "missing version",
+			wantFormula: _datetimeFormula,
+		},
+		{
+			msg:         "high sierra",
+			v:           semver.MustParse("10.13"),
+			wantFormula: _datetimeFormula,
+		},
+		{
+			msg:         "sierra",
+			v:           semver.MustParse("10.12.6"),
+			wantFormula: _datetimeFormulaLegacy,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			assert.Equal(t, tt.wantFormula, getDatetimeFormula(tt.v))
 		})
 	}
 }
@@ -318,7 +354,7 @@ func TestGetMessage(t *testing.T) {
 			defer db.Close()
 			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, COALESCE\(text, ''\), DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
-			cdb := &chatDB{DB: db, handleMap: handleMap}
+			cdb := &chatDB{DB: db, handleMap: handleMap, datetimeFormula: _datetimeFormula}
 
 			message, err := cdb.GetMessage(42)
 			if tt.wantErr != "" {

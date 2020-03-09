@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 )
@@ -20,7 +21,10 @@ import (
 const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issues"
 
 // Adapted from https://apple.stackexchange.com/a/300997/267331
-const _datetimeFormula = "(date/1000000000) + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
+const (
+	_datetimeFormulaLegacy = "date + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
+	_datetimeFormula       = "(date/1000000000) + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
+)
 
 // How to label messages sent by yourself.
 const _selfHandle = "Me"
@@ -50,15 +54,24 @@ type (
 
 	chatDB struct {
 		*sql.DB
-		handleMap  map[int]string
-		contactMap map[string]*vcard.Card
+		handleMap       map[int]string
+		contactMap      map[string]*vcard.Card
+		datetimeFormula string
 	}
 )
 
 // NewChatDB returns a ChatDB interface with a populated handle map.
-func NewChatDB(db *sql.DB, contactMap map[string]*vcard.Card) (ChatDB, error) {
+func NewChatDB(db *sql.DB, contactMap map[string]*vcard.Card, macOSVersion *semver.Version) (ChatDB, error) {
 	handleMap, err := getHandleMap(db, contactMap)
-	return &chatDB{DB: db, handleMap: handleMap, contactMap: contactMap}, errors.Wrap(err, "get handles")
+	if err != nil {
+		return nil, errors.Wrap(err, "get handles")
+	}
+	return &chatDB{
+		DB:              db,
+		handleMap:       handleMap,
+		contactMap:      contactMap,
+		datetimeFormula: getDatetimeFormula(macOSVersion),
+	}, nil
 }
 
 func getHandleMap(db *sql.DB, contactMap map[string]*vcard.Card) (map[int]string, error) {
@@ -86,6 +99,13 @@ func getHandleMap(db *sql.DB, contactMap map[string]*vcard.Card) (map[int]string
 		handleMap[handleID] = handle
 	}
 	return handleMap, nil
+}
+
+func getDatetimeFormula(macOSVersion *semver.Version) string {
+	if macOSVersion != nil && macOSVersion.LessThan(semver.MustParse("10.13")) {
+		return _datetimeFormulaLegacy
+	}
+	return _datetimeFormula
 }
 
 func (d chatDB) GetChats() ([]Chat, error) {
@@ -137,7 +157,7 @@ func (d chatDB) GetMessageIDs(chatID int) ([]int, error) {
 }
 
 func (d chatDB) GetMessage(messageID int) (string, error) {
-	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, COALESCE(text, ''), DATETIME(%s) FROM message WHERE ROWID=%d", _datetimeFormula, messageID))
+	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, COALESCE(text, ''), DATETIME(%s) FROM message WHERE ROWID=%d", d.datetimeFormula, messageID))
 	if err != nil {
 		return "", errors.Wrapf(err, "query message table for ID %d", messageID)
 	}

@@ -30,12 +30,9 @@ const (
 var _reqOSVersion = semver.MustParse("10.13")
 
 func main() {
-	ok, err := validateOSVersion()
+	macOSVersion, err := getMacOSVersion()
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "validate OS version"))
-	}
-	if !ok {
-		log.Fatalf("invalid OS version; update to Mac OS %s or newer", _reqOSVersion)
+		log.Print(errors.Wrap(err, "failed to get Mac OS version - assuming database was copied from Mac OS 10.13 or later"))
 	}
 
 	wd, err := os.Getwd()
@@ -55,7 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "get contacts from vcard file %q", _contactsFileName))
 	}
-	cdb, err := chatdb.NewChatDB(db, contactMap)
+	cdb, err := chatdb.NewChatDB(db, contactMap, macOSVersion)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "create ChatDB"))
 	}
@@ -93,18 +90,18 @@ func main() {
 	}
 }
 
-func validateOSVersion() (bool, error) {
+func getMacOSVersion() (*semver.Version, error) {
 	cmd := exec.Command("sw_vers", "-productVersion")
 	o, err := cmd.Output()
 	if err != nil {
-		return false, errors.Wrap(err, "call sw_vers")
+		return nil, errors.Wrap(err, "call sw_vers")
 	}
 	vstr := strings.TrimSuffix(string(o), "\n")
 	v, err := semver.NewVersion(vstr)
 	if err != nil {
-		return false, errors.Wrapf(err, "parse semantic version %q", vstr)
+		return nil, errors.Wrapf(err, "parse semantic version %q", vstr)
 	}
-	return !v.LessThan(_reqOSVersion), nil
+	return v, nil
 }
 
 func getContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
