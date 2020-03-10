@@ -37,29 +37,25 @@ func main() {
 	}
 
 	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "get working directory"))
-	}
+	exitOnError("get working directory", err)
 	dbPath := path.Join(wd, _dbFileName)
 	exportPath := path.Join(wd, _exportFolder)
 	contactsFilePath := path.Join(wd, _contactsFileName)
 
 	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		log.Fatal(errors.Wrapf(err, "open DB file %q", dbPath))
-	}
+	exitOnError("open DB file %q", err)
 	defer db.Close()
 	contactMap, err := getContactMap(contactsFilePath, afero.NewOsFs())
-	if err != nil {
-		log.Fatal(errors.Wrapf(err, "get contacts from vcard file %q", _contactsFileName))
-	}
+	exitOnError(fmt.Sprintf("get contacts from vcard file %q", _contactsFileName), err)
 	cdb, err := chatdb.NewChatDB(db, contactMap, macOSVersion)
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "create ChatDB"))
-	}
+	exitOnError("create ChatDB", err)
 
-	if err := exportChats(cdb, exportPath, afero.NewOsFs()); err != nil {
-		log.Fatal(errors.Wrap(err, "export chats"))
+	exitOnError("export chats", exportChats(cdb, exportPath, afero.NewOsFs()))
+}
+
+func exitOnError(activity string, err error) {
+	if err != nil {
+		log.Fatal(errors.Wrap(err, activity))
 	}
 }
 
