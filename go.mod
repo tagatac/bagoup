@@ -10,6 +10,5 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.2.2
-	github.com/stretchr/testify v1.5.1
 	gotest.tools/v3 v3.0.2
 )

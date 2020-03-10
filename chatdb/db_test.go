@@ -11,11 +11,10 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/emersion/go-vcard"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"gotest.tools/v3/assert"
 )
 
-func TestGetHandleMap(t *testing.T) {
+func TestNewChatDB(t *testing.T) {
 	tests := []struct {
 		msg        string
 		contactMap map[string]*vcard.Card
@@ -61,7 +60,7 @@ func TestGetHandleMap(t *testing.T) {
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				query.WillReturnError(errors.New("this is a DB error"))
 			},
-			wantErr: "get handles from DB: this is a DB error",
+			wantErr: "get handles: get handles from DB: this is a DB error",
 		},
 		{
 			msg: "row scan error",
@@ -71,7 +70,7 @@ func TestGetHandleMap(t *testing.T) {
 					AddRow(2, "testhandle2")
 				query.WillReturnRows(rows)
 			},
-			wantErr: "read handle: sql: Scan error on column index 1, name \"id\": converting NULL to string is unsupported",
+			wantErr: "get handles: read handle: sql: Scan error on column index 1, name \"id\": converting NULL to string is unsupported",
 		},
 		{
 			msg: "repeated row ID",
@@ -81,25 +80,29 @@ func TestGetHandleMap(t *testing.T) {
 					AddRow(1, "testhandle2")
 				query.WillReturnRows(rows)
 			},
-			wantErr: "multiple handles with the same ID: 1 - handle ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
+			wantErr: "get handles: multiple handles with the same ID: 1 - handle ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			defer db.Close()
 			query := sMock.ExpectQuery("SELECT ROWID, id FROM handle")
 			tt.setupQuery(query)
 
-			handleMap, err := getHandleMap(db, tt.contactMap)
+			cdb, err := NewChatDB(db, tt.contactMap, nil)
 			if tt.wantErr != "" {
-				assert.EqualError(t, err, tt.wantErr)
+				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantMap, handleMap)
+			assert.NilError(t, err)
+			privateCDB := cdb.(*chatDB)
+			assert.Equal(t, db, privateCDB.DB)
+			assert.DeepEqual(t, tt.wantMap, privateCDB.handleMap)
+			assert.DeepEqual(t, tt.contactMap, privateCDB.contactMap)
+			assert.Equal(t, _datetimeFormula, privateCDB.datetimeFormula)
 		})
 	}
 }
@@ -217,7 +220,7 @@ func TestGetChats(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			defer db.Close()
 			query := sMock.ExpectQuery("SELECT ROWID, guid, chat_identifier, display_name FROM chat")
 			tt.setupQuery(query)
@@ -225,11 +228,11 @@ func TestGetChats(t *testing.T) {
 
 			chats, err := cdb.GetChats()
 			if tt.wantErr != "" {
-				assert.EqualError(t, err, tt.wantErr)
+				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantChats, chats)
+			assert.NilError(t, err)
+			assert.DeepEqual(t, tt.wantChats, chats)
 		})
 	}
 }
@@ -273,7 +276,7 @@ func TestGetMessageIDs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			defer db.Close()
 			query := sMock.ExpectQuery("SELECT message_id FROM chat_message_join WHERE chat_id=42")
 			tt.setupQuery(query)
@@ -281,11 +284,11 @@ func TestGetMessageIDs(t *testing.T) {
 
 			ids, err := cdb.GetMessageIDs(42)
 			if tt.wantErr != "" {
-				assert.EqualError(t, err, tt.wantErr)
+				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantIDs, ids)
+			assert.NilError(t, err)
+			assert.DeepEqual(t, tt.wantIDs, ids)
 		})
 	}
 }
@@ -350,7 +353,7 @@ func TestGetMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			defer db.Close()
 			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, COALESCE\(text, ''\), DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
@@ -358,10 +361,10 @@ func TestGetMessage(t *testing.T) {
 
 			message, err := cdb.GetMessage(42)
 			if tt.wantErr != "" {
-				assert.EqualError(t, err, tt.wantErr)
+				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			assert.Equal(t, tt.wantMessage, message)
 		})
 	}
