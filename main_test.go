@@ -19,52 +19,6 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// Adapted from https://stackoverflow.com/a/33404435/5403337.
-func TestExitOnError(t *testing.T) {
-	if os.Getenv("BAGOUP_TEST_EXIT") == "1" {
-		var err error
-		errStr := os.Getenv("BAGOUP_EXIT_ERROR")
-		if errStr != "" {
-			err = errors.New(errStr)
-		}
-		exitOnError("here's a context string", err)
-		return
-	}
-
-	tests := []struct {
-		msg          string
-		wantErr      string
-		wantExitCode int
-	}{
-		{
-			msg: "no error",
-		},
-		{
-			msg:          "error",
-			wantErr:      "this is an error",
-			wantExitCode: 1,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.msg, func(t *testing.T) {
-			cmd := exec.Command(os.Args[0], "-test.run=TestExitOnError")
-			cmd.Env = []string{
-				"BAGOUP_TEST_EXIT=1",
-				fmt.Sprintf("BAGOUP_EXIT_ERROR=%s", tt.wantErr),
-			}
-			err := cmd.Run()
-			if tt.wantExitCode == 0 {
-				assert.NilError(t, err)
-				return
-			}
-			e, ok := err.(*exec.ExitError)
-			assert.Assert(t, ok)
-			assert.Equal(t, tt.wantExitCode, e.ExitCode())
-		})
-	}
-}
-
 func TestGetMacOSVersion(t *testing.T) {
 	tests := []struct {
 		msg          string
