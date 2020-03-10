@@ -9,15 +9,18 @@ implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/). It exports all of the
 conversations saved in Messages to readable, searchable text files.
 
-# Usage
+# "Installation"
+In your GOPATH:
 
+`git clone git@github.com:tagatac/bagoup.git`
+
+# Usage
 ## Copy chat.db
 The Messages database is a protected file in Mac OS, so to backup your messages,
 you first need to copy it to an unprotected folder outside of the terminal. See
 [this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
 for more details.
 
-1. Clone this repo into your GOPATH `git clone git@github.com:tagatac/bagoup.git`.
 1. Open Finder.
 1. Navigate to **~/Library/Messages**.
 1. Right-click on **chat.db**, and click **Copy "chat.db"** in the context menu.
