@@ -1,5 +1,5 @@
 // Copyright (C) 2020 David Tagatac <david@tagatac.net>
-// See the COPYING and LICENSE files for full usage terms.
+// See the LICENSE file for full usage terms.
 
 // Package chatdb provides an interface ChatDB for interacting with the Mac OS
 // Messages database typically located at $HOME/Library/Messages/chat.db. See
@@ -36,7 +36,7 @@ type Chat struct {
 	DisplayName string
 }
 
-//go:generate mockgen -source=db.go -destination=../mocks/mock_chatdb/mock_db.go -copyright_file=../COPYING
+//go:generate mockgen -source=db.go -destination=../mocks/mock_chatdb/mock_db.go
 
 type (
 	// ChatDB extracts data from a Mac OS Messages database on disk.

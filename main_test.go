@@ -1,5 +1,5 @@
 // Copyright (C) 2020 David Tagatac <david@tagatac.net>
-// See the COPYING and LICENSE files for full usage terms.
+// See the LICENSE file for full usage terms.
 
 package main
 
