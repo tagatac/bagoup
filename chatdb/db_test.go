@@ -39,9 +39,9 @@ func TestGetHandleMap(t *testing.T) {
 		{
 			msg: "contact map override",
 			contactMap: map[string]*vcard.Card{
-				"testhandle1": &vcard.Card{
+				"testhandle1": {
 					"N": []*vcard.Field{
-						&vcard.Field{Value: "contactsurname;contactgiven;;;"},
+						{Value: "contactsurname;contactgiven;;;"},
 					},
 				},
 			},
@@ -170,9 +170,9 @@ func TestGetChats(t *testing.T) {
 		{
 			msg: "contact map override",
 			contactMap: map[string]*vcard.Card{
-				"testchatname2": &vcard.Card{
+				"testchatname2": {
 					"FN": []*vcard.Field{
-						&vcard.Field{Value: "Contactgiven Contactsurname", Params: vcard.Params{"TYPE": []string{"pref"}}},
+						{Value: "Contactgiven Contactsurname", Params: vcard.Params{"TYPE": []string{"pref"}}},
 					},
 				},
 			},

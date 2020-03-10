@@ -88,53 +88,53 @@ func TestRunExecCmd(t *testing.T) {
 func TestGetContactMap(t *testing.T) {
 	tagCard := &vcard.Card{
 		"VERSION": []*vcard.Field{
-			&vcard.Field{Value: "3.0"},
+			{Value: "3.0"},
 		},
 		"FN": []*vcard.Field{
-			&vcard.Field{Value: "David Tagatac"},
+			{Value: "David Tagatac"},
 		},
 		"N": []*vcard.Field{
-			&vcard.Field{Value: "Tagatac;David;;;"},
+			{Value: "Tagatac;David;;;"},
 		},
 		"TEL": []*vcard.Field{
-			&vcard.Field{Value: "+1415555555", Params: vcard.Params{"TYPE": []string{"CELL"}}},
+			{Value: "+1415555555", Params: vcard.Params{"TYPE": []string{"CELL"}}},
 		},
 		"EMAIL": []*vcard.Field{
-			&vcard.Field{Value: "david@tagatac.net", Params: vcard.Params{"TYPE": []string{"INTERNET"}}},
+			{Value: "david@tagatac.net", Params: vcard.Params{"TYPE": []string{"INTERNET"}}},
 		},
 		"CATEGORIES": []*vcard.Field{
-			&vcard.Field{Value: "myContacts"},
+			{Value: "myContacts"},
 		},
 	}
 	noleCard := &vcard.Card{
 		"VERSION": []*vcard.Field{
-			&vcard.Field{Value: "3.0"},
+			{Value: "3.0"},
 		},
 		"FN": []*vcard.Field{
-			&vcard.Field{Value: "Novak Djokovic"},
+			{Value: "Novak Djokovic"},
 		},
 		"N": []*vcard.Field{
-			&vcard.Field{Value: "Djokovic;Novak;;;"},
+			{Value: "Djokovic;Novak;;;"},
 		},
 		"TEL": []*vcard.Field{
-			&vcard.Field{Value: "+3815555555", Params: vcard.Params{"TYPE": []string{"CELL"}}},
+			{Value: "+3815555555", Params: vcard.Params{"TYPE": []string{"CELL"}}},
 		},
 		"EMAIL": []*vcard.Field{
-			&vcard.Field{Value: "info@novakdjokovic.com", Params: vcard.Params{"TYPE": []string{"INTERNET"}}},
+			{Value: "info@novakdjokovic.com", Params: vcard.Params{"TYPE": []string{"INTERNET"}}},
 		},
 		"CATEGORIES": []*vcard.Field{
-			&vcard.Field{Value: "myContacts"},
+			{Value: "myContacts"},
 		},
 	}
 	jelenaCard := &vcard.Card{
 		"FN": []*vcard.Field{
-			&vcard.Field{Value: "Jelena Djokovic"},
+			{Value: "Jelena Djokovic"},
 		},
 		"N": []*vcard.Field{
-			&vcard.Field{Value: "Djokovic;Jelena;;;"},
+			{Value: "Djokovic;Jelena;;;"},
 		},
 		"EMAIL": []*vcard.Field{
-			&vcard.Field{Value: "info@novakdjokovic.com", Params: vcard.Params{"TYPE": []string{"INTERNET"}}},
+			{Value: "info@novakdjokovic.com", Params: vcard.Params{"TYPE": []string{"INTERNET"}}},
 		},
 	}
 
