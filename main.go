@@ -129,31 +129,31 @@ func sanitizePhone(dirty string) string {
 func exportChats(cdb chatdb.ChatDB, exportPath string, fs afero.Fs) error {
 	chats, err := cdb.GetChats()
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "get chats"))
+		return errors.Wrap(err, "get chats")
 	}
 	for _, chat := range chats {
 		chatDirPath := path.Join(exportPath, chat.DisplayName)
 		if err := fs.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-			log.Fatal(errors.Wrapf(err, "create directory %q", chatDirPath))
+			return errors.Wrapf(err, "create directory %q", chatDirPath)
 		}
 		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
 		chatFile, err := fs.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatal(errors.Wrapf(err, "open/create file %s", chatPath))
+			return errors.Wrapf(err, "open/create file %s", chatPath)
 		}
 		defer chatFile.Close()
 
 		messageIDs, err := cdb.GetMessageIDs(chat.ID)
 		if err != nil {
-			log.Fatal(errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID))
+			return errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 		}
 		for _, messageID := range messageIDs {
 			msg, err := cdb.GetMessage(messageID)
 			if err != nil {
-				log.Fatal(errors.Wrapf(err, "get message with ID %d", messageID))
+				return errors.Wrapf(err, "get message with ID %d", messageID)
 			}
 			if _, err := chatFile.WriteString(msg); err != nil {
-				log.Fatal(errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name()))
+				return errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
 			}
 		}
 		chatFile.Close()

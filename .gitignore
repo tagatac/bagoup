@@ -1,4 +1,5 @@
 .DS_Store
+.vscode/
 backup
 chat.db
 contacts.vcf

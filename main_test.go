@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,8 +12,10 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
+	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/require"
+	"github.com/tagatac/bagoup/chatdb"
+	"github.com/tagatac/bagoup/mocks/mock_chatdb"
 	"gotest.tools/v3/assert"
 )
 
@@ -48,7 +51,7 @@ func TestGetMacOSVersion(t *testing.T) {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			assert.Assert(t, v.Equal(tt.wantVersion), "Expected: %s\nGot: %s\n", tt.wantVersion, v)
 		})
 	}
@@ -219,7 +222,7 @@ END:VCARD
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			assert.DeepEqual(t, tt.wantMap, contactMap)
 		})
 	}
@@ -246,6 +249,129 @@ func TestSanitizePhone(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			assert.Equal(t, tt.clean, sanitizePhone(tt.dirty))
+		})
+	}
+}
+
+func TestExportChats(t *testing.T) {
+	tests := []struct {
+		msg       string
+		setupMock func(*mock_chatdb.MockChatDB)
+		roFs      bool
+		wantFiles map[string]string
+		wantErr   string
+	}{
+		{
+			msg: "two chats for one display name, one for another",
+			setupMock: func(dMock *mock_chatdb.MockChatDB) {
+				dMock.EXPECT().GetChats().Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+					{
+						ID:          2,
+						GUID:        "testguid2",
+						DisplayName: "testdisplayname",
+					},
+					{
+						ID:          3,
+						GUID:        "testguid3",
+						DisplayName: "testdisplayname2",
+					},
+				}, nil)
+				dMock.EXPECT().GetMessageIDs(1).Return([]int{100, 200}, nil)
+				dMock.EXPECT().GetMessage(100).Return("message100\n", nil)
+				dMock.EXPECT().GetMessage(200).Return("message200\n", nil)
+				dMock.EXPECT().GetMessageIDs(2).Return([]int{300, 400}, nil)
+				dMock.EXPECT().GetMessage(300).Return("message300\n", nil)
+				dMock.EXPECT().GetMessage(400).Return("message400\n", nil)
+				dMock.EXPECT().GetMessageIDs(3).Return([]int{500, 600}, nil)
+				dMock.EXPECT().GetMessage(500).Return("message500\n", nil)
+				dMock.EXPECT().GetMessage(600).Return("message600\n", nil)
+			},
+			wantFiles: map[string]string{
+				"backup/testdisplayname/testguid.txt":   "message100\nmessage200\n",
+				"backup/testdisplayname/testguid2.txt":  "message300\nmessage400\n",
+				"backup/testdisplayname2/testguid3.txt": "message500\nmessage600\n",
+			},
+		},
+		{
+			msg: "GetChats error",
+			setupMock: func(dMock *mock_chatdb.MockChatDB) {
+				dMock.EXPECT().GetChats().Return(nil, errors.New("this is a DB error"))
+			},
+			wantErr: "get chats: this is a DB error",
+		},
+		{
+			msg: "directory creation error",
+			setupMock: func(dMock *mock_chatdb.MockChatDB) {
+				dMock.EXPECT().GetChats().Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+				}, nil)
+			},
+			roFs:    true,
+			wantErr: "create directory \"backup/testdisplayname\": operation not permitted",
+		},
+		{
+			msg: "GetMessageIDs error",
+			setupMock: func(dMock *mock_chatdb.MockChatDB) {
+				dMock.EXPECT().GetChats().Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+				}, nil)
+				dMock.EXPECT().GetMessageIDs(1).Return(nil, errors.New("this is a DB error"))
+			},
+			wantErr: "get message IDs for chat ID 1: this is a DB error",
+		},
+		{
+			msg: "GetMessage error",
+			setupMock: func(dMock *mock_chatdb.MockChatDB) {
+				dMock.EXPECT().GetChats().Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+				}, nil)
+				dMock.EXPECT().GetMessageIDs(1).Return([]int{100, 200}, nil)
+				dMock.EXPECT().GetMessage(100).Return("message100\n", nil)
+				dMock.EXPECT().GetMessage(200).Return("", errors.New("this is a DB error"))
+			},
+			wantErr: "get message with ID 200: this is a DB error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			dMock := mock_chatdb.NewMockChatDB(ctrl)
+			tt.setupMock(dMock)
+			fs := afero.NewMemMapFs()
+			if tt.roFs {
+				fs = afero.NewReadOnlyFs(fs)
+			}
+
+			err := exportChats(dMock, _exportFolder, fs)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			for filename, expected := range tt.wantFiles {
+				actual, err := afero.ReadFile(fs, filename)
+				assert.NilError(t, err)
+				assert.Equal(t, expected, string(actual))
+			}
 		})
 	}
 }
