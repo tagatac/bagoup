@@ -1,5 +1,5 @@
 // Copyright (C) 2020 David Tagatac <david@tagatac.net>
-// See the LICENSE file for full usage terms.
+// See main.go for usage terms.
 
 package main
 
