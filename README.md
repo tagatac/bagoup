@@ -2,7 +2,7 @@ bagoup
 ======
 
 [![Build Status](https://travis-ci.org/tagatac/bagoup.svg?branch=master)](https://travis-ci.org/tagatac/bagoup)
-[![Coverage Status](https://coveralls.io/repos/github/tagatac/bagoup/badge.svg?branch=master)](https://coveralls.io/github/tagatac/bagoup?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/tagatac/bagoup/badge.svg?branch=master&service=github)](https://coveralls.io/github/tagatac/bagoup?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tagatac/bagoup)](https://goreportcard.com/report/github.com/tagatac/bagoup)
 
 bagoup *(pronounced BAAGoop)* is an export utility for Mac OS Messages,
