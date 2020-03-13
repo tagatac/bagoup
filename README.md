@@ -1,26 +1,21 @@
-bagoup
-======
-
-[![Build Status](https://travis-ci.org/tagatac/bagoup.svg?branch=master)](https://travis-ci.org/tagatac/bagoup)
-[![Coverage Status](https://coveralls.io/repos/github/tagatac/bagoup/badge.svg?branch=master&service=github)](https://coveralls.io/github/tagatac/bagoup?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/tagatac/bagoup)](https://goreportcard.com/report/github.com/tagatac/bagoup)
+# bagoup [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][card-img]][card]
 
 bagoup *(pronounced BAAGoop)* is an export utility for Mac OS Messages,
 implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/). It exports all of the
 conversations saved in Messages to readable, searchable text files.
 
-# "Installation"
+## "Installation"
 In your GOPATH:
 
 `git clone git@github.com:tagatac/bagoup.git`
 
-# Usage
-## chat.db Access
+## Usage
+### chat.db Access
 The Messages database is a protected file in Mac OS. See
 [this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
 for more details. To to backup your messages, you have two options:
-### Option 1 (recommended): Copy chat.db
+#### Option 1 (recommended): Copy chat.db
 Copy the Messages database to an unprotected folder outside of the terminal.
 
 1. Open Finder.
@@ -30,10 +25,10 @@ Copy the Messages database to an unprotected folder outside of the terminal.
 1. Right-click in the `bagoup` directory, and click **Paste Item** in the
 context menu.
 
-### Option 2: Give your terminal full disk access
+#### Option 2: Give your terminal full disk access
 https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/
 
-## Export your contacts (optional)
+### Export your contacts (optional)
 If you provide your contacts, bagoup will attempt to match the handles from the
 Messages database with full names from your contacts list.
 
@@ -41,10 +36,10 @@ Messages database with full names from your contacts list.
 Contacts
 1. Copy the file to the `bagoup` directory as **contacts.vcf**.
 
-## Build
+### Build
 `make`
 
-## Run
+### Run
 ```
 Usage:
   bagoup [OPTIONS]
@@ -60,5 +55,12 @@ Help Options:
 ```
 All conversations will be exported as text files to the specified export path.
 
-# Author
+## Author
 Copyright (C) 2020 [David Tagatac](mailto:david@tagatac.net)
+
+[ci-img]: https://travis-ci.org/tagatac/bagoup.svg?branch=master
+[ci]: https://travis-ci.org/tagatac/bagoup
+[cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/tagatac/bagoup
+[card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup
+[card]: https://goreportcard.com/report/github.com/tagatac/bagoup

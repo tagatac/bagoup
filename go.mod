@@ -11,5 +11,6 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.2.2
+	golang.org/x/tools v0.0.0-20200312194400-c312e98713c2 // indirect
 	gotest.tools/v3 v3.0.2
 )
