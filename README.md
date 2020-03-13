@@ -16,11 +16,12 @@ In your GOPATH:
 `git clone git@github.com:tagatac/bagoup.git`
 
 # Usage
-## Copy chat.db
-The Messages database is a protected file in Mac OS, so to backup your messages,
-you first need to copy it to an unprotected folder outside of the terminal. See
+## chat.db Access
+The Messages database is a protected file in Mac OS. See
 [this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
-for more details.
+for more details. To to backup your messages, you have two options:
+### Option 1 (recommended): Copy chat.db
+Copy the Messages database to an unprotected folder outside of the terminal.
 
 1. Open Finder.
 1. Navigate to **~/Library/Messages**.
@@ -28,6 +29,9 @@ for more details.
 1. Navigate to your clone of this repo.
 1. Right-click in the `bagoup` directory, and click **Paste Item** in the
 context menu.
+
+### Option 2: Give your terminal full disk access
+https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/
 
 ## Export your contacts (optional)
 1. Export your contacts as a vCard file from e.g. the Contacts app or Google
@@ -38,7 +42,20 @@ Contacts
 `make`
 
 ## Run
-`./bagoup`
+```
+Usage:
+  bagoup [OPTIONS]
+
+Application Options:
+  -d, --db-path=        Path to the Messages chat database file (default: ~/Library/Messages/chat.db)
+  -c, --contacts-path=  Path to the contacts vCard file (default: contacts.vcf)
+  -o, --export-path=    Path to which the Messages will be exported (default: backup)
+  -v, --mac-os-version= Version of Mac OS from which the Messages chat database file was copied
+
+Help Options:
+  -h, --help            Show this help message
+```
+All conversations will be exported as text files to the specified export path.
 
 # Author
 Copyright (C) 2020 [David Tagatac](mailto:david@tagatac.net)

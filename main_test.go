@@ -361,7 +361,7 @@ func TestExportChats(t *testing.T) {
 				fs = afero.NewReadOnlyFs(fs)
 			}
 
-			err := exportChats(dMock, _exportFolder, fs)
+			err := exportChats(dMock, "backup", fs)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
