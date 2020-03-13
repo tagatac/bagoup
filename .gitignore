@@ -1,6 +1,7 @@
 .DS_Store
 .vscode/
 backup
+bagoup
 chat.db
 contacts.vcf
 

@@ -34,8 +34,11 @@ context menu.
 Contacts
 1. Copy the file to the `bagoup` directory as **contacts.vcf**.
 
-## Run bagoup
-`go run main.go`
+## Build
+`make`
+
+## Run
+`./bagoup`
 
 # Author
 Copyright (C) 2020 [David Tagatac](mailto:david@tagatac.net)
