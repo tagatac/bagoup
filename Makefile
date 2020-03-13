@@ -3,7 +3,11 @@ build: bagoup
 bagoup: main.go chatdb/db.go
 	go build -o bagoup main.go
 
-.PHONY: test clean
+.PHONY: generate test clean
+
+generate:
+	go get -u github.com/golang/mock/mockgen
+	go generate ./...
 
 test:
 	go test -race -coverprofile=coverage.out ./...

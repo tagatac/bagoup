@@ -15,7 +15,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
-	"github.com/tagatac/bagoup/mocks/mock_chatdb"
+	"github.com/tagatac/bagoup/chatdb/mock_chatdb"
 	"gotest.tools/v3/assert"
 )
 

@@ -35,7 +35,7 @@ type Chat struct {
 	DisplayName string
 }
 
-//go:generate mockgen -source=db.go -destination=../mocks/mock_chatdb/mock_db.go
+//go:generate mockgen -destination=mock_chatdb/mock_db.go github.com/tagatac/bagoup/chatdb ChatDB
 
 type (
 	// ChatDB extracts data from a Mac OS Messages database on disk.
