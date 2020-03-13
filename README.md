@@ -34,6 +34,9 @@ context menu.
 https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/
 
 ## Export your contacts (optional)
+If you provide your contacts, bagoup will attempt to match the handles from the
+Messages database with full names from your contacts list.
+
 1. Export your contacts as a vCard file from e.g. the Contacts app or Google
 Contacts
 1. Copy the file to the `bagoup` directory as **contacts.vcf**.
