@@ -109,7 +109,7 @@ func getDatetimeFormula(macOSVersion *semver.Version) string {
 }
 
 func (d chatDB) GetChats() ([]Chat, error) {
-	chatRows, err := d.DB.Query("SELECT ROWID, guid, chat_identifier, display_name FROM chat")
+	chatRows, err := d.DB.Query("SELECT ROWID, guid, chat_identifier, COALESCE(display_name, '') FROM chat")
 	if err != nil {
 		return nil, errors.Wrap(err, "query chats table")
 	}

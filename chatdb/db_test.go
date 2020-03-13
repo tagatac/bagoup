@@ -222,7 +222,7 @@ func TestGetChats(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
 			defer db.Close()
-			query := sMock.ExpectQuery("SELECT ROWID, guid, chat_identifier, display_name FROM chat")
+			query := sMock.ExpectQuery(`SELECT ROWID, guid, chat_identifier, COALESCE\(display_name, ''\) FROM chat`)
 			tt.setupQuery(query)
 			cdb := &chatDB{DB: db, contactMap: tt.contactMap}
 
