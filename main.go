@@ -36,43 +36,45 @@ import (
 	"github.com/tagatac/bagoup/chatdb"
 )
 
+type options struct {
+	dbPath       string  `short:"d" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
+	contactsPath string  `short:"c" long:"contacts-path" description:"Path to the contacts vCard file" default:"contacts.vcf"`
+	exportPath   string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
+	macOSVersion *string `short:"v" long:"mac-os-version" description:"Version of Mac OS from which the Messages chat database file was copied"`
+	selfHandle   string  `short:"h" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
+}
+
 func main() {
-	var opts struct {
-		DBPath       string  `short:"d" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
-		ContactsPath string  `short:"c" long:"contacts-path" description:"Path to the contacts vCard file" default:"contacts.vcf"`
-		ExportPath   string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
-		MacOSVersion *string `short:"v" long:"mac-os-version" description:"Version of Mac OS from which the Messages chat database file was copied"`
-		SelfHandle   string  `short:"h" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
-	}
+	var opts options
 	_, err := flags.Parse(&opts)
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
 		os.Exit(0)
 	}
 	exitOnError("parse flags", err)
 
-	if _, err := os.Stat(opts.ExportPath); !os.IsNotExist(err) {
-		exitOnError(fmt.Sprintf("check export path %q", opts.ExportPath), err)
-		log.Fatalf("ERROR: export folder %q already exists - move it or specify a different export path", opts.ExportPath)
+	if _, err := os.Stat(opts.exportPath); !os.IsNotExist(err) {
+		exitOnError(fmt.Sprintf("check export path %q", opts.exportPath), err)
+		log.Fatalf("ERROR: export folder %q already exists - move it or specify a different export path", opts.exportPath)
 	}
 
 	var macOSVersion *semver.Version
-	if opts.MacOSVersion != nil {
-		macOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
-		exitOnError(fmt.Sprintf("parse Mac OS version %q", *opts.MacOSVersion), err)
+	if opts.macOSVersion != nil {
+		macOSVersion, err = semver.NewVersion(*opts.macOSVersion)
+		exitOnError(fmt.Sprintf("parse Mac OS version %q", *opts.macOSVersion), err)
 	} else {
 		macOSVersion, err = getMacOSVersion(exec.Command)
 		exitOnError("get Mac OS version - see bagoup --help about the mac-os-version option", err)
 	}
 
-	db, err := sql.Open("sqlite3", opts.DBPath)
-	exitOnError(fmt.Sprintf("open DB file %q", opts.DBPath), err)
+	db, err := sql.Open("sqlite3", opts.dbPath)
+	exitOnError(fmt.Sprintf("open DB file %q", opts.dbPath), err)
 	defer db.Close()
-	contactMap, err := getContactMap(opts.ContactsPath, afero.NewOsFs())
-	exitOnError(fmt.Sprintf("get contacts from vcard file %q", opts.ContactsPath), err)
-	cdb, err := chatdb.NewChatDB(db, contactMap, macOSVersion, opts.SelfHandle)
+	contactMap, err := getContactMap(opts.contactsPath, afero.NewOsFs())
+	exitOnError(fmt.Sprintf("get contacts from vcard file %q", opts.contactsPath), err)
+	cdb, err := chatdb.NewChatDB(db, contactMap, macOSVersion, opts.selfHandle)
 	exitOnError("create ChatDB", err)
 
-	exitOnError("export chats", exportChats(cdb, opts.ExportPath, afero.NewOsFs()))
+	exitOnError("export chats", exportChats(cdb, opts.exportPath, afero.NewOsFs()))
 }
 
 func exitOnError(activity string, err error) {
