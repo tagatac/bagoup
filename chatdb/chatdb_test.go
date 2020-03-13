@@ -14,7 +14,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestNewChatDB(t *testing.T) {
+func TestGetHandleMap(t *testing.T) {
 	tests := []struct {
 		msg        string
 		contactMap map[string]*vcard.Card
@@ -60,7 +60,7 @@ func TestNewChatDB(t *testing.T) {
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				query.WillReturnError(errors.New("this is a DB error"))
 			},
-			wantErr: "get handles: get handles from DB: this is a DB error",
+			wantErr: "get handles from DB: this is a DB error",
 		},
 		{
 			msg: "row scan error",
@@ -70,7 +70,7 @@ func TestNewChatDB(t *testing.T) {
 					AddRow(2, "testhandle2")
 				query.WillReturnRows(rows)
 			},
-			wantErr: "get handles: read handle: sql: Scan error on column index 1, name \"id\": converting NULL to string is unsupported",
+			wantErr: "read handle: sql: Scan error on column index 1, name \"id\": converting NULL to string is unsupported",
 		},
 		{
 			msg: "repeated row ID",
@@ -80,7 +80,7 @@ func TestNewChatDB(t *testing.T) {
 					AddRow(1, "testhandle2")
 				query.WillReturnRows(rows)
 			},
-			wantErr: "get handles: multiple handles with the same ID: 1 - handle ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
+			wantErr: "multiple handles with the same ID: 1 - handle ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
 		},
 	}
 
@@ -92,52 +92,14 @@ func TestNewChatDB(t *testing.T) {
 			query := sMock.ExpectQuery("SELECT ROWID, id FROM handle")
 			tt.setupQuery(query)
 
-			cdb, err := NewChatDB(db, tt.contactMap, nil, "Me")
+			cdb := NewChatDB(db, "Me")
+			handleMap, err := cdb.GetHandleMap(tt.contactMap)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
-			privateCDB := cdb.(*chatDB)
-			assert.Equal(t, db, privateCDB.DB)
-			assert.DeepEqual(t, tt.wantMap, privateCDB.handleMap)
-			assert.DeepEqual(t, tt.contactMap, privateCDB.contactMap)
-			assert.Equal(t, _datetimeFormula, privateCDB.datetimeFormula)
-			assert.Equal(t, "Me", privateCDB.selfHandle)
-		})
-	}
-}
-
-func TestGetDatetimeFormula(t *testing.T) {
-	tests := []struct {
-		msg         string
-		v           *semver.Version
-		wantFormula string
-	}{
-		{
-			msg:         "catalina",
-			v:           semver.MustParse("10.15.3"),
-			wantFormula: _datetimeFormula,
-		},
-		{
-			msg:         "missing version",
-			wantFormula: _datetimeFormula,
-		},
-		{
-			msg:         "high sierra",
-			v:           semver.MustParse("10.13"),
-			wantFormula: _datetimeFormula,
-		},
-		{
-			msg:         "sierra",
-			v:           semver.MustParse("10.12.6"),
-			wantFormula: _datetimeFormulaLegacy,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.msg, func(t *testing.T) {
-			assert.Equal(t, tt.wantFormula, getDatetimeFormula(tt.v))
+			assert.DeepEqual(t, tt.wantMap, handleMap)
 		})
 	}
 }
@@ -225,9 +187,9 @@ func TestGetChats(t *testing.T) {
 			defer db.Close()
 			query := sMock.ExpectQuery(`SELECT ROWID, guid, chat_identifier, COALESCE\(display_name, ''\) FROM chat`)
 			tt.setupQuery(query)
-			cdb := &chatDB{DB: db, contactMap: tt.contactMap}
+			cdb := NewChatDB(db, "Me")
 
-			chats, err := cdb.GetChats()
+			chats, err := cdb.GetChats(tt.contactMap)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
@@ -358,15 +320,56 @@ func TestGetMessage(t *testing.T) {
 			defer db.Close()
 			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, COALESCE\(text, ''\), DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
-			cdb := &chatDB{DB: db, handleMap: handleMap, datetimeFormula: _datetimeFormula, selfHandle: "Me"}
+			cdb := &chatDB{DB: db, selfHandle: "Me"}
 
-			message, err := cdb.GetMessage(42)
+			message, err := cdb.GetMessage(42, handleMap, nil)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
 			assert.Equal(t, tt.wantMessage, message)
+		})
+	}
+}
+
+func TestGetDatetimeFormula(t *testing.T) {
+	tests := []struct {
+		msg         string
+		v           *semver.Version
+		prevFormula string
+		wantFormula string
+	}{
+		{
+			msg:         "catalina",
+			v:           semver.MustParse("10.15.3"),
+			wantFormula: _datetimeFormula,
+		},
+		{
+			msg:         "missing version",
+			wantFormula: _datetimeFormula,
+		},
+		{
+			msg:         "high sierra",
+			v:           semver.MustParse("10.13"),
+			wantFormula: _datetimeFormula,
+		},
+		{
+			msg:         "sierra",
+			v:           semver.MustParse("10.12.6"),
+			wantFormula: _datetimeFormulaLegacy,
+		},
+		{
+			msg:         "previously saved formula",
+			prevFormula: "previous formula",
+			wantFormula: "previous formula",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			cdb := &chatDB{datetimeFormula: tt.prevFormula}
+			assert.Equal(t, tt.wantFormula, cdb.getDatetimeFormula(tt.v))
 		})
 	}
 }

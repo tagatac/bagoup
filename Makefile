@@ -1,7 +1,7 @@
 build: bagoup
 
-bagoup: main.go chatdb/db.go
-	go build -o bagoup main.go
+bagoup: main.go opsys/opsys.go chatdb/chatdb.go
+	go build -o $@ $<
 
 .PHONY: generate test clean
 

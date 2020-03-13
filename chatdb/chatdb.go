@@ -35,49 +35,44 @@ type Chat struct {
 	DisplayName string
 }
 
-//go:generate mockgen -destination=mock_chatdb/mock_db.go github.com/tagatac/bagoup/chatdb ChatDB
+//go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/chatdb ChatDB
 
 type (
 	// ChatDB extracts data from a Mac OS Messages database on disk.
 	ChatDB interface {
+		// GetHandleMap returns a mapping from handle ID to phone number or email
+		// address. If a contact map is supplied, it will attempt to resolve these
+		// handles to formatted names.
+		GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string, error)
 		// GetChats returns a slice of Chat, effectively a table scan of the chat
 		// table.
-		GetChats() ([]Chat, error)
+		GetChats(contactMap map[string]*vcard.Card) ([]Chat, error)
 		// GetMessageIDs returns a slice of message IDs corresponding to a given
 		// chat ID, in the order that the messages are timestamped.
 		GetMessageIDs(chatID int) ([]int, error)
 		// GetMessage returns a message retrieved from the database formatted for
 		// writing to a chat file.
-		GetMessage(messageID int) (string, error)
+		GetMessage(messageID int, handleMap map[int]string, macOSVersion *semver.Version) (string, error)
 	}
 
 	chatDB struct {
 		*sql.DB
-		handleMap       map[int]string
-		contactMap      map[string]*vcard.Card
 		datetimeFormula string
 		selfHandle      string
 	}
 )
 
-// NewChatDB returns a ChatDB interface with a populated handle map.
-func NewChatDB(db *sql.DB, contactMap map[string]*vcard.Card, macOSVersion *semver.Version, selfHandle string) (ChatDB, error) {
-	handleMap, err := getHandleMap(db, contactMap)
-	if err != nil {
-		return nil, errors.Wrap(err, "get handles")
-	}
+// NewChatDB returns a ChatDB interface using the given DB.
+func NewChatDB(db *sql.DB, selfHandle string) ChatDB {
 	return &chatDB{
-		DB:              db,
-		handleMap:       handleMap,
-		contactMap:      contactMap,
-		datetimeFormula: getDatetimeFormula(macOSVersion),
-		selfHandle:      selfHandle,
-	}, nil
+		DB:         db,
+		selfHandle: selfHandle,
+	}
 }
 
-func getHandleMap(db *sql.DB, contactMap map[string]*vcard.Card) (map[int]string, error) {
+func (d chatDB) GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string, error) {
 	handleMap := make(map[int]string)
-	handles, err := db.Query("SELECT ROWID, id FROM handle")
+	handles, err := d.DB.Query("SELECT ROWID, id FROM handle")
 	if err != nil {
 		return nil, errors.Wrap(err, "get handles from DB")
 	}
@@ -102,14 +97,7 @@ func getHandleMap(db *sql.DB, contactMap map[string]*vcard.Card) (map[int]string
 	return handleMap, nil
 }
 
-func getDatetimeFormula(macOSVersion *semver.Version) string {
-	if macOSVersion != nil && macOSVersion.LessThan(_modernVersion) {
-		return _datetimeFormulaLegacy
-	}
-	return _datetimeFormula
-}
-
-func (d chatDB) GetChats() ([]Chat, error) {
+func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]Chat, error) {
 	chatRows, err := d.DB.Query("SELECT ROWID, guid, chat_identifier, COALESCE(display_name, '') FROM chat")
 	if err != nil {
 		return nil, errors.Wrap(err, "query chats table")
@@ -125,7 +113,7 @@ func (d chatDB) GetChats() ([]Chat, error) {
 		if displayName == "" {
 			displayName = name
 		}
-		if card, ok := d.contactMap[displayName]; ok {
+		if card, ok := contactMap[displayName]; ok {
 			contactName := card.PreferredValue(vcard.FieldFormattedName)
 			if contactName != "" {
 				displayName = contactName
@@ -157,8 +145,8 @@ func (d chatDB) GetMessageIDs(chatID int) ([]int, error) {
 	return messageIDs, nil
 }
 
-func (d chatDB) GetMessage(messageID int) (string, error) {
-	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, COALESCE(text, ''), DATETIME(%s) FROM message WHERE ROWID=%d", d.datetimeFormula, messageID))
+func (d *chatDB) GetMessage(messageID int, handleMap map[int]string, macOSVersion *semver.Version) (string, error) {
+	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, COALESCE(text, ''), DATETIME(%s) FROM message WHERE ROWID=%d", d.getDatetimeFormula(macOSVersion), messageID))
 	if err != nil {
 		return "", errors.Wrapf(err, "query message table for ID %d", messageID)
 	}
@@ -172,9 +160,19 @@ func (d chatDB) GetMessage(messageID int) (string, error) {
 	if messages.Next() {
 		return "", fmt.Errorf("multiple messages with the same ID: %d - message ID uniqeness assumption violated - %s", messageID, _githubIssueMsg)
 	}
-	handle := d.handleMap[handleID]
+	handle := handleMap[handleID]
 	if fromMe == 1 {
 		handle = d.selfHandle
 	}
 	return fmt.Sprintf("[%s] %s: %s\n", date, handle, text), nil
+}
+
+func (d *chatDB) getDatetimeFormula(macOSVersion *semver.Version) string {
+	if d.datetimeFormula != "" {
+		return d.datetimeFormula
+	}
+	if macOSVersion != nil && macOSVersion.LessThan(_modernVersion) {
+		return _datetimeFormulaLegacy
+	}
+	return _datetimeFormula
 }
