@@ -26,6 +26,8 @@ const (
 	_datetimeFormula       = "(date/1000000000) + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 )
 
+var _modernVersion = semver.MustParse("10.13")
+
 // How to label messages sent by yourself.
 const _selfHandle = "Me"
 
@@ -102,7 +104,7 @@ func getHandleMap(db *sql.DB, contactMap map[string]*vcard.Card) (map[int]string
 }
 
 func getDatetimeFormula(macOSVersion *semver.Version) string {
-	if macOSVersion != nil && macOSVersion.LessThan(semver.MustParse("10.13")) {
+	if macOSVersion != nil && macOSVersion.LessThan(_modernVersion) {
 		return _datetimeFormulaLegacy
 	}
 	return _datetimeFormula

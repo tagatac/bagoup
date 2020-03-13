@@ -41,8 +41,6 @@ const (
 	_exportFolder     = "backup"
 )
 
-var _reqOSVersion = semver.MustParse("10.13")
-
 func main() {
 	macOSVersion, err := getMacOSVersion(exec.Command)
 	if err != nil {
