@@ -42,6 +42,7 @@ func main() {
 		ContactsPath string  `short:"c" long:"contacts-path" description:"Path to the contacts vCard file" default:"contacts.vcf"`
 		ExportPath   string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
 		MacOSVersion *string `short:"v" long:"mac-os-version" description:"Version of Mac OS from which the Messages chat database file was copied"`
+		SelfHandle   string  `short:"h" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
 	}
 	_, err := flags.Parse(&opts)
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
@@ -68,7 +69,7 @@ func main() {
 	defer db.Close()
 	contactMap, err := getContactMap(opts.ContactsPath, afero.NewOsFs())
 	exitOnError(fmt.Sprintf("get contacts from vcard file %q", opts.ContactsPath), err)
-	cdb, err := chatdb.NewChatDB(db, contactMap, macOSVersion)
+	cdb, err := chatdb.NewChatDB(db, contactMap, macOSVersion, opts.SelfHandle)
 	exitOnError("create ChatDB", err)
 
 	exitOnError("export chats", exportChats(cdb, opts.ExportPath, afero.NewOsFs()))

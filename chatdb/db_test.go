@@ -92,7 +92,7 @@ func TestNewChatDB(t *testing.T) {
 			query := sMock.ExpectQuery("SELECT ROWID, id FROM handle")
 			tt.setupQuery(query)
 
-			cdb, err := NewChatDB(db, tt.contactMap, nil)
+			cdb, err := NewChatDB(db, tt.contactMap, nil, "Me")
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
@@ -103,6 +103,7 @@ func TestNewChatDB(t *testing.T) {
 			assert.DeepEqual(t, tt.wantMap, privateCDB.handleMap)
 			assert.DeepEqual(t, tt.contactMap, privateCDB.contactMap)
 			assert.Equal(t, _datetimeFormula, privateCDB.datetimeFormula)
+			assert.Equal(t, "Me", privateCDB.selfHandle)
 		})
 	}
 }
@@ -357,7 +358,7 @@ func TestGetMessage(t *testing.T) {
 			defer db.Close()
 			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, COALESCE\(text, ''\), DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
-			cdb := &chatDB{DB: db, handleMap: handleMap, datetimeFormula: _datetimeFormula}
+			cdb := &chatDB{DB: db, handleMap: handleMap, datetimeFormula: _datetimeFormula, selfHandle: "Me"}
 
 			message, err := cdb.GetMessage(42)
 			if tt.wantErr != "" {

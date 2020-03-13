@@ -28,9 +28,6 @@ const (
 
 var _modernVersion = semver.MustParse("10.13")
 
-// How to label messages sent by yourself.
-const _selfHandle = "Me"
-
 // Chat represents a row from the chat table.
 type Chat struct {
 	ID          int
@@ -59,11 +56,12 @@ type (
 		handleMap       map[int]string
 		contactMap      map[string]*vcard.Card
 		datetimeFormula string
+		selfHandle      string
 	}
 )
 
 // NewChatDB returns a ChatDB interface with a populated handle map.
-func NewChatDB(db *sql.DB, contactMap map[string]*vcard.Card, macOSVersion *semver.Version) (ChatDB, error) {
+func NewChatDB(db *sql.DB, contactMap map[string]*vcard.Card, macOSVersion *semver.Version, selfHandle string) (ChatDB, error) {
 	handleMap, err := getHandleMap(db, contactMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "get handles")
@@ -73,6 +71,7 @@ func NewChatDB(db *sql.DB, contactMap map[string]*vcard.Card, macOSVersion *semv
 		handleMap:       handleMap,
 		contactMap:      contactMap,
 		datetimeFormula: getDatetimeFormula(macOSVersion),
+		selfHandle:      selfHandle,
 	}, nil
 }
 
@@ -175,7 +174,7 @@ func (d chatDB) GetMessage(messageID int) (string, error) {
 	}
 	handle := d.handleMap[handleID]
 	if fromMe == 1 {
-		handle = _selfHandle
+		handle = d.selfHandle
 	}
 	return fmt.Sprintf("[%s] %s: %s\n", date, handle, text), nil
 }
