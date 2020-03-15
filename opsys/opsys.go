@@ -6,12 +6,10 @@
 package opsys
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"unicode"
 
@@ -19,7 +17,6 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/chatdb"
 )
 
 //go:generate mockgen -destination=mock_opsys/mock_opsys.go github.com/tagatac/bagoup/opsys OS
@@ -27,6 +24,7 @@ import (
 type (
 	// OS interacts with the local filesystem and operating system.
 	OS interface {
+		afero.Fs
 		// FileExist checks if the given path already exists.
 		FileExist(path string) (bool, error)
 		// GetMacOSVersion checks the version of the current operating system,
@@ -36,15 +34,6 @@ type (
 		// addresses specified in those cards, from the vcard file at the given
 		// path.
 		GetContactMap(path string) (map[string]*vcard.Card, error)
-		// ExportChats writes all of the chats from the given ChatDB into searchable
-		// formatted text files in the given export path.
-		ExportChats(
-			cdb chatdb.ChatDB,
-			exportPath string,
-			contactMap map[string]*vcard.Card,
-			handleMap map[int]string,
-			macOSVersion *semver.Version,
-		) error
 	}
 
 	opSys struct {
@@ -127,45 +116,4 @@ func sanitizePhone(dirty string) string {
 		},
 		dirty,
 	)
-}
-
-func (s opSys) ExportChats(
-	cdb chatdb.ChatDB,
-	exportPath string,
-	contactMap map[string]*vcard.Card,
-	handleMap map[int]string,
-	macOSVersion *semver.Version,
-) error {
-	chats, err := cdb.GetChats(contactMap)
-	if err != nil {
-		return errors.Wrap(err, "get chats")
-	}
-	for _, chat := range chats {
-		chatDirPath := path.Join(exportPath, chat.DisplayName)
-		if err := s.Fs.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-			return errors.Wrapf(err, "create directory %q", chatDirPath)
-		}
-		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
-		chatFile, err := s.Fs.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return errors.Wrapf(err, "open/create file %s", chatPath)
-		}
-		defer chatFile.Close()
-
-		messageIDs, err := cdb.GetMessageIDs(chat.ID)
-		if err != nil {
-			return errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
-		}
-		for _, messageID := range messageIDs {
-			msg, err := cdb.GetMessage(messageID, handleMap, macOSVersion)
-			if err != nil {
-				return errors.Wrapf(err, "get message with ID %d", messageID)
-			}
-			if _, err := chatFile.WriteString(msg); err != nil {
-				return errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
-			}
-		}
-		chatFile.Close()
-	}
-	return nil
 }

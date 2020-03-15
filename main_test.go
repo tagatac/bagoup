@@ -9,7 +9,10 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/afero"
+	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/chatdb/mock_chatdb"
+	"github.com/tagatac/bagoup/opsys"
 	"github.com/tagatac/bagoup/opsys/mock_opsys"
 	"gotest.tools/v3/assert"
 )
@@ -38,7 +41,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().FileExist("backup").Return(false, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("10.15"), nil),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
-					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.15")).Return(nil),
+					dbMock.EXPECT().GetChats(nil).Return(nil, nil),
 				)
 			},
 		},
@@ -81,7 +84,7 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileExist("backup").Return(false, nil),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
-					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.12")).Return(nil),
+					dbMock.EXPECT().GetChats(nil).Return(nil, nil),
 				)
 			},
 		},
@@ -112,7 +115,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("10.15"), nil),
 					osMock.EXPECT().GetContactMap("contacts.vcf").Return(nil, nil),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
-					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.15")).Return(nil),
+					dbMock.EXPECT().GetChats(nil).Return(nil, nil),
 				)
 			},
 		},
@@ -146,17 +149,17 @@ func TestBagoup(t *testing.T) {
 			wantErr: "get handle map: this is a DB error",
 		},
 		{
-			msg:  "default options running on Mac OS",
+			msg:  "export chats error",
 			opts: defaultOpts,
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileExist("backup").Return(false, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("10.15"), nil),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
-					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.15")).Return(errors.New("this is a file write error")),
+					dbMock.EXPECT().GetChats(nil).Return(nil, errors.New("this is a DB error")),
 				)
 			},
-			wantErr: "export chats: this is a file write error",
+			wantErr: "export chats: get chats: this is a DB error",
 		},
 	}
 
@@ -174,6 +177,130 @@ func TestBagoup(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
+		})
+	}
+}
+
+func TestExportChats(t *testing.T) {
+	tests := []struct {
+		msg       string
+		setupMock func(*mock_chatdb.MockChatDB)
+		roFs      bool
+		wantFiles map[string]string
+		wantErr   string
+	}{
+		{
+			msg: "two chats for one display name, one for another",
+			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+					{
+						ID:          2,
+						GUID:        "testguid2",
+						DisplayName: "testdisplayname",
+					},
+					{
+						ID:          3,
+						GUID:        "testguid3",
+						DisplayName: "testdisplayname2",
+					},
+				}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return([]int{100, 200}, nil)
+				dbMock.EXPECT().GetMessage(100, nil, nil).Return("message100\n", nil)
+				dbMock.EXPECT().GetMessage(200, nil, nil).Return("message200\n", nil)
+				dbMock.EXPECT().GetMessageIDs(2).Return([]int{300, 400}, nil)
+				dbMock.EXPECT().GetMessage(300, nil, nil).Return("message300\n", nil)
+				dbMock.EXPECT().GetMessage(400, nil, nil).Return("message400\n", nil)
+				dbMock.EXPECT().GetMessageIDs(3).Return([]int{500, 600}, nil)
+				dbMock.EXPECT().GetMessage(500, nil, nil).Return("message500\n", nil)
+				dbMock.EXPECT().GetMessage(600, nil, nil).Return("message600\n", nil)
+			},
+			wantFiles: map[string]string{
+				"backup/testdisplayname/testguid.txt":   "message100\nmessage200\n",
+				"backup/testdisplayname/testguid2.txt":  "message300\nmessage400\n",
+				"backup/testdisplayname2/testguid3.txt": "message500\nmessage600\n",
+			},
+		},
+		{
+			msg: "GetChats error",
+			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
+				dbMock.EXPECT().GetChats(nil).Return(nil, errors.New("this is a DB error"))
+			},
+			wantErr: "get chats: this is a DB error",
+		},
+		{
+			msg: "directory creation error",
+			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+				}, nil)
+			},
+			roFs:    true,
+			wantErr: "create directory \"backup/testdisplayname\": operation not permitted",
+		},
+		{
+			msg: "GetMessageIDs error",
+			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+				}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return(nil, errors.New("this is a DB error"))
+			},
+			wantErr: "get message IDs for chat ID 1: this is a DB error",
+		},
+		{
+			msg: "GetMessage error",
+			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+					{
+						ID:          1,
+						GUID:        "testguid",
+						DisplayName: "testdisplayname",
+					},
+				}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return([]int{100, 200}, nil)
+				dbMock.EXPECT().GetMessage(100, nil, nil).Return("message100\n", nil)
+				dbMock.EXPECT().GetMessage(200, nil, nil).Return("", errors.New("this is a DB error"))
+			},
+			wantErr: "get message with ID 200: this is a DB error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			dbMock := mock_chatdb.NewMockChatDB(ctrl)
+			tt.setupMock(dbMock)
+			fs := afero.NewMemMapFs()
+			if tt.roFs {
+				fs = afero.NewReadOnlyFs(fs)
+			}
+			s := opsys.NewOS(fs, nil, nil)
+
+			err := exportChats(s, dbMock, "backup", nil, nil, nil)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			for filename, expected := range tt.wantFiles {
+				actual, err := afero.ReadFile(fs, filename)
+				assert.NilError(t, err)
+				assert.Equal(t, expected, string(actual))
+			}
 		})
 	}
 }

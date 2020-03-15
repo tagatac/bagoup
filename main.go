@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
@@ -95,5 +96,47 @@ func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
 		return errors.Wrap(err, "get handle map")
 	}
 
-	return errors.Wrap(s.ExportChats(cdb, opts.ExportPath, contactMap, handleMap, macOSVersion), "export chats")
+	return errors.Wrap(exportChats(s, cdb, opts.ExportPath, macOSVersion, contactMap, handleMap), "export chats")
+}
+
+func exportChats(
+	s opsys.OS,
+	cdb chatdb.ChatDB,
+	exportPath string,
+	macOSVersion *semver.Version,
+	contactMap map[string]*vcard.Card,
+	handleMap map[int]string,
+) error {
+	chats, err := cdb.GetChats(contactMap)
+	if err != nil {
+		return errors.Wrap(err, "get chats")
+	}
+	for _, chat := range chats {
+		chatDirPath := path.Join(exportPath, chat.DisplayName)
+		if err := s.MkdirAll(chatDirPath, os.ModePerm); err != nil {
+			return errors.Wrapf(err, "create directory %q", chatDirPath)
+		}
+		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
+		chatFile, err := s.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return errors.Wrapf(err, "open/create file %s", chatPath)
+		}
+		defer chatFile.Close()
+
+		messageIDs, err := cdb.GetMessageIDs(chat.ID)
+		if err != nil {
+			return errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
+		}
+		for _, messageID := range messageIDs {
+			msg, err := cdb.GetMessage(messageID, handleMap, macOSVersion)
+			if err != nil {
+				return errors.Wrapf(err, "get message with ID %d", messageID)
+			}
+			if _, err := chatFile.WriteString(msg); err != nil {
+				return errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
+			}
+		}
+		chatFile.Close()
+	}
+	return nil
 }
