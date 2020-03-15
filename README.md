@@ -46,9 +46,9 @@ Usage:
 
 Application Options:
   -d, --db-path=        Path to the Messages chat database file (default: ~/Library/Messages/chat.db)
+  -v, --mac-os-version= Version of Mac OS from which the Messages chat database file was copied
   -c, --contacts-path=  Path to the contacts vCard file
   -o, --export-path=    Path to which the Messages will be exported (default: backup)
-  -v, --mac-os-version= Version of Mac OS from which the Messages chat database file was copied
   -h, --self-handle=    Prefix to use for for messages sent by you (default: Me)
 
 Help Options:
