@@ -5,42 +5,44 @@ implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/). It exports all of the
 conversations saved in Messages to readable, searchable text files.
 
-## "Installation"
+## Installation
 
-`git clone git@github.com:tagatac/bagoup.git`
+```
+brew tap tagatac/bagoup
+brew install bagoup
+```
 
-## Usage
-### chat.db Access
+## chat.db Access
 The Messages database is a protected file in Mac OS. See
 [this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
 for more details. To to backup your messages, you have two options:
-#### Option 1 (recommended): Copy chat.db
-Copy the Messages database to an unprotected folder outside of the terminal.
+### Option 1 (recommended): Copy chat.db
+Copy the Messages database to an unprotected folder in Finder.
 
 1. Open Finder.
 1. Navigate to **~/Library/Messages**.
 1. Right-click on **chat.db**, and click **Copy "chat.db"** in the context menu.
-1. Navigate to your clone of this repo.
-1. Right-click in the `bagoup` directory, and click **Paste Item** in the
+1. Navigate to your home folder or another unprotected folder.
+1. Right-click in the unprotected folder, and click **Paste Item** in the
 context menu.
 
-#### Option 2: Give your terminal full disk access
+### Option 2 (less secure): Give your terminal full disk access
 https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/
 
-### Export your contacts (optional)
-If you provide your contacts, bagoup will attempt to match the handles from the
-Messages database with full names from your contacts list.
+If you choose this option, bagoup will be able to open **chat.db** in its
+default location.
 
-1. Export your contacts as a vCard file from e.g. the Contacts app or Google
-Contacts
-1. Copy the file to the `bagoup` directory as **contacts.vcf**.
+## Contact information (optional)
+If you provide your contacts via the `--contacts-path` flags, bagoup will
+attempt to match the handles from the Messages database with full names from
+your contacts list, labeling the folders with full names and each message with
+first names. Otherwise, phone numbers and email addresses will be used.
 
-### Build
-`make`
+The contacts file must be in vCard format and can be obtained,
+e.g., from the Contacts app or Google Contacts.
 
-### Run
+## Usage
 ```
-Usage:
   bagoup [OPTIONS]
 
 Application Options:
