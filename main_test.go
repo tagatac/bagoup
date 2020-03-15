@@ -16,13 +16,13 @@ import (
 
 func TestBagoup(t *testing.T) {
 	defaultOpts := options{
-		DBPath:       "~/Library/Messages/chat.db",
-		ContactsPath: "contacts.vcf",
-		ExportPath:   "backup",
-		SelfHandle:   "Me",
+		DBPath:     "~/Library/Messages/chat.db",
+		ExportPath: "backup",
+		SelfHandle: "Me",
 	}
 	tenDotTwelve := "10.12"
 	tenDotTenDotTenDotTen := "10.10.10.10"
+	contactsPath := "contacts.vcf"
 
 	tests := []struct {
 		msg        string
@@ -37,7 +37,6 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileExist("backup").Return(false, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("10.15"), nil),
-					osMock.EXPECT().GetContactMap("contacts.vcf").Return(nil, nil),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
 					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.15")).Return(nil),
 				)
@@ -52,39 +51,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().GetMacOSVersion().Return(nil, errors.New("this is an exec error")),
 				)
 			},
-			wantErr: "get Mac OS version - see bagoup --help about the mac-os-version option: this is an exec error",
-		},
-		{
-			msg: "chat.db version specified",
-			opts: options{
-				DBPath:       "~/Library/Messages/chat.db",
-				ContactsPath: "contacts.vcf",
-				ExportPath:   "backup",
-				MacOSVersion: &tenDotTwelve,
-				SelfHandle:   "Me",
-			},
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
-				gomock.InOrder(
-					osMock.EXPECT().FileExist("backup").Return(false, nil),
-					osMock.EXPECT().GetContactMap("contacts.vcf").Return(nil, nil),
-					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
-					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.12")).Return(nil),
-				)
-			},
-		},
-		{
-			msg: "chat.db version specified",
-			opts: options{
-				DBPath:       "~/Library/Messages/chat.db",
-				ContactsPath: "contacts.vcf",
-				ExportPath:   "backup",
-				MacOSVersion: &tenDotTenDotTenDotTen,
-				SelfHandle:   "Me",
-			},
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
-				osMock.EXPECT().FileExist("backup").Return(false, nil)
-			},
-			wantErr: `parse Mac OS version "10.10.10.10": Invalid Semantic Version`,
+			wantErr: "get Mac OS version - specify the Mac OS version from which chat.db was copied with the --mac-os-version option: this is an exec error",
 		},
 		{
 			msg:  "export path exists",
@@ -103,8 +70,60 @@ func TestBagoup(t *testing.T) {
 			wantErr: `check export path "backup": this is a stat error`,
 		},
 		{
-			msg:  "error getting contact map",
-			opts: defaultOpts,
+			msg: "chat.db version specified",
+			opts: options{
+				DBPath:       "~/Library/Messages/chat.db",
+				ExportPath:   "backup",
+				MacOSVersion: &tenDotTwelve,
+				SelfHandle:   "Me",
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+				gomock.InOrder(
+					osMock.EXPECT().FileExist("backup").Return(false, nil),
+					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
+					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.12")).Return(nil),
+				)
+			},
+		},
+		{
+			msg: "invalid chat.db version specified",
+			opts: options{
+				DBPath:       "~/Library/Messages/chat.db",
+				ExportPath:   "backup",
+				MacOSVersion: &tenDotTenDotTenDotTen,
+				SelfHandle:   "Me",
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+				osMock.EXPECT().FileExist("backup").Return(false, nil)
+			},
+			wantErr: `parse Mac OS version "10.10.10.10": Invalid Semantic Version`,
+		},
+		{
+			msg: "contacts file specified",
+			opts: options{
+				DBPath:       "~/Library/Messages/chat.db",
+				ContactsPath: &contactsPath,
+				ExportPath:   "backup",
+				SelfHandle:   "Me",
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+				gomock.InOrder(
+					osMock.EXPECT().FileExist("backup").Return(false, nil),
+					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("10.15"), nil),
+					osMock.EXPECT().GetContactMap("contacts.vcf").Return(nil, nil),
+					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
+					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.15")).Return(nil),
+				)
+			},
+		},
+		{
+			msg: "error getting contact map",
+			opts: options{
+				DBPath:       "~/Library/Messages/chat.db",
+				ContactsPath: &contactsPath,
+				ExportPath:   "backup",
+				SelfHandle:   "Me",
+			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileExist("backup").Return(false, nil),
@@ -121,7 +140,6 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileExist("backup").Return(false, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("10.15"), nil),
-					osMock.EXPECT().GetContactMap("contacts.vcf").Return(nil, nil),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, errors.New("this is a DB error")),
 				)
 			},
@@ -134,7 +152,6 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileExist("backup").Return(false, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("10.15"), nil),
-					osMock.EXPECT().GetContactMap("contacts.vcf").Return(nil, nil),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, nil),
 					osMock.EXPECT().ExportChats(dbMock, "backup", nil, nil, semver.MustParse("10.15")).Return(errors.New("this is a file write error")),
 				)

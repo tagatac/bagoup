@@ -215,7 +215,7 @@ END:VCARD
 		},
 		{
 			msg:     "no contacts file",
-			wantMap: nil,
+			wantErr: `open contacts.vcf: file does not exist`,
 		},
 		{
 			msg: "bad vcard file",

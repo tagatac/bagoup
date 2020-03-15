@@ -84,12 +84,8 @@ func (s opSys) GetMacOSVersion() (*semver.Version, error) {
 
 func (s opSys) GetContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
 	f, err := s.Fs.Open(contactsFilePath)
-	if os.IsNotExist(err) {
-		log.Print(errors.Wrapf(err, "open file %q - continuing without contacts", contactsFilePath))
-		return nil, nil
-	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "open file %q", contactsFilePath)
+		return nil, err
 	}
 	defer f.Close()
 

@@ -24,6 +24,7 @@ import (
 	"os/exec"
 
 	"github.com/Masterminds/semver"
+	"github.com/emersion/go-vcard"
 	"github.com/jessevdk/go-flags"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -34,7 +35,7 @@ import (
 
 type options struct {
 	DBPath       string  `short:"d" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
-	ContactsPath string  `short:"c" long:"contacts-path" description:"Path to the contacts vCard file" default:"contacts.vcf"`
+	ContactsPath *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
 	ExportPath   string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
 	MacOSVersion *string `short:"v" long:"mac-os-version" description:"Version of Mac OS from which the Messages chat database file was copied"`
 	SelfHandle   string  `short:"h" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
@@ -78,12 +79,17 @@ func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
 			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
 		}
 	} else if macOSVersion, err = s.GetMacOSVersion(); err != nil {
-		return errors.Wrap(err, "get Mac OS version - see bagoup --help about the mac-os-version option")
+		return errors.Wrap(err, "get Mac OS version - specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
 	}
-	contactMap, err := s.GetContactMap(opts.ContactsPath)
-	if err != nil {
-		return errors.Wrapf(err, "get contacts from vcard file %q", opts.ContactsPath)
+
+	var contactMap map[string]*vcard.Card
+	if opts.ContactsPath != nil {
+		contactMap, err = s.GetContactMap(*opts.ContactsPath)
+		if err != nil {
+			return errors.Wrapf(err, "get contacts from vcard file %q", *opts.ContactsPath)
+		}
 	}
+
 	handleMap, err := cdb.GetHandleMap(contactMap)
 	if err != nil {
 		return errors.Wrap(err, "get handle map")
