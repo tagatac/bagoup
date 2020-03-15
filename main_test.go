@@ -126,8 +126,8 @@ func TestBagoup(t *testing.T) {
 			msg: "contacts file specified",
 			opts: options{
 				DBPath:       "~/Library/Messages/chat.db",
-				ContactsPath: &contactsPath,
 				ExportPath:   "backup",
+				ContactsPath: &contactsPath,
 				SelfHandle:   "Me",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
@@ -145,8 +145,8 @@ func TestBagoup(t *testing.T) {
 			msg: "error getting contact map",
 			opts: options{
 				DBPath:       "~/Library/Messages/chat.db",
-				ContactsPath: &contactsPath,
 				ExportPath:   "backup",
+				ContactsPath: &contactsPath,
 				SelfHandle:   "Me",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {

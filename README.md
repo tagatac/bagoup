@@ -17,7 +17,8 @@ The Messages database is a protected file in Mac OS. See
 [this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
 for more details. To to backup your messages, you have two options:
 ### Option 1 (recommended): Copy chat.db
-Copy the Messages database to an unprotected folder in Finder.
+Copy the Messages database to an unprotected folder in Finder, and provide the
+path to the copy via the `--db-path` flag.
 
 1. Open Finder.
 1. Navigate to **~/Library/Messages**.
@@ -30,30 +31,31 @@ context menu.
 https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/
 
 If you choose this option, bagoup will be able to open **chat.db** in its
-default location.
+default location, and the `--db-path` flag is not needed.
 
 ## Contact information (optional)
-If you provide your contacts via the `--contacts-path` flags, bagoup will
-attempt to match the handles from the Messages database with full names from
-your contacts list, labeling the folders with full names and each message with
-first names. Otherwise, phone numbers and email addresses will be used.
+If you provide your contacts via the `--contacts-path` flag, bagoup will attempt
+to match the handles from the Messages database with full names from your
+contacts list, labeling the folders with full names and each message with first
+names. Otherwise, phone numbers and email addresses will be used.
 
 The contacts file must be in vCard format and can be obtained,
 e.g., from the Contacts app or Google Contacts.
 
 ## Usage
 ```
+Usage:
   bagoup [OPTIONS]
 
 Application Options:
   -d, --db-path=        Path to the Messages chat database file (default: ~/Library/Messages/chat.db)
-  -v, --mac-os-version= Version of Mac OS from which the Messages chat database file was copied
-  -c, --contacts-path=  Path to the contacts vCard file
   -o, --export-path=    Path to which the Messages will be exported (default: backup)
+  -v, --mac-os-version= Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)
+  -c, --contacts-path=  Path to the contacts vCard file
   -h, --self-handle=    Prefix to use for for messages sent by you (default: Me)
 
 Help Options:
-  -h, --help            Show this help message
+  -h, --help            Show this help messagee
 ```
 All conversations will be exported as text files to the specified export path.
 
