@@ -34,6 +34,9 @@ import (
 	"github.com/tagatac/bagoup/opsys"
 )
 
+const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#chatdb-access"
+const _defaultDBPath = "~/Library/Messages/chat.db"
+
 type options struct {
 	DBPath       string  `short:"d" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
 	MacOSVersion *string `short:"v" long:"mac-os-version" description:"Version of Mac OS from which the Messages chat database file was copied"`
@@ -66,8 +69,16 @@ func logFatalOnErr(err error) {
 }
 
 func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
+	if opts.DBPath == _defaultDBPath {
+		if f, err := s.Open(opts.DBPath); err != nil {
+			return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
+		} else {
+			f.Close()
+		}
+	}
+
 	if exist, err := s.FileExist(opts.ExportPath); exist {
-		return fmt.Errorf("export folder %q already exists - move it or specify a different export path", opts.ExportPath)
+		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", opts.ExportPath)
 	} else if err != nil {
 		return errors.Wrapf(err, "check export path %q", opts.ExportPath)
 	}
@@ -80,7 +91,7 @@ func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
 			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
 		}
 	} else if macOSVersion, err = s.GetMacOSVersion(); err != nil {
-		return errors.Wrap(err, "get Mac OS version - specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
+		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
 	}
 
 	var contactMap map[string]*vcard.Card
