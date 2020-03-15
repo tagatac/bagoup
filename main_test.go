@@ -212,6 +212,7 @@ func TestExportChats(t *testing.T) {
 		setupMock func(*mock_chatdb.MockChatDB)
 		roFs      bool
 		wantFiles map[string]string
+		wantCount int
 		wantErr   string
 	}{
 		{
@@ -249,6 +250,7 @@ func TestExportChats(t *testing.T) {
 				"backup/testdisplayname/testguid2.txt":  "message300\nmessage400\n",
 				"backup/testdisplayname2/testguid3.txt": "message500\nmessage600\n",
 			},
+			wantCount: 6,
 		},
 		{
 			msg: "GetChats error",
@@ -315,7 +317,7 @@ func TestExportChats(t *testing.T) {
 			}
 			s := opsys.NewOS(fs, nil, nil)
 
-			err := exportChats(s, dbMock, "backup", nil, nil, nil)
+			count, err := exportChats(s, dbMock, "backup", nil, nil, nil)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
@@ -326,6 +328,7 @@ func TestExportChats(t *testing.T) {
 				assert.NilError(t, err)
 				assert.Equal(t, expected, string(actual))
 			}
+			assert.Equal(t, tt.wantCount, count)
 		})
 	}
 }

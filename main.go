@@ -107,7 +107,12 @@ func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
 		return errors.Wrap(err, "get handle map")
 	}
 
-	return errors.Wrap(exportChats(s, cdb, opts.ExportPath, macOSVersion, contactMap, handleMap), "export chats")
+	count, err := exportChats(s, cdb, opts.ExportPath, macOSVersion, contactMap, handleMap)
+	if err != nil {
+		return errors.Wrap(err, "export chats")
+	}
+	fmt.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
+	return nil
 }
 
 func exportChats(
@@ -117,37 +122,39 @@ func exportChats(
 	macOSVersion *semver.Version,
 	contactMap map[string]*vcard.Card,
 	handleMap map[int]string,
-) error {
+) (int, error) {
+	count := 0
 	chats, err := cdb.GetChats(contactMap)
 	if err != nil {
-		return errors.Wrap(err, "get chats")
+		return count, errors.Wrap(err, "get chats")
 	}
 	for _, chat := range chats {
 		chatDirPath := path.Join(exportPath, chat.DisplayName)
 		if err := s.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-			return errors.Wrapf(err, "create directory %q", chatDirPath)
+			return count, errors.Wrapf(err, "create directory %q", chatDirPath)
 		}
 		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
 		chatFile, err := s.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return errors.Wrapf(err, "open/create file %s", chatPath)
+			return count, errors.Wrapf(err, "open/create file %s", chatPath)
 		}
 		defer chatFile.Close()
 
 		messageIDs, err := cdb.GetMessageIDs(chat.ID)
 		if err != nil {
-			return errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
+			return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 		}
 		for _, messageID := range messageIDs {
 			msg, err := cdb.GetMessage(messageID, handleMap, macOSVersion)
 			if err != nil {
-				return errors.Wrapf(err, "get message with ID %d", messageID)
+				return count, errors.Wrapf(err, "get message with ID %d", messageID)
 			}
 			if _, err := chatFile.WriteString(msg); err != nil {
-				return errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
+				return count, errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
 			}
+			count++
 		}
 		chatFile.Close()
 	}
-	return nil
+	return count, nil
 }
