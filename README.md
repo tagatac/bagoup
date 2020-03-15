@@ -6,7 +6,6 @@ implemented in Go, inspired by
 conversations saved in Messages to readable, searchable text files.
 
 ## "Installation"
-In your GOPATH:
 
 `git clone git@github.com:tagatac/bagoup.git`
 
