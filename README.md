@@ -5,6 +5,16 @@ implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/). It exports all of the
 conversations saved in Messages to readable, searchable text files.
 
+## Example Export
+```
+$ cat "backup/Novak Djokovic/iMessage;-;+3815555555555.txt"
+[2020-03-01 15:34:05] Me: Want to play tennis?
+[2020-03-01 15:34:41] Novak: I can't today. I'm still at the Dubai Open
+[2020-03-01 15:34:53] Me: Ah, okay. When are you back in SF?
+[2020-03-01 15:35:23] Novak: Possibly next month. I'll let you know
+[2020-03-01 15:35:50] Me: 👍
+```
+
 ## Installation
 
 ```
@@ -58,6 +68,8 @@ Help Options:
   -h, --help            Show this help messagee
 ```
 All conversations will be exported as text files to the specified export path.
+See https://github.com/tagatac/bagoup/tree/master/example-export for an example
+export directory structure.
 
 ## Author
 Copyright (C) 2020 [David Tagatac](mailto:david@tagatac.net)
