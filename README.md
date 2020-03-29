@@ -58,14 +58,14 @@ Usage:
   bagoup [OPTIONS]
 
 Application Options:
-  -d, --db-path=        Path to the Messages chat database file (default: ~/Library/Messages/chat.db)
+  -i, --db-path=        Path to the Messages chat database file (default: ~/Library/Messages/chat.db)
   -o, --export-path=    Path to which the Messages will be exported (default: backup)
-  -v, --mac-os-version= Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)
+  -m, --mac-os-version= Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)
   -c, --contacts-path=  Path to the contacts vCard file
-  -h, --self-handle=    Prefix to use for for messages sent by you (default: Me)
+  -s, --self-handle=    Prefix to use for for messages sent by you (default: Me)
 
 Help Options:
-  -h, --help            Show this help messagee
+  -h, --help            Show this help message
 ```
 All conversations will be exported as text files to the specified export path.
 See https://github.com/tagatac/bagoup/tree/master/example-export for an example
