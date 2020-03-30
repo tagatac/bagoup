@@ -6,7 +6,7 @@ build: bagoup
 bagoup: main.go opsys/opsys.go chatdb/chatdb.go vendor
 	go build -o $@ $<
 
-vendor:
+vendor: go.mod go.sum
 	go mod vendor -v
 
 .PHONY: deps generate test zip clean
