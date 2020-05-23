@@ -12,11 +12,11 @@ vendor: go.mod go.sum
 .PHONY: deps generate test zip clean
 
 deps:
-	go mod tidy -v
 	go get -u -v ./...
+	go mod tidy -v
 	go get -u golang.org/x/tools/cover
 
-generate:
+generate: clean
 	go get -u github.com/golang/mock/mockgen
 	go generate ./...
 
