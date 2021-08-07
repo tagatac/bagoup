@@ -70,11 +70,11 @@ func logFatalOnErr(err error) {
 
 func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
 	if opts.DBPath == _defaultDBPath {
-		if f, err := s.Open(opts.DBPath); err != nil {
+		f, err := s.Open(opts.DBPath)
+		if err != nil {
 			return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
-		} else {
-			f.Close()
 		}
+		f.Close()
 	}
 
 	if exist, err := s.FileExist(opts.ExportPath); exist {
