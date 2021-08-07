@@ -5,37 +5,38 @@
 package mock_chatdb
 
 import (
+	reflect "reflect"
+
 	semver "github.com/Masterminds/semver"
 	vcard "github.com/emersion/go-vcard"
 	gomock "github.com/golang/mock/gomock"
 	chatdb "github.com/tagatac/bagoup/chatdb"
-	reflect "reflect"
 )
 
-// MockChatDB is a mock of ChatDB interface
+// MockChatDB is a mock of ChatDB interface.
 type MockChatDB struct {
 	ctrl     *gomock.Controller
 	recorder *MockChatDBMockRecorder
 }
 
-// MockChatDBMockRecorder is the mock recorder for MockChatDB
+// MockChatDBMockRecorder is the mock recorder for MockChatDB.
 type MockChatDBMockRecorder struct {
 	mock *MockChatDB
 }
 
-// NewMockChatDB creates a new mock instance
+// NewMockChatDB creates a new mock instance.
 func NewMockChatDB(ctrl *gomock.Controller) *MockChatDB {
 	mock := &MockChatDB{ctrl: ctrl}
 	mock.recorder = &MockChatDBMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockChatDB) EXPECT() *MockChatDBMockRecorder {
 	return m.recorder
 }
 
-// GetChats mocks base method
+// GetChats mocks base method.
 func (m *MockChatDB) GetChats(arg0 map[string]*vcard.Card) ([]chatdb.Chat, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetChats", arg0)
@@ -44,13 +45,13 @@ func (m *MockChatDB) GetChats(arg0 map[string]*vcard.Card) ([]chatdb.Chat, error
 	return ret0, ret1
 }
 
-// GetChats indicates an expected call of GetChats
+// GetChats indicates an expected call of GetChats.
 func (mr *MockChatDBMockRecorder) GetChats(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChats", reflect.TypeOf((*MockChatDB)(nil).GetChats), arg0)
 }
 
-// GetHandleMap mocks base method
+// GetHandleMap mocks base method.
 func (m *MockChatDB) GetHandleMap(arg0 map[string]*vcard.Card) (map[int]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHandleMap", arg0)
@@ -59,13 +60,13 @@ func (m *MockChatDB) GetHandleMap(arg0 map[string]*vcard.Card) (map[int]string, 
 	return ret0, ret1
 }
 
-// GetHandleMap indicates an expected call of GetHandleMap
+// GetHandleMap indicates an expected call of GetHandleMap.
 func (mr *MockChatDBMockRecorder) GetHandleMap(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHandleMap", reflect.TypeOf((*MockChatDB)(nil).GetHandleMap), arg0)
 }
 
-// GetMessage mocks base method
+// GetMessage mocks base method.
 func (m *MockChatDB) GetMessage(arg0 int, arg1 map[int]string, arg2 *semver.Version) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessage", arg0, arg1, arg2)
@@ -74,13 +75,13 @@ func (m *MockChatDB) GetMessage(arg0 int, arg1 map[int]string, arg2 *semver.Vers
 	return ret0, ret1
 }
 
-// GetMessage indicates an expected call of GetMessage
+// GetMessage indicates an expected call of GetMessage.
 func (mr *MockChatDBMockRecorder) GetMessage(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessage", reflect.TypeOf((*MockChatDB)(nil).GetMessage), arg0, arg1, arg2)
 }
 
-// GetMessageIDs mocks base method
+// GetMessageIDs mocks base method.
 func (m *MockChatDB) GetMessageIDs(arg0 int) ([]int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessageIDs", arg0)
@@ -89,7 +90,7 @@ func (m *MockChatDB) GetMessageIDs(arg0 int) ([]int, error) {
 	return ret0, ret1
 }
 
-// GetMessageIDs indicates an expected call of GetMessageIDs
+// GetMessageIDs indicates an expected call of GetMessageIDs.
 func (mr *MockChatDBMockRecorder) GetMessageIDs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessageIDs", reflect.TypeOf((*MockChatDB)(nil).GetMessageIDs), arg0)
