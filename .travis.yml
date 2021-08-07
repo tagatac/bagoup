@@ -6,5 +6,4 @@ install:
 script:
   - make test
 after_success:
-  - env
   - bash <(curl -s https://codecov.io/bash)
