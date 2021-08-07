@@ -38,12 +38,19 @@ path to the copy via the `--db-path` flag.
 context menu.
 
 ### Option 2 (less secure): Give your terminal full disk access
-https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/
+From [osxdaily.com](https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/):
+1. Pull down the Apple menu and choose ‘System Preferences’
+1. Choose “Security & Privacy” control panel
+1. Now select the “Privacy” tab, then from the left-side menu select “Full Disk Access”
+1. Click the lock icon in the lower left corner of the preference panel and authenticate with an admin level login
+1. Now click the [+] plus button to add an application with full disk access
+1. Navigate to the /Applications/Utilities/ folder and choose “Terminal” to grant Terminal with Full Disk Access privileges
+1. Relaunch Terminal, the “Operation not permitted” error messages will be gone
 
 If you choose this option, bagoup will be able to open **chat.db** in its
 default location, and the `--db-path` flag is not needed.
 
-## Contact information (optional)
+## Contact Information (optional)
 If you provide your contacts via the `--contacts-path` flag, bagoup will attempt
 to match the handles from the Messages database with full names from your
 contacts list, labeling the folders with full names and each message with first
@@ -72,7 +79,7 @@ See https://github.com/tagatac/bagoup/tree/master/example-export for an example
 export directory structure.
 
 ## Author
-Copyright (C) 2020 [David Tagatac](mailto:david@tagatac.net)
+Copyright (C) 2020-2021 [David Tagatac](mailto:david@tagatac.net)
 
 [ci-img]: https://travis-ci.org/tagatac/bagoup.svg?branch=master
 [ci]: https://travis-ci.org/tagatac/bagoup
