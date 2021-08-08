@@ -9,7 +9,7 @@ bagoup: main.go opsys/opsys.go chatdb/chatdb.go vendor
 vendor: go.mod go.sum
 	go mod vendor -v
 
-.PHONY: deps generate test zip clean
+.PHONY: deps generate test zip clean codecov
 
 deps:
 	go get -u -v ./...
@@ -32,3 +32,13 @@ clean:
 	vendor \
 	$(COVERAGE_FILE) \
 	$(ZIPFILE)
+
+codecov:
+	curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import
+	curl -Os https://uploader.codecov.io/latest/linux/codecov
+	curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+	curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+	gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+	shasum -a 256 -c codecov.SHA256SUM
+	chmod +x codecov
+	env CI= ./codecov -t {CODECOV_TOKEN}
