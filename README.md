@@ -81,8 +81,8 @@ export directory structure.
 ## Author
 Copyright (C) 2020-2021 [David Tagatac](mailto:david@tagatac.net)
 
-[ci-img]: https://travis-ci.org/tagatac/bagoup.svg?branch=master
-[ci]: https://travis-ci.org/tagatac/bagoup
+[ci-img]: https://travis-ci.com/tagatac/bagoup.svg?branch=master
+[ci]: https://travis-ci.com/tagatac/bagoup
 [cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/master/graph/badge.svg
 [cov]: https://codecov.io/gh/tagatac/bagoup
 [card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup
