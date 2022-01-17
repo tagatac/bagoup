@@ -12,6 +12,8 @@ package chatdb
 import (
 	"database/sql"
 	"fmt"
+	"sort"
+	"strconv"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
@@ -22,10 +24,11 @@ const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issu
 
 // Adapted from https://apple.stackexchange.com/a/300997/267331
 const (
+	_newDateMultiple       = 1_000_000_000
 	_datetimeFormulaLegacy = "date + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
-	_datetimeFormula       = "(date/1000000000) + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 )
 
+var _datetimeFormula = "(date/" + strconv.Itoa(_newDateMultiple) + ") + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 var _modernVersion = semver.MustParse("10.13")
 
 // Chat represents a row from the chat table.
@@ -47,12 +50,18 @@ type (
 		// GetChats returns a slice of Chat, effectively a table scan of the chat
 		// table.
 		GetChats(contactMap map[string]*vcard.Card) ([]Chat, error)
-		// GetMessageIDs returns a slice of message IDs corresponding to a given
+		// GetMessageIDs returns a slice of DatedMessageIDs corresponding to a given
 		// chat ID, in the order that the messages are timestamped.
-		GetMessageIDs(chatID int) ([]int, error)
+		GetMessageIDs(chatID int) ([]DatedMessageID, error)
 		// GetMessage returns a message retrieved from the database formatted for
 		// writing to a chat file.
 		GetMessage(messageID int, handleMap map[int]string, macOSVersion *semver.Version) (string, error)
+	}
+
+	// DatedMessageID pairs a message ID and its date, in the legacy date format.
+	DatedMessageID struct {
+		ID   int
+		Date int
 	}
 
 	chatDB struct {
@@ -128,20 +137,25 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]Chat, error) {
 	return chats, nil
 }
 
-func (d chatDB) GetMessageIDs(chatID int) ([]int, error) {
-	rows, err := d.DB.Query(fmt.Sprintf("SELECT message_id FROM chat_message_join WHERE chat_id=%d", chatID))
+func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
+	rows, err := d.DB.Query(fmt.Sprintf("SELECT message_id, message_date FROM chat_message_join WHERE chat_id=%d", chatID))
 	if err != nil {
 		return nil, errors.Wrapf(err, "query chat_message_join table for chat ID %d", chatID)
 	}
 	defer rows.Close()
-	messageIDs := []int{}
+	messageIDs := []DatedMessageID{}
 	for rows.Next() {
-		var messageID int
-		if err := rows.Scan(&messageID); err != nil {
+		var id int
+		var date int
+		if err := rows.Scan(&id, &date); err != nil {
 			return nil, errors.Wrapf(err, "read message ID for chat ID %d", chatID)
 		}
-		messageIDs = append(messageIDs, messageID)
+		if date >= _newDateMultiple {
+			date /= _newDateMultiple
+		}
+		messageIDs = append(messageIDs, DatedMessageID{id, date})
 	}
+	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	return messageIDs, nil
 }
 

@@ -235,13 +235,31 @@ func TestExportChats(t *testing.T) {
 						DisplayName: "testdisplayname2",
 					},
 				}, nil)
-				dbMock.EXPECT().GetMessageIDs(1).Return([]int{100, 200}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 100, Date: 0},
+						{ID: 200, Date: 0},
+					},
+					nil,
+				)
 				dbMock.EXPECT().GetMessage(100, nil, nil).Return("message100\n", nil)
 				dbMock.EXPECT().GetMessage(200, nil, nil).Return("message200\n", nil)
-				dbMock.EXPECT().GetMessageIDs(2).Return([]int{300, 400}, nil)
+				dbMock.EXPECT().GetMessageIDs(2).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 300, Date: 0},
+						{ID: 400, Date: 0},
+					},
+					nil,
+				)
 				dbMock.EXPECT().GetMessage(300, nil, nil).Return("message300\n", nil)
 				dbMock.EXPECT().GetMessage(400, nil, nil).Return("message400\n", nil)
-				dbMock.EXPECT().GetMessageIDs(3).Return([]int{500, 600}, nil)
+				dbMock.EXPECT().GetMessageIDs(3).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 500, Date: 0},
+						{ID: 600, Date: 0},
+					},
+					nil,
+				)
 				dbMock.EXPECT().GetMessage(500, nil, nil).Return("message500\n", nil)
 				dbMock.EXPECT().GetMessage(600, nil, nil).Return("message600\n", nil)
 			},
@@ -297,11 +315,17 @@ func TestExportChats(t *testing.T) {
 						DisplayName: "testdisplayname",
 					},
 				}, nil)
-				dbMock.EXPECT().GetMessageIDs(1).Return([]int{100, 200}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 100, Date: 0},
+						{ID: 200, Date: 0},
+					},
+					nil,
+				)
 				dbMock.EXPECT().GetMessage(100, nil, nil).Return("message100\n", nil)
 				dbMock.EXPECT().GetMessage(200, nil, nil).Return("", errors.New("this is a DB error"))
 			},
-			wantErr: "get message with ID 200: this is a DB error",
+			wantErr: "get message with ID {200 0}: this is a DB error",
 		},
 	}
 

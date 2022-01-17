@@ -204,18 +204,34 @@ func TestGetMessageIDs(t *testing.T) {
 	tests := []struct {
 		msg        string
 		setupQuery func(*sqlmock.ExpectedQuery)
-		wantIDs    []int
+		wantIDs    []DatedMessageID
 		wantErr    string
 	}{
 		{
 			msg: "success",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"message_id"}).
-					AddRow(192).
-					AddRow(168)
+				rows := sqlmock.NewRows([]string{"message_id", "message_date"}).
+					AddRow(192, 593720716622331392).
+					AddRow(168, 601412272470654464)
 				query.WillReturnRows(rows)
 			},
-			wantIDs: []int{192, 168},
+			wantIDs: []DatedMessageID{
+				{192, 593720716},
+				{168, 601412272},
+			},
+		},
+		{
+			msg: "success reorder",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"message_id", "message_date"}).
+					AddRow(192, 601412272).
+					AddRow(168, 593720716622331392)
+				query.WillReturnRows(rows)
+			},
+			wantIDs: []DatedMessageID{
+				{168, 593720716},
+				{192, 601412272},
+			},
 		},
 		{
 			msg: "DB error",
@@ -227,9 +243,9 @@ func TestGetMessageIDs(t *testing.T) {
 		{
 			msg: "row scan error",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"message_id"}).
-					AddRow(192).
-					AddRow(nil)
+				rows := sqlmock.NewRows([]string{"message_id", "message_date"}).
+					AddRow(192, 593720716622331392).
+					AddRow(nil, 601412272470654464)
 				query.WillReturnRows(rows)
 			},
 			wantErr: "read message ID for chat ID 42: sql: Scan error on column index 0, name \"message_id\": converting NULL to int is unsupported",
@@ -241,7 +257,7 @@ func TestGetMessageIDs(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
 			defer db.Close()
-			query := sMock.ExpectQuery("SELECT message_id FROM chat_message_join WHERE chat_id=42")
+			query := sMock.ExpectQuery("SELECT message_id, message_date FROM chat_message_join WHERE chat_id=42")
 			tt.setupQuery(query)
 			cdb := &chatDB{DB: db}
 

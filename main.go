@@ -145,7 +145,7 @@ func exportChats(
 			return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 		}
 		for _, messageID := range messageIDs {
-			msg, err := cdb.GetMessage(messageID, handleMap, macOSVersion)
+			msg, err := cdb.GetMessage(messageID.ID, handleMap, macOSVersion)
 			if err != nil {
 				return count, errors.Wrapf(err, "get message with ID %d", messageID)
 			}

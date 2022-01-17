@@ -82,10 +82,10 @@ func (mr *MockChatDBMockRecorder) GetMessage(arg0, arg1, arg2 interface{}) *gomo
 }
 
 // GetMessageIDs mocks base method.
-func (m *MockChatDB) GetMessageIDs(arg0 int) ([]int, error) {
+func (m *MockChatDB) GetMessageIDs(arg0 int) ([]chatdb.DatedMessageID, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessageIDs", arg0)
-	ret0, _ := ret[0].([]int)
+	ret0, _ := ret[0].([]chatdb.DatedMessageID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
