@@ -10,9 +10,9 @@ require (
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/afero v1.6.0
-	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
+	github.com/spf13/afero v1.8.0
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.5 // indirect
+	golang.org/x/tools v0.1.8 // indirect
 	gotest.tools/v3 v3.0.2
 )
