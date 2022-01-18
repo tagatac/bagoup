@@ -1,5 +1,5 @@
 COVERAGE_FILE=coverage.out
-ZIPFILE=bagoup-darwin-x86_64.zip
+ZIPFILE="bagoup-$(shell uname -s)-$(shell uname -m).zip"
 
 build: bagoup
 

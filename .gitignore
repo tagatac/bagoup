@@ -2,7 +2,7 @@
 .vscode/
 /backup/
 bagoup
-bagoup-darwin-x86_64.zip
+bagoup-*-*.zip
 chat.db
 contacts.vcf
 coverage.out
