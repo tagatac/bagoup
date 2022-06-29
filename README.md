@@ -79,7 +79,7 @@ See https://github.com/tagatac/bagoup/tree/master/example-export for an example
 export directory structure.
 
 ## Author
-Copyright (C) 2020-2021 [David Tagatac](mailto:david@tagatac.net)
+Copyright (C) 2020-2022 [David Tagatac](mailto:david@tagatac.net)
 
 [ci-img]: https://travis-ci.com/tagatac/bagoup.svg?branch=master
 [ci]: https://app.travis-ci.com/github/tagatac/bagoup
