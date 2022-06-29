@@ -23,6 +23,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
@@ -128,23 +130,30 @@ func exportChats(
 	if err != nil {
 		return count, errors.Wrap(err, "get chats")
 	}
-	for _, chat := range chats {
-		chatDirPath := path.Join(exportPath, chat.DisplayName)
+	for _, entityChats := range chats {
+		var guids []string
+		var contactMessageIDs []chatdb.DatedMessageID
+		for _, chat := range entityChats.Chats {
+			guids = append(guids, chat.GUID)
+			messageIDs, err := cdb.GetMessageIDs(chat.ID)
+			if err != nil {
+				return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
+			}
+			contactMessageIDs = append(contactMessageIDs, messageIDs...)
+		}
+		sort.SliceStable(contactMessageIDs, func(i, j int) bool { return contactMessageIDs[i].Date < contactMessageIDs[j].Date })
+		chatDirPath := path.Join(exportPath, entityChats.Name)
 		if err := s.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 			return count, errors.Wrapf(err, "create directory %q", chatDirPath)
 		}
-		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", chat.GUID))
+		fileName := strings.Join(guids, ";;;")
+		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", fileName))
 		chatFile, err := s.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return count, errors.Wrapf(err, "open/create file %s", chatPath)
 		}
 		defer chatFile.Close()
-
-		messageIDs, err := cdb.GetMessageIDs(chat.ID)
-		if err != nil {
-			return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
-		}
-		for _, messageID := range messageIDs {
+		for _, messageID := range contactMessageIDs {
 			msg, err := cdb.GetMessage(messageID.ID, handleMap, macOSVersion)
 			if err != nil {
 				return count, errors.Wrapf(err, "get message with ID %d", messageID)

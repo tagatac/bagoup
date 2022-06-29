@@ -12,7 +12,6 @@ package chatdb
 import (
 	"database/sql"
 	"fmt"
-	"sort"
 	"strconv"
 
 	"github.com/Masterminds/semver"
@@ -31,11 +30,18 @@ const (
 var _datetimeFormula = "(date/" + strconv.Itoa(_newDateMultiple) + ") + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 var _modernVersion = semver.MustParse("10.13")
 
+// EntityChats represents all of the chats with a given entity (associated
+// with the same vCard, phone number, or email address). In the case of group
+// chats, this struct will only contain a single Chat.
+type EntityChats struct {
+	Name  string
+	Chats []Chat
+}
+
 // Chat represents a row from the chat table.
 type Chat struct {
-	ID          int
-	GUID        string
-	DisplayName string
+	ID   int
+	GUID string
 }
 
 //go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/chatdb ChatDB
@@ -47,11 +53,11 @@ type (
 		// address. If a contact map is supplied, it will attempt to resolve these
 		// handles to formatted names.
 		GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string, error)
-		// GetChats returns a slice of Chat, effectively a table scan of the chat
-		// table.
-		GetChats(contactMap map[string]*vcard.Card) ([]Chat, error)
-		// GetMessageIDs returns a slice of DatedMessageIDs corresponding to a given
-		// chat ID, in the order that the messages are timestamped.
+		// GetChats returns a slice of EntityChats, effectively a table scan of
+		// the chat table.
+		GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, error)
+		// GetMessageIDs returns a slice of DatedMessageIDs corresponding to a
+		// given chat ID.
 		GetMessageIDs(chatID int) ([]DatedMessageID, error)
 		// GetMessage returns a message retrieved from the database formatted for
 		// writing to a chat file.
@@ -106,33 +112,64 @@ func (d chatDB) GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string,
 	return handleMap, nil
 }
 
-func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]Chat, error) {
+func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, error) {
 	chatRows, err := d.DB.Query("SELECT ROWID, guid, chat_identifier, COALESCE(display_name, '') FROM chat")
 	if err != nil {
 		return nil, errors.Wrap(err, "query chats table")
 	}
 	defer chatRows.Close()
-	chats := []Chat{}
+	contactChats := map[*vcard.Card]EntityChats{}
+	addressChats := map[string]EntityChats{}
 	for chatRows.Next() {
 		var id int
 		var guid, name, displayName string
 		if err := chatRows.Scan(&id, &guid, &name, &displayName); err != nil {
 			return nil, errors.Wrap(err, "read chat")
 		}
-		if displayName == "" {
-			displayName = name
+		entityName := displayName
+		if entityName == "" {
+			entityName = name
 		}
-		if card, ok := contactMap[displayName]; ok {
-			contactName := card.PreferredValue(vcard.FieldFormattedName)
-			if contactName != "" {
-				displayName = contactName
+		chat := Chat{
+			ID:   id,
+			GUID: guid,
+		}
+		if card, ok := contactMap[entityName]; ok {
+			if entityChats, ok := contactChats[card]; !ok {
+				// We have contact info, but this is our first time seeing this contact.
+				contactName := card.PreferredValue(vcard.FieldFormattedName)
+				if contactName != "" {
+					entityName = contactName
+				}
+				contactChats[card] = EntityChats{
+					Name:  entityName,
+					Chats: []Chat{chat},
+				}
+			} else {
+				// We have contact info, and we have seen this contact before.
+				entityChats.Chats = append(entityChats.Chats, chat)
+				contactChats[card] = entityChats
+			}
+		} else {
+			if entityChats, ok := addressChats[name]; !ok {
+				// We don't have contact info, and this is a new address.
+				addressChats[name] = EntityChats{
+					Name:  entityName,
+					Chats: []Chat{chat},
+				}
+			} else {
+				// We don't have contact info, and we have seen this address before.
+				entityChats.Chats = append(entityChats.Chats, chat)
+				addressChats[name] = entityChats
 			}
 		}
-		chats = append(chats, Chat{
-			ID:          id,
-			GUID:        guid,
-			DisplayName: displayName,
-		})
+	}
+	chats := []EntityChats{}
+	for _, entityChats := range contactChats {
+		chats = append(chats, entityChats)
+	}
+	for _, entityChats := range addressChats {
+		chats = append(chats, entityChats)
 	}
 	return chats, nil
 }
@@ -155,7 +192,6 @@ func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
 		}
 		messageIDs = append(messageIDs, DatedMessageID{id, date})
 	}
-	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	return messageIDs, nil
 }
 
