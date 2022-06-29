@@ -126,42 +126,17 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 		if err := chatRows.Scan(&id, &guid, &name, &displayName); err != nil {
 			return nil, errors.Wrap(err, "read chat")
 		}
-		entityName := displayName
-		if entityName == "" {
-			entityName = name
+		if displayName == "" {
+			displayName = name
 		}
 		chat := Chat{
 			ID:   id,
 			GUID: guid,
 		}
-		if card, ok := contactMap[entityName]; ok {
-			if entityChats, ok := contactChats[card]; !ok {
-				// We have contact info, but this is our first time seeing this contact.
-				contactName := card.PreferredValue(vcard.FieldFormattedName)
-				if contactName != "" {
-					entityName = contactName
-				}
-				contactChats[card] = EntityChats{
-					Name:  entityName,
-					Chats: []Chat{chat},
-				}
-			} else {
-				// We have contact info, and we have seen this contact before.
-				entityChats.Chats = append(entityChats.Chats, chat)
-				contactChats[card] = entityChats
-			}
+		if card, ok := contactMap[displayName]; ok {
+			addContactChat(card, displayName, chat, contactChats)
 		} else {
-			if entityChats, ok := addressChats[name]; !ok {
-				// We don't have contact info, and this is a new address.
-				addressChats[name] = EntityChats{
-					Name:  entityName,
-					Chats: []Chat{chat},
-				}
-			} else {
-				// We don't have contact info, and we have seen this address before.
-				entityChats.Chats = append(entityChats.Chats, chat)
-				addressChats[name] = entityChats
-			}
+			addAddressChat(name, displayName, chat, addressChats)
 		}
 	}
 	chats := []EntityChats{}
@@ -172,6 +147,36 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 		chats = append(chats, entityChats)
 	}
 	return chats, nil
+}
+
+func addContactChat(card *vcard.Card, displayName string, chat Chat, contactChats map[*vcard.Card]EntityChats) {
+	if entityChats, ok := contactChats[card]; !ok {
+		contactName := card.PreferredValue(vcard.FieldFormattedName)
+		if contactName != "" {
+			displayName = contactName
+		}
+		contactChats[card] = EntityChats{
+			Name:  displayName,
+			Chats: []Chat{chat},
+		}
+	} else {
+		entityChats.Chats = append(entityChats.Chats, chat)
+		contactChats[card] = entityChats
+	}
+}
+
+func addAddressChat(address, displayName string, chat Chat, addressChats map[string]EntityChats) {
+	if entityChats, ok := addressChats[address]; !ok {
+		// We don't have contact info, and this is a new address.
+		addressChats[address] = EntityChats{
+			Name:  displayName,
+			Chats: []Chat{chat},
+		}
+	} else {
+		// We don't have contact info, and we have seen this address before.
+		entityChats.Chats = append(entityChats.Chats, chat)
+		addressChats[address] = entityChats
+	}
 }
 
 func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
