@@ -40,11 +40,20 @@ const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#chat
 const _defaultDBPath = "~/Library/Messages/chat.db"
 
 type options struct {
-	DBPath       string  `short:"i" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
-	ExportPath   string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
-	MacOSVersion *string `short:"m" long:"mac-os-version" description:"Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
-	ContactsPath *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
-	SelfHandle   string  `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
+	DBPath        string  `short:"i" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
+	ExportPath    string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
+	MacOSVersion  *string `short:"m" long:"mac-os-version" description:"Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
+	ContactsPath  *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
+	SelfHandle    string  `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
+	SeparateChats bool    `long:"separate-chats" description:"Do not merge chats with the same contact into a single file, e.g. iMessage and SMS"`
+}
+
+type configuration struct {
+	opsys.OS
+	chatdb.ChatDB
+	ExportPath   string
+	MacOSVersion *semver.Version
+	HandleMap    map[int]string
 }
 
 func main() {
@@ -61,7 +70,12 @@ func main() {
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
-	logFatalOnErr(bagoup(opts, s, cdb))
+	config := configuration{
+		OS:         s,
+		ChatDB:     cdb,
+		ExportPath: opts.ExportPath,
+	}
+	logFatalOnErr(bagoup(opts, config))
 }
 
 func logFatalOnErr(err error) {
@@ -70,7 +84,43 @@ func logFatalOnErr(err error) {
 	}
 }
 
-func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
+func bagoup(opts options, config configuration) error {
+	if err := validatePaths(config.OS, opts); err != nil {
+		return err
+	}
+
+	var err error
+	if opts.MacOSVersion != nil {
+		config.MacOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
+		if err != nil {
+			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
+		}
+	} else if config.MacOSVersion, err = config.OS.GetMacOSVersion(); err != nil {
+		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
+	}
+
+	var contactMap map[string]*vcard.Card
+	if opts.ContactsPath != nil {
+		contactMap, err = config.OS.GetContactMap(*opts.ContactsPath)
+		if err != nil {
+			return errors.Wrapf(err, "get contacts from vcard file %q", *opts.ContactsPath)
+		}
+	}
+
+	config.HandleMap, err = config.ChatDB.GetHandleMap(contactMap)
+	if err != nil {
+		return errors.Wrap(err, "get handle map")
+	}
+
+	count, err := exportChats(config, contactMap, !opts.SeparateChats)
+	fmt.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
+	if err != nil {
+		return errors.Wrap(err, "export chats")
+	}
+	return nil
+}
+
+func validatePaths(s opsys.OS, opts options) error {
 	if opts.DBPath == _defaultDBPath {
 		f, err := s.Open(opts.DBPath)
 		if err != nil {
@@ -84,86 +134,70 @@ func bagoup(opts options, s opsys.OS, cdb chatdb.ChatDB) error {
 	} else if err != nil {
 		return errors.Wrapf(err, "check export path %q", opts.ExportPath)
 	}
-
-	var macOSVersion *semver.Version
-	var err error
-	if opts.MacOSVersion != nil {
-		macOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
-		if err != nil {
-			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
-		}
-	} else if macOSVersion, err = s.GetMacOSVersion(); err != nil {
-		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
-	}
-
-	var contactMap map[string]*vcard.Card
-	if opts.ContactsPath != nil {
-		contactMap, err = s.GetContactMap(*opts.ContactsPath)
-		if err != nil {
-			return errors.Wrapf(err, "get contacts from vcard file %q", *opts.ContactsPath)
-		}
-	}
-
-	handleMap, err := cdb.GetHandleMap(contactMap)
-	if err != nil {
-		return errors.Wrap(err, "get handle map")
-	}
-
-	count, err := exportChats(s, cdb, opts.ExportPath, macOSVersion, contactMap, handleMap)
-	if err != nil {
-		return errors.Wrap(err, "export chats")
-	}
-	fmt.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
 	return nil
 }
 
-func exportChats(
-	s opsys.OS,
-	cdb chatdb.ChatDB,
-	exportPath string,
-	macOSVersion *semver.Version,
-	contactMap map[string]*vcard.Card,
-	handleMap map[int]string,
-) (int, error) {
+func exportChats(config configuration, contactMap map[string]*vcard.Card, mergeChats bool) (int, error) {
 	count := 0
-	chats, err := cdb.GetChats(contactMap)
+	chats, err := config.ChatDB.GetChats(contactMap)
 	if err != nil {
 		return count, errors.Wrap(err, "get chats")
 	}
 	for _, entityChats := range chats {
 		var guids []string
-		var contactMessageIDs []chatdb.DatedMessageID
+		var entityMessageIDs []chatdb.DatedMessageID
 		for _, chat := range entityChats.Chats {
-			guids = append(guids, chat.GUID)
-			messageIDs, err := cdb.GetMessageIDs(chat.ID)
+			messageIDs, err := config.ChatDB.GetMessageIDs(chat.ID)
 			if err != nil {
 				return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 			}
-			contactMessageIDs = append(contactMessageIDs, messageIDs...)
+			if mergeChats {
+				guids = append(guids, chat.GUID)
+				entityMessageIDs = append(entityMessageIDs, messageIDs...)
+			} else {
+				thisCount, err := writeFile(config, entityChats.Name, []string{chat.GUID}, messageIDs)
+				if err != nil {
+					return count + thisCount, err
+				}
+				count += thisCount
+			}
 		}
-		sort.SliceStable(contactMessageIDs, func(i, j int) bool { return contactMessageIDs[i].Date < contactMessageIDs[j].Date })
-		chatDirPath := path.Join(exportPath, entityChats.Name)
-		if err := s.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-			return count, errors.Wrapf(err, "create directory %q", chatDirPath)
-		}
-		fileName := strings.Join(guids, ";;;")
-		chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", fileName))
-		chatFile, err := s.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return count, errors.Wrapf(err, "open/create file %s", chatPath)
-		}
-		defer chatFile.Close()
-		for _, messageID := range contactMessageIDs {
-			msg, err := cdb.GetMessage(messageID.ID, handleMap, macOSVersion)
+		if mergeChats {
+			thisCount, err := writeFile(config, entityChats.Name, guids, entityMessageIDs)
 			if err != nil {
-				return count, errors.Wrapf(err, "get message with ID %d", messageID)
+				return count + thisCount, err
 			}
-			if _, err := chatFile.WriteString(msg); err != nil {
-				return count, errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
-			}
-			count++
+			count += thisCount
 		}
-		chatFile.Close()
 	}
+	return count, nil
+}
+
+func writeFile(config configuration, entityName string, guids []string, messageIDs []chatdb.DatedMessageID) (int, error) {
+	chatDirPath := path.Join(config.ExportPath, entityName)
+	if err := config.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
+		return 0, errors.Wrapf(err, "create directory %q", chatDirPath)
+	}
+	fileName := strings.Join(guids, ";;;")
+	chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", fileName))
+	chatFile, err := config.OS.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return 0, errors.Wrapf(err, "open/create file %s", chatPath)
+	}
+	defer chatFile.Close()
+
+	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
+	var count int
+	for _, messageID := range messageIDs {
+		msg, err := config.ChatDB.GetMessage(messageID.ID, config.HandleMap, config.MacOSVersion)
+		if err != nil {
+			return count, errors.Wrapf(err, "get message with ID %d", messageID)
+		}
+		if _, err := chatFile.WriteString(msg); err != nil {
+			return count, errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
+		}
+		count++
+	}
+	chatFile.Close()
 	return count, nil
 }
