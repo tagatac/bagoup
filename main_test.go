@@ -196,7 +196,10 @@ func TestBagoup(t *testing.T) {
 			dbMock := mock_chatdb.NewMockChatDB(ctrl)
 			tt.setupMocks(osMock, dbMock)
 
-			err := bagoup(tt.opts, osMock, dbMock)
+			err := bagoup(tt.opts, configuration{
+				OS:     osMock,
+				ChatDB: dbMock,
+			})
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
@@ -208,31 +211,39 @@ func TestBagoup(t *testing.T) {
 
 func TestExportChats(t *testing.T) {
 	tests := []struct {
-		msg       string
-		setupMock func(*mock_chatdb.MockChatDB)
-		roFs      bool
-		wantFiles map[string]string
-		wantCount int
-		wantErr   string
+		msg        string
+		setupMock  func(*mock_chatdb.MockChatDB)
+		roFs       bool
+		mergeChats bool
+		wantFiles  map[string]string
+		wantCount  int
+		wantErr    string
 	}{
 		{
 			msg: "two chats for one display name, one for another",
 			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
-				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 					{
-						ID:          1,
-						GUID:        "testguid",
-						DisplayName: "testdisplayname",
+						Name: "testdisplayname",
+						Chats: []chatdb.Chat{
+							{
+								ID:   1,
+								GUID: "testguid",
+							},
+							{
+								ID:   2,
+								GUID: "testguid2",
+							},
+						},
 					},
 					{
-						ID:          2,
-						GUID:        "testguid2",
-						DisplayName: "testdisplayname",
-					},
-					{
-						ID:          3,
-						GUID:        "testguid3",
-						DisplayName: "testdisplayname2",
+						Name: "testdisplayname2",
+						Chats: []chatdb.Chat{
+							{
+								ID:   3,
+								GUID: "testguid3",
+							},
+						},
 					},
 				}, nil)
 				dbMock.EXPECT().GetMessageIDs(1).Return(
@@ -271,6 +282,68 @@ func TestExportChats(t *testing.T) {
 			wantCount: 6,
 		},
 		{
+			msg: "merged chats",
+			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
+					{
+						Name: "testdisplayname",
+						Chats: []chatdb.Chat{
+							{
+								ID:   1,
+								GUID: "testguid",
+							},
+							{
+								ID:   2,
+								GUID: "testguid2",
+							},
+						},
+					},
+					{
+						Name: "testdisplayname2",
+						Chats: []chatdb.Chat{
+							{
+								ID:   3,
+								GUID: "testguid3",
+							},
+						},
+					},
+				}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 100, Date: 1},
+						{ID: 200, Date: 2},
+					},
+					nil,
+				)
+				dbMock.EXPECT().GetMessage(100, nil, nil).Return("message100\n", nil)
+				dbMock.EXPECT().GetMessage(200, nil, nil).Return("message200\n", nil)
+				dbMock.EXPECT().GetMessageIDs(2).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 300, Date: 3},
+						{ID: 400, Date: 0},
+					},
+					nil,
+				)
+				dbMock.EXPECT().GetMessage(300, nil, nil).Return("message300\n", nil)
+				dbMock.EXPECT().GetMessage(400, nil, nil).Return("message400\n", nil)
+				dbMock.EXPECT().GetMessageIDs(3).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 500, Date: 0},
+						{ID: 600, Date: 0},
+					},
+					nil,
+				)
+				dbMock.EXPECT().GetMessage(500, nil, nil).Return("message500\n", nil)
+				dbMock.EXPECT().GetMessage(600, nil, nil).Return("message600\n", nil)
+			},
+			mergeChats: true,
+			wantFiles: map[string]string{
+				"backup/testdisplayname/testguid;;;testguid2.txt": "message400\nmessage100\nmessage200\nmessage300\n",
+				"backup/testdisplayname2/testguid3.txt":           "message500\nmessage600\n",
+			},
+			wantCount: 6,
+		},
+		{
 			msg: "GetChats error",
 			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
 				dbMock.EXPECT().GetChats(nil).Return(nil, errors.New("this is a DB error"))
@@ -280,13 +353,24 @@ func TestExportChats(t *testing.T) {
 		{
 			msg: "directory creation error",
 			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
-				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 					{
-						ID:          1,
-						GUID:        "testguid",
-						DisplayName: "testdisplayname",
+						Name: "testdisplayname",
+						Chats: []chatdb.Chat{
+							{
+								ID:   1,
+								GUID: "testguid",
+							},
+						},
 					},
 				}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 100, Date: 0},
+						{ID: 200, Date: 0},
+					},
+					nil,
+				)
 			},
 			roFs:    true,
 			wantErr: "create directory \"backup/testdisplayname\": operation not permitted",
@@ -294,11 +378,15 @@ func TestExportChats(t *testing.T) {
 		{
 			msg: "GetMessageIDs error",
 			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
-				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 					{
-						ID:          1,
-						GUID:        "testguid",
-						DisplayName: "testdisplayname",
+						Name: "testdisplayname",
+						Chats: []chatdb.Chat{
+							{
+								ID:   1,
+								GUID: "testguid",
+							},
+						},
 					},
 				}, nil)
 				dbMock.EXPECT().GetMessageIDs(1).Return(nil, errors.New("this is a DB error"))
@@ -308,11 +396,15 @@ func TestExportChats(t *testing.T) {
 		{
 			msg: "GetMessage error",
 			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
-				dbMock.EXPECT().GetChats(nil).Return([]chatdb.Chat{
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 					{
-						ID:          1,
-						GUID:        "testguid",
-						DisplayName: "testdisplayname",
+						Name: "testdisplayname",
+						Chats: []chatdb.Chat{
+							{
+								ID:   1,
+								GUID: "testguid",
+							},
+						},
 					},
 				}, nil)
 				dbMock.EXPECT().GetMessageIDs(1).Return(
@@ -341,7 +433,12 @@ func TestExportChats(t *testing.T) {
 			}
 			s := opsys.NewOS(fs, nil, nil)
 
-			count, err := exportChats(s, dbMock, "backup", nil, nil, nil)
+			count, err := exportChats(
+				configuration{
+					OS:         s,
+					ChatDB:     dbMock,
+					ExportPath: "backup",
+				}, nil, tt.mergeChats)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
