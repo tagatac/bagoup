@@ -109,7 +109,7 @@ func TestGetChats(t *testing.T) {
 		msg        string
 		contactMap map[string]*vcard.Card
 		setupQuery func(*sqlmock.ExpectedQuery)
-		wantChats  []Chat
+		wantChats  []EntityChats
 		wantErr    string
 	}{
 		{
@@ -117,19 +117,32 @@ func TestGetChats(t *testing.T) {
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"ROWID", "guid", "chat_identifier", "display_name"}).
 					AddRow(1, "testguid1", "testchatname1", "testdisplayname1").
-					AddRow(2, "testguid2", "testchatname2", "")
+					AddRow(2, "testguid2", "testchatname2", "").
+					AddRow(3, "testguid3", "testchatname2", "")
 				query.WillReturnRows(rows)
 			},
-			wantChats: []Chat{
+			wantChats: []EntityChats{
 				{
-					ID:          1,
-					GUID:        "testguid1",
-					DisplayName: "testdisplayname1",
+					Name: "testchatname2",
+					Chats: []Chat{
+						{
+							ID:   2,
+							GUID: "testguid2",
+						},
+						{
+							ID:   3,
+							GUID: "testguid3",
+						},
+					},
 				},
 				{
-					ID:          2,
-					GUID:        "testguid2",
-					DisplayName: "testchatname2",
+					Name: "testdisplayname1",
+					Chats: []Chat{
+						{
+							ID:   1,
+							GUID: "testguid1",
+						},
+					},
 				},
 			},
 		},
@@ -145,19 +158,32 @@ func TestGetChats(t *testing.T) {
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"ROWID", "guid", "chat_identifier", "display_name"}).
 					AddRow(1, "testguid1", "testchatname1", "testdisplayname1").
-					AddRow(2, "testguid2", "testchatname2", "")
+					AddRow(2, "testguid2", "testchatname2", "").
+					AddRow(3, "testguid3", "testchatname2", "")
 				query.WillReturnRows(rows)
 			},
-			wantChats: []Chat{
+			wantChats: []EntityChats{
 				{
-					ID:          1,
-					GUID:        "testguid1",
-					DisplayName: "testdisplayname1",
+					Name: "Contactgiven Contactsurname",
+					Chats: []Chat{
+						{
+							ID:   2,
+							GUID: "testguid2",
+						},
+						{
+							ID:   3,
+							GUID: "testguid3",
+						},
+					},
 				},
 				{
-					ID:          2,
-					GUID:        "testguid2",
-					DisplayName: "Contactgiven Contactsurname",
+					Name: "testdisplayname1",
+					Chats: []Chat{
+						{
+							ID:   1,
+							GUID: "testguid1",
+						},
+					},
 				},
 			},
 		},
@@ -218,19 +244,6 @@ func TestGetMessageIDs(t *testing.T) {
 			wantIDs: []DatedMessageID{
 				{192, 593720716},
 				{168, 601412272},
-			},
-		},
-		{
-			msg: "success reorder",
-			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"message_id", "message_date"}).
-					AddRow(192, 601412272).
-					AddRow(168, 593720716622331392)
-				query.WillReturnRows(rows)
-			},
-			wantIDs: []DatedMessageID{
-				{168, 593720716},
-				{192, 601412272},
 			},
 		},
 		{

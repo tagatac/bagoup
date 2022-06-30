@@ -37,10 +37,10 @@ func (m *MockChatDB) EXPECT() *MockChatDBMockRecorder {
 }
 
 // GetChats mocks base method.
-func (m *MockChatDB) GetChats(arg0 map[string]*vcard.Card) ([]chatdb.Chat, error) {
+func (m *MockChatDB) GetChats(arg0 map[string]*vcard.Card) ([]chatdb.EntityChats, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetChats", arg0)
-	ret0, _ := ret[0].([]chatdb.Chat)
+	ret0, _ := ret[0].([]chatdb.EntityChats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

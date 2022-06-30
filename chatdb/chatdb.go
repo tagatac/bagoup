@@ -12,6 +12,7 @@ package chatdb
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/Masterminds/semver"
@@ -146,6 +147,7 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 	for _, entityChats := range addressChats {
 		chats = append(chats, entityChats)
 	}
+	sort.SliceStable(chats, func(i, j int) bool { return chats[i].Name < chats[j].Name })
 	return chats, nil
 }
 
