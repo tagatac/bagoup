@@ -1,9 +1,3 @@
-codecov:
-  branch: main
-
 coverage:
   status:
-    project:
-      default:
-        target: 72%
-        threshold: 0.5%
+    patch: off
