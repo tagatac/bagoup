@@ -158,8 +158,8 @@ func TestGetChats(t *testing.T) {
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"ROWID", "guid", "chat_identifier", "display_name"}).
 					AddRow(1, "testguid1", "testchatname1", "testdisplayname1").
-					AddRow(2, "testguid2", "testchatname2", "").
-					AddRow(3, "testguid3", "testchatname2", "")
+					AddRow(2, "testguid2", "testchatname2", "testdisplayname2").
+					AddRow(3, "testguid3", "testchatname2", "testdisplayname2")
 				query.WillReturnRows(rows)
 			},
 			wantChats: []EntityChats{
