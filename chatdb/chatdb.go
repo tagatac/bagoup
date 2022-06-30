@@ -134,7 +134,7 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 			ID:   id,
 			GUID: guid,
 		}
-		if card, ok := contactMap[displayName]; ok {
+		if card, ok := contactMap[name]; ok {
 			addContactChat(card, displayName, chat, contactChats)
 		} else {
 			addAddressChat(name, displayName, chat, addressChats)
