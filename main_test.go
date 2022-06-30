@@ -376,6 +376,32 @@ func TestExportChats(t *testing.T) {
 			wantErr: "create directory \"backup/testdisplayname\": operation not permitted",
 		},
 		{
+			msg: "directory creation error - with chat merge",
+			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
+				dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
+					{
+						Name: "testdisplayname",
+						Chats: []chatdb.Chat{
+							{
+								ID:   1,
+								GUID: "testguid",
+							},
+						},
+					},
+				}, nil)
+				dbMock.EXPECT().GetMessageIDs(1).Return(
+					[]chatdb.DatedMessageID{
+						{ID: 100, Date: 0},
+						{ID: 200, Date: 0},
+					},
+					nil,
+				)
+			},
+			roFs:       true,
+			mergeChats: true,
+			wantErr:    "create directory \"backup/testdisplayname\": operation not permitted",
+		},
+		{
 			msg: "GetMessageIDs error",
 			setupMock: func(dbMock *mock_chatdb.MockChatDB) {
 				dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
