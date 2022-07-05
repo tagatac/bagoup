@@ -34,6 +34,7 @@ type (
 		// addresses specified in those cards, from the vcard file at the given
 		// path.
 		GetContactMap(path string) (map[string]*vcard.Card, error)
+		NewOutFile(filePath string, isPDF bool) (OutFile, error)
 	}
 
 	opSys struct {

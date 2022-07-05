@@ -3,7 +3,7 @@ ZIPFILE="bagoup-$(shell uname -s)-$(shell uname -m).zip"
 
 build: bagoup
 
-bagoup: main.go opsys/opsys.go chatdb/chatdb.go vendor
+bagoup: main.go opsys/opsys.go opsys/outfile.go chatdb/chatdb.go vendor
 	go build -o $@ $<
 
 vendor: go.mod go.sum

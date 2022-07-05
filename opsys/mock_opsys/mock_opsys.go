@@ -13,6 +13,7 @@ import (
 	vcard "github.com/emersion/go-vcard"
 	gomock "github.com/golang/mock/gomock"
 	afero "github.com/spf13/afero"
+	opsys "github.com/tagatac/bagoup/opsys"
 )
 
 // MockOS is a mock of OS interface.
@@ -180,6 +181,21 @@ func (m *MockOS) Name() string {
 func (mr *MockOSMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockOS)(nil).Name))
+}
+
+// NewOutFile mocks base method.
+func (m *MockOS) NewOutFile(arg0 string, arg1 bool) (opsys.OutFile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewOutFile", arg0, arg1)
+	ret0, _ := ret[0].(opsys.OutFile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewOutFile indicates an expected call of NewOutFile.
+func (mr *MockOSMockRecorder) NewOutFile(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOutFile", reflect.TypeOf((*MockOS)(nil).NewOutFile), arg0, arg1)
 }
 
 // Open mocks base method.

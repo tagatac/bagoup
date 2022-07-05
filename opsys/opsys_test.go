@@ -113,10 +113,10 @@ func TestRunExecCmd(t *testing.T) {
 	if os.Getenv("BAGOUP_WANT_TEST_RUN_EXEC_CMD") != "1" {
 		return
 	}
-	fmt.Fprintf(os.Stdout, os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_OUTPUT"))
+	fmt.Fprint(os.Stdout, os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_OUTPUT"))
 	err := os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_ERROR")
 	if err != "" {
-		fmt.Fprintf(os.Stderr, err)
+		fmt.Fprint(os.Stderr, err)
 		os.Exit(1)
 	}
 	os.Exit(0)

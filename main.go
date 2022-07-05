@@ -46,14 +46,15 @@ type options struct {
 	ContactsPath  *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
 	SelfHandle    string  `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
 	SeparateChats bool    `long:"separate-chats" description:"Do not merge chats with the same contact into a single file, e.g. iMessage and SMS"`
+	OutputPDF     bool    `short:"p" long:"pdf" description:"Export text and images to PDF files (requires full disk access)"`
 }
 
 type configuration struct {
 	opsys.OS
 	chatdb.ChatDB
-	ExportPath   string
 	MacOSVersion *semver.Version
 	HandleMap    map[int]string
+	Options      options
 }
 
 func main() {
@@ -71,11 +72,11 @@ func main() {
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	config := configuration{
-		OS:         s,
-		ChatDB:     cdb,
-		ExportPath: opts.ExportPath,
+		OS:      s,
+		ChatDB:  cdb,
+		Options: opts,
 	}
-	logFatalOnErr(bagoup(opts, config))
+	logFatalOnErr(bagoup(config))
 }
 
 func logFatalOnErr(err error) {
@@ -84,7 +85,8 @@ func logFatalOnErr(err error) {
 	}
 }
 
-func bagoup(opts options, config configuration) error {
+func bagoup(config configuration) error {
+	opts := config.Options
 	if err := validatePaths(config.OS, opts); err != nil {
 		return err
 	}
@@ -112,7 +114,7 @@ func bagoup(opts options, config configuration) error {
 		return errors.Wrap(err, "get handle map")
 	}
 
-	count, err := exportChats(config, contactMap, !opts.SeparateChats)
+	count, err := exportChats(config, contactMap)
 	fmt.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
 	if err != nil {
 		return errors.Wrap(err, "export chats")
@@ -137,7 +139,8 @@ func validatePaths(s opsys.OS, opts options) error {
 	return nil
 }
 
-func exportChats(config configuration, contactMap map[string]*vcard.Card, mergeChats bool) (int, error) {
+func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, error) {
+	mergeChats := !config.Options.SeparateChats
 	count := 0
 	chats, err := config.ChatDB.GetChats(contactMap)
 	if err != nil {
@@ -174,17 +177,17 @@ func exportChats(config configuration, contactMap map[string]*vcard.Card, mergeC
 }
 
 func writeFile(config configuration, entityName string, guids []string, messageIDs []chatdb.DatedMessageID) (int, error) {
-	chatDirPath := path.Join(config.ExportPath, entityName)
+	chatDirPath := path.Join(config.Options.ExportPath, entityName)
 	if err := config.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return 0, errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
 	fileName := strings.Join(guids, ";;;")
-	chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", fileName))
-	chatFile, err := config.OS.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	chatPath := path.Join(chatDirPath, fileName)
+	outFile, err := config.OS.NewOutFile(chatPath, config.Options.OutputPDF)
 	if err != nil {
 		return 0, errors.Wrapf(err, "open/create file %s", chatPath)
 	}
-	defer chatFile.Close()
+	defer outFile.Close()
 
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	var count int
@@ -193,11 +196,11 @@ func writeFile(config configuration, entityName string, guids []string, messageI
 		if err != nil {
 			return count, errors.Wrapf(err, "get message with ID %d", messageID)
 		}
-		if _, err := chatFile.WriteString(msg); err != nil {
-			return count, errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
+		if err := outFile.WriteMessage(msg); err != nil {
+			return count, errors.Wrapf(err, "write message %q to file %q", msg, chatPath)
 		}
 		count++
 	}
-	chatFile.Close()
-	return count, nil
+	err = outFile.Close()
+	return count, err
 }
