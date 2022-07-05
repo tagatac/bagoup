@@ -20,6 +20,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
+	"github.com/jung-kurt/gofpdf"
 	"github.com/pkg/errors"
 )
 
@@ -33,9 +34,6 @@ const (
 
 var _datetimeFormula = "(date/" + strconv.Itoa(_newDateMultiple) + ") + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 var _modernVersion = semver.MustParse("10.13")
-
-var _typeHEIC = "image/heic"
-var _typeJPEG = "image/jpeg"
 
 // EntityChats represents all of the chats with a given entity (associated
 // with the same vCard, phone number, or email address). In the case of group
@@ -258,7 +256,9 @@ func (d *chatDB) GetImagePaths() (map[int]string, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "get path for attachment %d to message %d", attachmentID, msgID)
 		}
-		if mimeType != _typeJPEG {
+		fpdf := gofpdf.Fpdf{}
+		tp := fpdf.ImageTypeFromMime(mimeType)
+		if tp != "jpg" {
 			continue
 		}
 		imagePaths[msgID] = filename

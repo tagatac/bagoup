@@ -66,6 +66,21 @@ func (mr *MockChatDBMockRecorder) GetHandleMap(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHandleMap", reflect.TypeOf((*MockChatDB)(nil).GetHandleMap), arg0)
 }
 
+// GetImagePaths mocks base method.
+func (m *MockChatDB) GetImagePaths() (map[int]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetImagePaths")
+	ret0, _ := ret[0].(map[int]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetImagePaths indicates an expected call of GetImagePaths.
+func (mr *MockChatDBMockRecorder) GetImagePaths() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImagePaths", reflect.TypeOf((*MockChatDB)(nil).GetImagePaths))
+}
+
 // GetMessage mocks base method.
 func (m *MockChatDB) GetMessage(arg0 int, arg1 map[int]string, arg2 *semver.Version) (string, error) {
 	m.ctrl.T.Helper()

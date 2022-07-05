@@ -1,34 +1,53 @@
 package opsys
 
 import (
-	"errors"
 	"fmt"
+	"image/jpeg"
+	"math"
 	"os"
 
 	"github.com/johnfercher/maroto/pkg/consts"
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
-type OutFile interface {
-	Name() string
-	WriteMessage(msg string) error
-	WriteImage(imgPath string) error
-	Close() error
-}
+type (
+	OutFile interface {
+		Name() string
+		WriteMessage(msg string) error
+		WriteImage(imgPath string) error
+		Close() error
+	}
 
-type txtFile struct {
-	afero.File
-}
+	txtFile struct {
+		afero.File
+	}
+
+	pdfFile struct {
+		pdf.Maroto
+		filePath   string
+		pageWidth  float64
+		pageHeight float64
+		closed     bool
+	}
+)
 
 func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
 	if isPDF {
+		m := pdf.NewMaroto(consts.Portrait, consts.Letter)
+		m.AddPage()
+		pageWidth, pageHeight := m.GetPageSize()
+		leftMargin, topMargin, rightMargin, bottomMargin := m.GetPageMargins()
+		pageWidth = pageWidth - leftMargin - rightMargin
+		pageHeight = pageHeight - topMargin - bottomMargin
 		thisFile := pdfFile{
-			Maroto:   pdf.NewMaroto(consts.Portrait, consts.Letter),
-			filePath: fmt.Sprintf("%s.pdf", filePath),
+			Maroto:     m,
+			filePath:   fmt.Sprintf("%s.pdf", filePath),
+			pageWidth:  pageWidth,
+			pageHeight: pageHeight,
 		}
-		thisFile.AddPage()
 		return &thisFile, nil
 	}
 	chatFile, err := s.OpenFile(fmt.Sprintf("%s.txt", filePath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -44,17 +63,11 @@ func (f txtFile) WriteImage(imgPath string) error {
 	return errors.New("illegal attempt to write image to text file - open an issue at https://github.com/tagatac/bagoup/issues")
 }
 
-type pdfFile struct {
-	pdf.Maroto
-	filePath string
-	closed   bool
-}
-
-func (f pdfFile) Name() string {
+func (f *pdfFile) Name() string {
 	return f.filePath
 }
 
-func (f pdfFile) WriteMessage(msg string) error {
+func (f *pdfFile) WriteMessage(msg string) error {
 	textProp := props.Text{Extrapolate: true}
 	f.Row(4, func() {
 		f.Text(msg, textProp)
@@ -62,8 +75,17 @@ func (f pdfFile) WriteMessage(msg string) error {
 	return nil
 }
 
-func (f pdfFile) WriteImage(imgPath string) error {
-	f.Row(40, func() {
+func (f *pdfFile) WriteImage(imgPath string) error {
+	reader, err := os.Open(imgPath)
+	if err != nil {
+		return errors.Wrap(err, "open image file to get dimensions")
+	}
+	imgCfg, err := jpeg.DecodeConfig(reader)
+	if err != nil {
+		return errors.Wrap(err, "decode config from JPEG to get dimensions")
+	}
+	rowHeight := math.Min(f.pageHeight-1, float64(imgCfg.Height))
+	f.Row(rowHeight, func() {
 		f.FileImage(imgPath)
 	})
 	return nil
