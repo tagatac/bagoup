@@ -12,6 +12,7 @@ import (
 )
 
 type OutFile interface {
+	Name() string
 	WriteMessage(msg string) error
 	WriteImage(imgPath string) error
 	Close() error
@@ -40,13 +41,17 @@ func (f txtFile) WriteMessage(msg string) error {
 }
 
 func (f txtFile) WriteImage(imgPath string) error {
-	return errors.New("unable to write images to text files")
+	return errors.New("illegal attempt to write image to text file - open an issue at https://github.com/tagatac/bagoup/issues")
 }
 
 type pdfFile struct {
 	pdf.Maroto
 	filePath string
 	closed   bool
+}
+
+func (f pdfFile) Name() string {
+	return f.filePath
 }
 
 func (f pdfFile) WriteMessage(msg string) error {
@@ -58,7 +63,10 @@ func (f pdfFile) WriteMessage(msg string) error {
 }
 
 func (f pdfFile) WriteImage(imgPath string) error {
-	return errors.New("writing images not yet implemented")
+	f.Row(40, func() {
+		f.FileImage(imgPath)
+	})
+	return nil
 }
 
 func (f *pdfFile) Close() error {

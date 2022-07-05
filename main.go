@@ -50,11 +50,12 @@ type options struct {
 }
 
 type configuration struct {
+	Options options
 	opsys.OS
 	chatdb.ChatDB
 	MacOSVersion *semver.Version
 	HandleMap    map[int]string
-	Options      options
+	ImagePaths   map[int]string
 }
 
 func main() {
@@ -140,9 +141,17 @@ func validatePaths(s opsys.OS, opts options) error {
 }
 
 func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, error) {
+	if config.Options.OutputPDF {
+		imagePaths, err := config.GetImagePaths()
+		if err != nil {
+			return 0, errors.Wrap(err, "get image paths")
+		}
+		config.ImagePaths = imagePaths
+	}
+
 	mergeChats := !config.Options.SeparateChats
 	count := 0
-	chats, err := config.ChatDB.GetChats(contactMap)
+	chats, err := config.GetChats(contactMap)
 	if err != nil {
 		return count, errors.Wrap(err, "get chats")
 	}
@@ -150,7 +159,7 @@ func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, 
 		var guids []string
 		var entityMessageIDs []chatdb.DatedMessageID
 		for _, chat := range entityChats.Chats {
-			messageIDs, err := config.ChatDB.GetMessageIDs(chat.ID)
+			messageIDs, err := config.GetMessageIDs(chat.ID)
 			if err != nil {
 				return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 			}
@@ -178,26 +187,33 @@ func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, 
 
 func writeFile(config configuration, entityName string, guids []string, messageIDs []chatdb.DatedMessageID) (int, error) {
 	chatDirPath := path.Join(config.Options.ExportPath, entityName)
-	if err := config.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
+	if err := config.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return 0, errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
 	fileName := strings.Join(guids, ";;;")
 	chatPath := path.Join(chatDirPath, fileName)
-	outFile, err := config.OS.NewOutFile(chatPath, config.Options.OutputPDF)
+	outFile, err := config.NewOutFile(chatPath, config.Options.OutputPDF)
 	if err != nil {
-		return 0, errors.Wrapf(err, "open/create file %s", chatPath)
+		return 0, errors.Wrapf(err, "open/create file %q", chatPath)
 	}
 	defer outFile.Close()
 
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	var count int
 	for _, messageID := range messageIDs {
-		msg, err := config.ChatDB.GetMessage(messageID.ID, config.HandleMap, config.MacOSVersion)
+		msg, err := config.GetMessage(messageID.ID, config.HandleMap, config.MacOSVersion)
 		if err != nil {
 			return count, errors.Wrapf(err, "get message with ID %d", messageID)
 		}
 		if err := outFile.WriteMessage(msg); err != nil {
-			return count, errors.Wrapf(err, "write message %q to file %q", msg, chatPath)
+			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
+		}
+		if config.Options.OutputPDF {
+			if imgPath, ok := config.ImagePaths[messageID.ID]; ok {
+				if err := outFile.WriteImage(imgPath); err != nil {
+					return count, errors.Wrapf(err, "write image %q to file %q", imgPath, outFile.Name())
+				}
+			}
 		}
 		count++
 	}
