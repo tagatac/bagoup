@@ -2,16 +2,37 @@ package opsys
 
 import (
 	"fmt"
-	"image/jpeg"
-	"math"
 	"os"
+	"path"
+	"strings"
 
-	"github.com/johnfercher/maroto/pkg/consts"
-	"github.com/johnfercher/maroto/pkg/pdf"
-	"github.com/johnfercher/maroto/pkg/props"
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"golang.org/x/net/html"
 )
+
+// Copied from https://github.com/wkhtmltopdf/wkhtmltopdf/issues/2913#issuecomment-1011269370
+const _twemojiScript string = `
+<style>
+img.emoji {
+    height: 1em;
+    width: 1em;
+    margin: 0 .05em 0 .1em;
+    vertical-align: -0.1em;
+}
+</style>
+<script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
+<script>window.onload = function () { twemoji.parse(document.body);}</script>
+`
+const _imgMaxDimensions string = `
+<style>
+img {
+    max-width:900px;
+    max-height:1300px;
+}
+</style>
+`
 
 type (
 	OutFile interface {
@@ -26,27 +47,37 @@ type (
 	}
 
 	pdfFile struct {
-		pdf.Maroto
-		filePath   string
-		pageWidth  float64
-		pageHeight float64
-		closed     bool
+		*wkhtmltopdf.PDFGenerator
+		filePath string
+		contents string
+		closed   bool
 	}
 )
 
 func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
 	if isPDF {
-		m := pdf.NewMaroto(consts.Portrait, consts.Letter)
-		m.AddPage()
-		pageWidth, pageHeight := m.GetPageSize()
-		leftMargin, topMargin, rightMargin, bottomMargin := m.GetPageMargins()
-		pageWidth = pageWidth - leftMargin - rightMargin
-		pageHeight = pageHeight - topMargin - bottomMargin
+		pdfg, err := wkhtmltopdf.NewPDFGenerator()
+		if err != nil {
+			return nil, errors.Wrap(err, "create PDF generator")
+		}
+		contents := fmt.Sprintf(`<!doctype html>
+<html>
+	<head>
+		<title>%s</title>
+		<meta charset="UTF-8">
+		%s
+		%s
+	</head>
+	<body>
+`,
+			path.Base(filePath),
+			_twemojiScript,
+			_imgMaxDimensions,
+		)
 		thisFile := pdfFile{
-			Maroto:     m,
-			filePath:   fmt.Sprintf("%s.pdf", filePath),
-			pageWidth:  pageWidth,
-			pageHeight: pageHeight,
+			PDFGenerator: pdfg,
+			filePath:     fmt.Sprintf("%s.pdf", filePath),
+			contents:     contents,
 		}
 		return &thisFile, nil
 	}
@@ -68,26 +99,13 @@ func (f *pdfFile) Name() string {
 }
 
 func (f *pdfFile) WriteMessage(msg string) error {
-	textProp := props.Text{Extrapolate: true}
-	f.Row(4, func() {
-		f.Text(msg, textProp)
-	})
+	msg = strings.ReplaceAll(html.EscapeString(msg), "\n", "<br/>")
+	f.contents = f.contents + "\t\t" + msg + "\n"
 	return nil
 }
 
 func (f *pdfFile) WriteImage(imgPath string) error {
-	reader, err := os.Open(imgPath)
-	if err != nil {
-		return errors.Wrap(err, "open image file to get dimensions")
-	}
-	imgCfg, err := jpeg.DecodeConfig(reader)
-	if err != nil {
-		return errors.Wrap(err, "decode config from JPEG to get dimensions")
-	}
-	rowHeight := math.Min(f.pageHeight-1, float64(imgCfg.Height))
-	f.Row(rowHeight, func() {
-		f.FileImage(imgPath)
-	})
+	f.contents = f.contents + fmt.Sprintf("\t\t<img src=%q/><br/>\n", imgPath)
 	return nil
 }
 
@@ -96,5 +114,12 @@ func (f *pdfFile) Close() error {
 		return nil
 	}
 	f.closed = true
-	return f.OutputFileAndClose(f.filePath)
+	contents := f.contents + "\n\t</body>\n</html>"
+	page := wkhtmltopdf.NewPageReader(strings.NewReader(contents))
+	page.EnableLocalFileAccess.Set(true)
+	f.AddPage(page)
+	if err := f.Create(); err != nil {
+		return errors.Wrap(err, "create PDF in internal buffer")
+	}
+	return errors.Wrap(f.WriteFile(f.filePath), "write buffer contents to file")
 }
