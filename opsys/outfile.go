@@ -64,7 +64,7 @@ func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
 <html>
 	<head>
 		<title>%s</title>
-		<meta charset="UTF-8">
+		<meta charset="utf-8">
 		%s
 		%s
 	</head>

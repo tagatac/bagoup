@@ -196,9 +196,10 @@ func TestBagoup(t *testing.T) {
 			dbMock := mock_chatdb.NewMockChatDB(ctrl)
 			tt.setupMocks(osMock, dbMock)
 
-			err := bagoup(tt.opts, configuration{
-				OS:     osMock,
-				ChatDB: dbMock,
+			err := bagoup(configuration{
+				Options: tt.opts,
+				OS:      osMock,
+				ChatDB:  dbMock,
 			})
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
@@ -211,13 +212,13 @@ func TestBagoup(t *testing.T) {
 
 func TestExportChats(t *testing.T) {
 	tests := []struct {
-		msg        string
-		setupMock  func(*mock_chatdb.MockChatDB)
-		roFs       bool
-		mergeChats bool
-		wantFiles  map[string]string
-		wantCount  int
-		wantErr    string
+		msg           string
+		setupMock     func(*mock_chatdb.MockChatDB)
+		roFs          bool
+		separateChats bool
+		wantFiles     map[string]string
+		wantCount     int
+		wantErr       string
 	}{
 		{
 			msg: "two chats for one display name, one for another",
@@ -274,6 +275,7 @@ func TestExportChats(t *testing.T) {
 				dbMock.EXPECT().GetMessage(500, nil, nil).Return("message500\n", nil)
 				dbMock.EXPECT().GetMessage(600, nil, nil).Return("message600\n", nil)
 			},
+			separateChats: true,
 			wantFiles: map[string]string{
 				"backup/testdisplayname/testguid.txt":   "message100\nmessage200\n",
 				"backup/testdisplayname/testguid2.txt":  "message300\nmessage400\n",
@@ -336,7 +338,6 @@ func TestExportChats(t *testing.T) {
 				dbMock.EXPECT().GetMessage(500, nil, nil).Return("message500\n", nil)
 				dbMock.EXPECT().GetMessage(600, nil, nil).Return("message600\n", nil)
 			},
-			mergeChats: true,
 			wantFiles: map[string]string{
 				"backup/testdisplayname/testguid;;;testguid2.txt": "message400\nmessage100\nmessage200\nmessage300\n",
 				"backup/testdisplayname2/testguid3.txt":           "message500\nmessage600\n",
@@ -372,8 +373,9 @@ func TestExportChats(t *testing.T) {
 					nil,
 				)
 			},
-			roFs:    true,
-			wantErr: "create directory \"backup/testdisplayname\": operation not permitted",
+			roFs:          true,
+			separateChats: true,
+			wantErr:       "create directory \"backup/testdisplayname\": operation not permitted",
 		},
 		{
 			msg: "directory creation error - with chat merge",
@@ -397,9 +399,8 @@ func TestExportChats(t *testing.T) {
 					nil,
 				)
 			},
-			roFs:       true,
-			mergeChats: true,
-			wantErr:    "create directory \"backup/testdisplayname\": operation not permitted",
+			roFs:    true,
+			wantErr: "create directory \"backup/testdisplayname\": operation not permitted",
 		},
 		{
 			msg: "GetMessageIDs error",
@@ -461,10 +462,13 @@ func TestExportChats(t *testing.T) {
 
 			count, err := exportChats(
 				configuration{
-					OS:         s,
-					ChatDB:     dbMock,
-					ExportPath: "backup",
-				}, nil, tt.mergeChats)
+					Options: options{
+						ExportPath:    "backup",
+						SeparateChats: tt.separateChats,
+					},
+					OS:     s,
+					ChatDB: dbMock,
+				}, nil)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
