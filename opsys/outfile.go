@@ -1,7 +1,10 @@
 package opsys
 
 import (
+	"bytes"
+	"embed"
 	"fmt"
+	"html/template"
 	"os"
 	"path"
 	"strings"
@@ -12,27 +15,8 @@ import (
 	"golang.org/x/net/html"
 )
 
-// Copied from https://github.com/wkhtmltopdf/wkhtmltopdf/issues/2913#issuecomment-1011269370
-const _twemojiScript string = `
-<style>
-img.emoji {
-    height: 1em;
-    width: 1em;
-    margin: 0 .05em 0 .1em;
-    vertical-align: -0.1em;
-}
-</style>
-<script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
-<script>window.onload = function () { twemoji.parse(document.body);}</script>
-`
-const _imgMaxDimensions string = `
-<style>
-img {
-    max-width:900px;
-    max-height:1300px;
-}
-</style>
-`
+//go:embed outfile_html.tmpl
+var _embedFS embed.FS
 
 type (
 	OutFile interface {
@@ -49,8 +33,16 @@ type (
 	pdfFile struct {
 		*wkhtmltopdf.PDFGenerator
 		filePath string
-		contents string
+		contents htmlFileData
 		closed   bool
+	}
+
+	htmlFileData struct {
+		Title string
+		Lines []htmlFileLine
+	}
+	htmlFileLine struct {
+		Element template.HTML
 	}
 )
 
@@ -60,24 +52,13 @@ func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "create PDF generator")
 		}
-		contents := fmt.Sprintf(`<!doctype html>
-<html>
-	<head>
-		<title>%s</title>
-		<meta charset="utf-8">
-		%s
-		%s
-	</head>
-	<body>
-`,
-			path.Base(filePath),
-			_twemojiScript,
-			_imgMaxDimensions,
-		)
 		thisFile := pdfFile{
 			PDFGenerator: pdfg,
 			filePath:     fmt.Sprintf("%s.pdf", filePath),
-			contents:     contents,
+			contents: htmlFileData{
+				Title: path.Base(filePath),
+				Lines: []htmlFileLine{},
+			},
 		}
 		return &thisFile, nil
 	}
@@ -99,13 +80,14 @@ func (f *pdfFile) Name() string {
 }
 
 func (f *pdfFile) WriteMessage(msg string) error {
-	msg = strings.ReplaceAll(html.EscapeString(msg), "\n", "<br/>")
-	f.contents = f.contents + "\t\t" + msg + "\n"
+	htmlMsg := template.HTML(strings.ReplaceAll(html.EscapeString(msg), "\n", "<br/>"))
+	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: htmlMsg})
 	return nil
 }
 
 func (f *pdfFile) WriteImage(imgPath string) error {
-	f.contents = f.contents + fmt.Sprintf("\t\t<img src=%q/><br/>\n", imgPath)
+	img := template.HTML(fmt.Sprintf("<img src=%q/><br/>", imgPath))
+	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: img})
 	return nil
 }
 
@@ -114,8 +96,15 @@ func (f *pdfFile) Close() error {
 		return nil
 	}
 	f.closed = true
-	contents := f.contents + "\n\t</body>\n</html>"
-	page := wkhtmltopdf.NewPageReader(strings.NewReader(contents))
+	tmpl, err := template.ParseFS(_embedFS, "outfile_html.tmpl")
+	if err != nil {
+		return errors.Wrap(err, "parse HTML template")
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, f.contents); err != nil {
+		return errors.Wrap(err, "execute HTML template")
+	}
+	page := wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
 	page.EnableLocalFileAccess.Set(true)
 	f.AddPage(page)
 	if err := f.Create(); err != nil {
