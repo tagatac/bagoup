@@ -15,6 +15,8 @@ import (
 	"golang.org/x/net/html"
 )
 
+var _unhandledAttachmentTypes []string = []string{".mov"}
+
 //go:embed outfile_html.tmpl
 var _embedFS embed.FS
 
@@ -32,9 +34,10 @@ type (
 
 	pdfFile struct {
 		*wkhtmltopdf.PDFGenerator
-		filePath string
-		contents htmlFileData
-		closed   bool
+		filePath                 string
+		contents                 htmlFileData
+		closed                   bool
+		unhandledAttachmentTypes []string
 	}
 
 	htmlFileData struct {
@@ -46,11 +49,15 @@ type (
 	}
 )
 
-func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
+func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, error) {
 	if isPDF {
 		pdfg, err := wkhtmltopdf.NewPDFGenerator()
 		if err != nil {
 			return nil, errors.Wrap(err, "create PDF generator")
+		}
+		unhandledAttachmentTypes := _unhandledAttachmentTypes
+		if !includePPA {
+			unhandledAttachmentTypes = append(unhandledAttachmentTypes, ".pluginpayloadattachment")
 		}
 		thisFile := pdfFile{
 			PDFGenerator: pdfg,
@@ -59,6 +66,7 @@ func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
 				Title: filepath.Base(filePath),
 				Lines: []htmlFileLine{},
 			},
+			unhandledAttachmentTypes: unhandledAttachmentTypes,
 		}
 		return &thisFile, nil
 	}
@@ -72,7 +80,7 @@ func (f txtFile) WriteMessage(msg string) error {
 }
 
 func (f txtFile) WriteImage(imgPath string) error {
-	return errors.New("illegal attempt to write image to text file - open an issue at https://github.com/tagatac/bagoup/issues")
+	return f.WriteMessage(fmt.Sprintf("<%s>\n", filepath.Base(imgPath)))
 }
 
 func (f *pdfFile) Name() string {
@@ -86,7 +94,14 @@ func (f *pdfFile) WriteMessage(msg string) error {
 }
 
 func (f *pdfFile) WriteImage(imgPath string) error {
-	img := template.HTML(fmt.Sprintf("<img src=%q/><br/>", imgPath))
+	img := template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", imgPath, filepath.Base(imgPath)))
+	ext := strings.ToLower(filepath.Ext(imgPath))
+	for _, t := range f.unhandledAttachmentTypes {
+		if ext == t {
+			img = template.HTML(fmt.Sprintf("<em>%s</em><br/>", filepath.Base(imgPath)))
+			break
+		}
+	}
 	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: img})
 	return nil
 }

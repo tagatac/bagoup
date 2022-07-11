@@ -81,6 +81,20 @@ func (mr *MockOSMockRecorder) Chtimes(arg0, arg1, arg2 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Chtimes", reflect.TypeOf((*MockOS)(nil).Chtimes), arg0, arg1, arg2)
 }
 
+// CopyFile mocks base method.
+func (m *MockOS) CopyFile(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopyFile", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CopyFile indicates an expected call of CopyFile.
+func (mr *MockOSMockRecorder) CopyFile(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyFile", reflect.TypeOf((*MockOS)(nil).CopyFile), arg0, arg1)
+}
+
 // Create mocks base method.
 func (m *MockOS) Create(arg0 string) (afero.File, error) {
 	m.ctrl.T.Helper()
@@ -94,6 +108,20 @@ func (m *MockOS) Create(arg0 string) (afero.File, error) {
 func (mr *MockOSMockRecorder) Create(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOS)(nil).Create), arg0)
+}
+
+// FileAccess mocks base method.
+func (m *MockOS) FileAccess(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FileAccess", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FileAccess indicates an expected call of FileAccess.
+func (mr *MockOSMockRecorder) FileAccess(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileAccess", reflect.TypeOf((*MockOS)(nil).FileAccess), arg0)
 }
 
 // FileExist mocks base method.
@@ -141,6 +169,21 @@ func (mr *MockOSMockRecorder) GetMacOSVersion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMacOSVersion", reflect.TypeOf((*MockOS)(nil).GetMacOSVersion))
 }
 
+// HEIC2JPG mocks base method.
+func (m *MockOS) HEIC2JPG(arg0 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HEIC2JPG", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HEIC2JPG indicates an expected call of HEIC2JPG.
+func (mr *MockOSMockRecorder) HEIC2JPG(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HEIC2JPG", reflect.TypeOf((*MockOS)(nil).HEIC2JPG), arg0)
+}
+
 // Mkdir mocks base method.
 func (m *MockOS) Mkdir(arg0 string, arg1 fs.FileMode) error {
 	m.ctrl.T.Helper()
@@ -184,18 +227,18 @@ func (mr *MockOSMockRecorder) Name() *gomock.Call {
 }
 
 // NewOutFile mocks base method.
-func (m *MockOS) NewOutFile(arg0 string, arg1 bool) (opsys.OutFile, error) {
+func (m *MockOS) NewOutFile(arg0 string, arg1, arg2 bool) (opsys.OutFile, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewOutFile", arg0, arg1)
+	ret := m.ctrl.Call(m, "NewOutFile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(opsys.OutFile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewOutFile indicates an expected call of NewOutFile.
-func (mr *MockOSMockRecorder) NewOutFile(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOSMockRecorder) NewOutFile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOutFile", reflect.TypeOf((*MockOS)(nil).NewOutFile), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOutFile", reflect.TypeOf((*MockOS)(nil).NewOutFile), arg0, arg1, arg2)
 }
 
 // Open mocks base method.
@@ -268,6 +311,20 @@ func (m *MockOS) Rename(arg0, arg1 string) error {
 func (mr *MockOSMockRecorder) Rename(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rename", reflect.TypeOf((*MockOS)(nil).Rename), arg0, arg1)
+}
+
+// RmTempDir mocks base method.
+func (m *MockOS) RmTempDir() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RmTempDir")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RmTempDir indicates an expected call of RmTempDir.
+func (mr *MockOSMockRecorder) RmTempDir() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RmTempDir", reflect.TypeOf((*MockOS)(nil).RmTempDir))
 }
 
 // Stat mocks base method.

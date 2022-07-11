@@ -67,10 +67,10 @@ func (mr *MockChatDBMockRecorder) GetHandleMap(arg0 interface{}) *gomock.Call {
 }
 
 // GetImagePaths mocks base method.
-func (m *MockChatDB) GetImagePaths() (map[int]string, error) {
+func (m *MockChatDB) GetImagePaths() (map[int][]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetImagePaths")
-	ret0, _ := ret[0].(map[int]string)
+	ret0, _ := ret[0].(map[int][]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -37,18 +37,18 @@ import (
 	"github.com/tagatac/bagoup/pathtools"
 )
 
-const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#chatdb-access"
-const _defaultDBPath = "~/Library/Messages/chat.db"
+const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access"
 
 type options struct {
 	DBPath          string  `short:"i" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
-	ExportPath      string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
+	ExportPath      string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"messages-export"`
 	MacOSVersion    *string `short:"m" long:"mac-os-version" description:"Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
 	ContactsPath    *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
 	SelfHandle      string  `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
-	SeparateChats   bool    `long:"separate-chats" description:"Do not merge chats with the same contact into a single file, e.g. iMessage and SMS"`
+	SeparateChats   bool    `long:"separate-chats" description:"Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file"`
 	OutputPDF       bool    `short:"p" long:"pdf" description:"Export text and images to PDF files (requires full disk access)"`
-	CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them"`
+	IncludePPA      bool    `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
+	CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
 }
 
 type configuration struct {
@@ -57,7 +57,7 @@ type configuration struct {
 	chatdb.ChatDB
 	MacOSVersion *semver.Version
 	HandleMap    map[int]string
-	ImagePaths   map[int]string
+	ImagePaths   map[int][]string
 }
 
 func main() {
@@ -121,22 +121,17 @@ func bagoup(config configuration) error {
 	}
 
 	count, err := exportChats(config, contactMap)
-	fmt.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
+	log.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
 	if err != nil {
 		return errors.Wrap(err, "export chats")
 	}
-	return nil
+	return config.RmTempDir()
 }
 
 func validatePaths(s opsys.OS, opts options) error {
-	if opts.DBPath == _defaultDBPath {
-		f, err := s.Open(opts.DBPath)
-		if err != nil {
-			return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
-		}
-		f.Close()
+	if err := s.FileAccess(opts.DBPath); err != nil {
+		return errors.Wrapf(err, "test DB file - FIX: %s", _readmeURL)
 	}
-
 	if exist, err := s.FileExist(opts.ExportPath); exist {
 		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", opts.ExportPath)
 	} else if err != nil {
@@ -146,12 +141,21 @@ func validatePaths(s opsys.OS, opts options) error {
 }
 
 func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, error) {
+	imagePaths, err := config.GetImagePaths()
+	if err != nil {
+		return 0, errors.Wrap(err, "get image paths")
+	}
+	config.ImagePaths = imagePaths
 	if config.Options.OutputPDF || config.Options.CopyAttachments {
-		imagePaths, err := config.GetImagePaths()
-		if err != nil {
-			return 0, errors.Wrap(err, "get image paths")
+		for _, msgPaths := range imagePaths {
+			if len(msgPaths) == 0 {
+				continue
+			}
+			if err := config.FileAccess(msgPaths[0]); err != nil {
+				return 0, errors.Wrapf(err, "access to attachments - FIX: %s", _readmeURL)
+			}
+			break
 		}
-		config.ImagePaths = imagePaths
 	}
 
 	mergeChats := !config.Options.SeparateChats
@@ -160,6 +164,7 @@ func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, 
 	if err != nil {
 		return count, errors.Wrap(err, "get chats")
 	}
+	defer config.RmTempDir()
 	for _, entityChats := range chats {
 		var guids []string
 		var entityMessageIDs []chatdb.DatedMessageID
@@ -197,7 +202,7 @@ func writeFile(config configuration, entityName string, guids []string, messageI
 	}
 	fileName := strings.Join(guids, ";;;")
 	chatPath := filepath.Join(chatDirPath, fileName)
-	outFile, err := config.NewOutFile(chatPath, config.Options.OutputPDF)
+	outFile, err := config.NewOutFile(chatPath, config.Options.OutputPDF, config.Options.IncludePPA)
 	if err != nil {
 		return 0, errors.Wrapf(err, "open/create file %q", chatPath)
 	}
@@ -219,15 +224,22 @@ func writeFile(config configuration, entityName string, guids []string, messageI
 		if err := outFile.WriteMessage(msg); err != nil {
 			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
 		}
-		if imgPath, ok := config.ImagePaths[messageID.ID]; ok {
-			if config.Options.OutputPDF {
+		if msgPaths, ok := config.ImagePaths[messageID.ID]; ok {
+			for _, imgPath := range msgPaths {
+				if config.Options.CopyAttachments {
+					if err := config.CopyFile(imgPath, attDir); err != nil {
+						return count, errors.Wrapf(err, "copy attachment %q to %q - POSSIBLE FIX: %s", imgPath, attDir, _readmeURL)
+					}
+				}
+				if config.Options.OutputPDF {
+					var err error
+					imgPath, err = config.HEIC2JPG(imgPath)
+					if err != nil {
+						return 0, errors.Wrapf(err, "convert HEIC file %q to JPG", imgPath)
+					}
+				}
 				if err := outFile.WriteImage(imgPath); err != nil {
 					return count, errors.Wrapf(err, "write image %q to file %q", imgPath, outFile.Name())
-				}
-			}
-			if config.Options.CopyAttachments {
-				if err := opsys.CopyFile(imgPath, attDir); err != nil {
-					return count, errors.Wrapf(err, "copy attachment %q to %q", imgPath, attDir)
 				}
 			}
 		}

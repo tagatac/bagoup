@@ -66,7 +66,7 @@ type (
 		// GetMessage returns a message retrieved from the database formatted for
 		// writing to a chat file.
 		GetMessage(messageID int, handleMap map[int]string, macOSVersion *semver.Version) (string, error)
-		GetImagePaths() (map[int]string, error)
+		GetImagePaths() (map[int][]string, error)
 	}
 
 	// DatedMessageID pairs a message ID and its date, in the legacy date format.
@@ -238,14 +238,14 @@ func (d *chatDB) getDatetimeFormula(macOSVersion *semver.Version) string {
 	return _datetimeFormula
 }
 
-func (d *chatDB) GetImagePaths() (map[int]string, error) {
+func (d *chatDB) GetImagePaths() (map[int][]string, error) {
 	attachmentJoins, err := d.DB.Query("SELECT message_id, attachment_id FROM message_attachment_join")
 	if err != nil {
 		return nil, errors.Wrapf(err, "scan message_attachment_join table")
 	}
 	defer attachmentJoins.Close()
 
-	imagePaths := map[int]string{}
+	imagePaths := map[int][]string{}
 	for attachmentJoins.Next() {
 		var msgID, attachmentID int
 		if err := attachmentJoins.Scan(&msgID, &attachmentID); err != nil {
@@ -255,7 +255,12 @@ func (d *chatDB) GetImagePaths() (map[int]string, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "get path for attachment %d to message %d", attachmentID, msgID)
 		}
-		imagePaths[msgID] = filename
+		imagePaths[msgID] = append(imagePaths[msgID], filename)
+		// if imagePaths[msgID] == nil {
+		// 	imagePaths[msgID] = []string{filename}
+		// } else {
+		// 	imagePaths[msgID] = append(imagePaths[msgID], filename)
+		// }
 	}
 	return imagePaths, nil
 }

@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.4.1
 	github.com/Masterminds/semver v1.5.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.7.2
+	github.com/adrium/goheif v0.0.0-20210309200126-b184a7b446fa
 	github.com/emersion/go-vcard v0.0.0-20220507122617-d4056df0ec4a
 	github.com/golang/mock v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
@@ -18,6 +19,7 @@ require (
 
 require (
 	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd // indirect
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.11 // indirect
