@@ -12,16 +12,15 @@ package chatdb
 import (
 	"database/sql"
 	"fmt"
-	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
-	"github.com/jung-kurt/gofpdf"
 	"github.com/pkg/errors"
+	"github.com/tagatac/bagoup/pathtools"
 )
 
 const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issues"
@@ -252,14 +251,9 @@ func (d *chatDB) GetImagePaths() (map[int]string, error) {
 		if err := attachmentJoins.Scan(&msgID, &attachmentID); err != nil {
 			return nil, errors.Wrap(err, "read data from message_attachment_join table")
 		}
-		filename, mimeType, err := d.getAttachmentPath(attachmentID)
+		filename, _, err := d.getAttachmentPath(attachmentID)
 		if err != nil {
 			return nil, errors.Wrapf(err, "get path for attachment %d to message %d", attachmentID, msgID)
-		}
-		fpdf := gofpdf.Fpdf{}
-		tp := fpdf.ImageTypeFromMime(mimeType)
-		if tp != "jpg" {
-			continue
 		}
 		imagePaths[msgID] = filename
 	}
@@ -280,10 +274,12 @@ func (d *chatDB) getAttachmentPath(attachmentID int) (string, string, error) {
 	if attachments.Next() {
 		return "", "", fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)
 	}
-	if strings.HasPrefix(filename, "~") {
-		filename = strings.Replace(filename, "~", os.Getenv("HOME"), 1)
-	} else if strings.HasPrefix(filename, "/var") {
-		filename = path.Join(path.Dir(filename), "0", path.Base(filename))
+	filename, err = pathtools.ReplaceTilde(filename)
+	if err != nil {
+		return "", "", errors.Wrap(err, "replace tilde")
+	}
+	if strings.HasPrefix(filename, "/var") {
+		filename = filepath.Join(filepath.Dir(filename), "0", filepath.Base(filename))
 	}
 	return filename, mimeType, nil
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
@@ -56,7 +56,7 @@ func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
 			PDFGenerator: pdfg,
 			filePath:     fmt.Sprintf("%s.pdf", filePath),
 			contents: htmlFileData{
-				Title: path.Base(filePath),
+				Title: filepath.Base(filePath),
 				Lines: []htmlFileLine{},
 			},
 		}

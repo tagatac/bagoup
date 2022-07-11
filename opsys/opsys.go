@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -117,4 +118,21 @@ func sanitizePhone(dirty string) string {
 		},
 		dirty,
 	)
+}
+
+func CopyFile(src, dstDir string) error {
+	fin, err := os.Open(src)
+	if err != nil {
+		return errors.Wrapf(err, "open source file %q", src)
+	}
+	defer fin.Close()
+	dst := filepath.Join(dstDir, filepath.Base(src))
+	fout, err := os.Create(dst)
+	if err != nil {
+		return errors.Wrapf(err, "create destination file %q", dst)
+	}
+	defer fout.Close()
+
+	_, err = io.Copy(fout, fin)
+	return err
 }

@@ -9,7 +9,6 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20220507122617-d4056df0ec4a
 	github.com/golang/mock v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.8.2
