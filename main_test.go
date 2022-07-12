@@ -196,11 +196,12 @@ func TestBagoup(t *testing.T) {
 			dbMock := mock_chatdb.NewMockChatDB(ctrl)
 			tt.setupMocks(osMock, dbMock)
 
-			err := bagoup(configuration{
+			c := configuration{
 				Options: tt.opts,
 				OS:      osMock,
 				ChatDB:  dbMock,
-			})
+			}
+			err := c.bagoup()
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
@@ -460,15 +461,15 @@ func TestExportChats(t *testing.T) {
 			}
 			s := opsys.NewOS(fs, nil, nil)
 
-			count, err := exportChats(
-				configuration{
-					Options: options{
-						ExportPath:    "backup",
-						SeparateChats: tt.separateChats,
-					},
-					OS:     s,
-					ChatDB: dbMock,
-				}, nil)
+			c := configuration{
+				Options: options{
+					ExportPath:    "backup",
+					SeparateChats: tt.separateChats,
+				},
+				OS:     s,
+				ChatDB: dbMock,
+			}
+			count, err := c.exportChats(nil)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return

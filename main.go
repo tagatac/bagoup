@@ -82,7 +82,7 @@ func main() {
 		ChatDB:  cdb,
 		Options: opts,
 	}
-	logFatalOnErr(bagoup(config))
+	logFatalOnErr(config.bagoup())
 }
 
 func logFatalOnErr(err error) {
@@ -91,7 +91,7 @@ func logFatalOnErr(err error) {
 	}
 }
 
-func bagoup(config configuration) error {
+func (config configuration) bagoup() error {
 	opts := config.Options
 	if err := validatePaths(config.OS, opts); err != nil {
 		return err
@@ -120,7 +120,7 @@ func bagoup(config configuration) error {
 		return errors.Wrap(err, "get handle map")
 	}
 
-	count, err := exportChats(config, contactMap)
+	count, err := config.exportChats(contactMap)
 	log.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
 	if err != nil {
 		return errors.Wrap(err, "export chats")
@@ -140,10 +140,31 @@ func validatePaths(s opsys.OS, opts options) error {
 	return nil
 }
 
-func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, error) {
+func (config configuration) exportChats(contactMap map[string]*vcard.Card) (int, error) {
+	if err := getAttachmentPaths(&config); err != nil {
+		return 0, err
+	}
+	chats, err := config.GetChats(contactMap)
+	if err != nil {
+		return 0, errors.Wrap(err, "get chats")
+	}
+
+	count := 0
+	defer config.RmTempDir()
+	for _, entityChats := range chats {
+		thisCount, err := config.exportEntityChats(entityChats)
+		count += thisCount
+		if err != nil {
+			return count, err
+		}
+	}
+	return count, nil
+}
+
+func getAttachmentPaths(config *configuration) error {
 	attPaths, err := config.GetAttachmentPaths()
 	if err != nil {
-		return 0, errors.Wrap(err, "get image paths")
+		return errors.Wrap(err, "get attachment paths")
 	}
 	config.AttachmentPaths = attPaths
 	if config.Options.OutputPDF || config.Options.CopyAttachments {
@@ -152,50 +173,46 @@ func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, 
 				continue
 			}
 			if err := config.FileAccess(msgPaths[0]); err != nil {
-				return 0, errors.Wrapf(err, "access to attachments - FIX: %s", _readmeURL)
+				return errors.Wrapf(err, "access to attachments - FIX: %s", _readmeURL)
 			}
 			break
 		}
 	}
+	return nil
+}
 
+func (config configuration) exportEntityChats(entityChats chatdb.EntityChats) (int, error) {
 	mergeChats := !config.Options.SeparateChats
+	var guids []string
+	var entityMessageIDs []chatdb.DatedMessageID
 	count := 0
-	chats, err := config.GetChats(contactMap)
-	if err != nil {
-		return count, errors.Wrap(err, "get chats")
-	}
-	defer config.RmTempDir()
-	for _, entityChats := range chats {
-		var guids []string
-		var entityMessageIDs []chatdb.DatedMessageID
-		for _, chat := range entityChats.Chats {
-			messageIDs, err := config.GetMessageIDs(chat.ID)
-			if err != nil {
-				return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
-			}
-			if mergeChats {
-				guids = append(guids, chat.GUID)
-				entityMessageIDs = append(entityMessageIDs, messageIDs...)
-			} else {
-				thisCount, err := writeFile(config, entityChats.Name, []string{chat.GUID}, messageIDs)
-				if err != nil {
-					return count + thisCount, err
-				}
-				count += thisCount
-			}
+	for _, chat := range entityChats.Chats {
+		messageIDs, err := config.GetMessageIDs(chat.ID)
+		if err != nil {
+			return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 		}
 		if mergeChats {
-			thisCount, err := writeFile(config, entityChats.Name, guids, entityMessageIDs)
+			guids = append(guids, chat.GUID)
+			entityMessageIDs = append(entityMessageIDs, messageIDs...)
+		} else {
+			thisCount, err := config.writeFile(entityChats.Name, []string{chat.GUID}, messageIDs)
 			if err != nil {
 				return count + thisCount, err
 			}
 			count += thisCount
 		}
 	}
+	if mergeChats {
+		thisCount, err := config.writeFile(entityChats.Name, guids, entityMessageIDs)
+		if err != nil {
+			return count + thisCount, err
+		}
+		count += thisCount
+	}
 	return count, nil
 }
 
-func writeFile(config configuration, entityName string, guids []string, messageIDs []chatdb.DatedMessageID) (int, error) {
+func (config configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) (int, error) {
 	chatDirPath := filepath.Join(config.Options.ExportPath, entityName)
 	if err := config.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return 0, errors.Wrapf(err, "create directory %q", chatDirPath)
@@ -224,27 +241,36 @@ func writeFile(config configuration, entityName string, guids []string, messageI
 		if err := outFile.WriteMessage(msg); err != nil {
 			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
 		}
-		if msgPaths, ok := config.AttachmentPaths[messageID.ID]; ok {
-			for _, attPath := range msgPaths {
-				if config.Options.CopyAttachments {
-					if err := config.CopyFile(attPath, attDir); err != nil {
-						return count, errors.Wrapf(err, "copy attachment %q to %q - POSSIBLE FIX: %s", attPath, attDir, _readmeURL)
-					}
-				}
-				if config.Options.OutputPDF {
-					var err error
-					attPath, err = config.HEIC2JPG(attPath)
-					if err != nil {
-						return 0, errors.Wrapf(err, "convert HEIC file %q to JPG", attPath)
-					}
-				}
-				if err := outFile.WriteAttachment(attPath); err != nil {
-					return count, errors.Wrapf(err, "include attachment %q in file %q", attPath, outFile.Name())
-				}
-			}
+		if err := config.copyAndWriteAttachments(outFile, messageID.ID, attDir); err != nil {
+			return count, err
 		}
 		count++
 	}
 	err = outFile.Close()
 	return count, err
+}
+
+func (config configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
+	msgPaths, ok := config.AttachmentPaths[msgID]
+	if !ok {
+		return nil
+	}
+	for _, attPath := range msgPaths {
+		if config.Options.CopyAttachments {
+			if err := config.CopyFile(attPath, attDir); err != nil {
+				return errors.Wrapf(err, "copy attachment %q to %q - POSSIBLE FIX: %s", attPath, attDir, _readmeURL)
+			}
+		}
+		if config.Options.OutputPDF {
+			var err error
+			attPath, err = config.HEIC2JPG(attPath)
+			if err != nil {
+				return errors.Wrapf(err, "convert HEIC file %q to JPG", attPath)
+			}
+		}
+		if err := outFile.WriteAttachment(attPath); err != nil {
+			return errors.Wrapf(err, "include attachment %q in file %q", attPath, outFile.Name())
+		}
+	}
+	return nil
 }
