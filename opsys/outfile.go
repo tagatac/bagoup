@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2022 David Tagatac <david@tagatac.net>
+// Copyright (C) 2022 David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
 package opsys
@@ -23,6 +23,8 @@ var _embedFS embed.FS
 
 var _unhandledAttachmentTypes []string = []string{".mov"}
 var _errFileClosed error = errors.New("file already closed")
+
+//go:generate mockgen -destination=mock_opsys/mock_outfile.go github.com/tagatac/bagoup/opsys OutFile
 
 type (
 	// Outfile represents single messages export file, either text or PDF.

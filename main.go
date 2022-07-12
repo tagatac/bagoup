@@ -120,6 +120,7 @@ func (config configuration) bagoup() error {
 		return errors.Wrap(err, "get handle map")
 	}
 
+	defer config.RmTempDir()
 	count, err := config.exportChats(contactMap)
 	log.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
 	if err != nil {
@@ -130,7 +131,7 @@ func (config configuration) bagoup() error {
 
 func validatePaths(s opsys.OS, opts options) error {
 	if err := s.FileAccess(opts.DBPath); err != nil {
-		return errors.Wrapf(err, "test DB file - FIX: %s", _readmeURL)
+		return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
 	}
 	if exist, err := s.FileExist(opts.ExportPath); exist {
 		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", opts.ExportPath)
@@ -150,7 +151,6 @@ func (config configuration) exportChats(contactMap map[string]*vcard.Card) (int,
 	}
 
 	count := 0
-	defer config.RmTempDir()
 	for _, entityChats := range chats {
 		thisCount, err := config.exportEntityChats(entityChats)
 		count += thisCount
@@ -236,7 +236,7 @@ func (config configuration) writeFile(entityName string, guids []string, message
 	for _, messageID := range messageIDs {
 		msg, err := config.GetMessage(messageID.ID, config.HandleMap, config.MacOSVersion)
 		if err != nil {
-			return count, errors.Wrapf(err, "get message with ID %d", messageID)
+			return count, errors.Wrapf(err, "get message with ID %d", messageID.ID)
 		}
 		if err := outFile.WriteMessage(msg); err != nil {
 			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
@@ -262,11 +262,13 @@ func (config configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgID
 			}
 		}
 		if config.Options.OutputPDF {
+			var jpgPath string
 			var err error
-			attPath, err = config.HEIC2JPG(attPath)
+			jpgPath, err = config.HEIC2JPG(attPath)
 			if err != nil {
 				return errors.Wrapf(err, "convert HEIC file %q to JPG", attPath)
 			}
+			attPath = jpgPath
 		}
 		if err := outFile.WriteAttachment(attPath); err != nil {
 			return errors.Wrapf(err, "include attachment %q in file %q", attPath, outFile.Name())
