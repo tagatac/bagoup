@@ -55,9 +55,9 @@ type configuration struct {
 	Options options
 	opsys.OS
 	chatdb.ChatDB
-	MacOSVersion *semver.Version
-	HandleMap    map[int]string
-	ImagePaths   map[int][]string
+	MacOSVersion    *semver.Version
+	HandleMap       map[int]string
+	AttachmentPaths map[int][]string
 }
 
 func main() {
@@ -141,13 +141,13 @@ func validatePaths(s opsys.OS, opts options) error {
 }
 
 func exportChats(config configuration, contactMap map[string]*vcard.Card) (int, error) {
-	imagePaths, err := config.GetImagePaths()
+	attPaths, err := config.GetAttachmentPaths()
 	if err != nil {
 		return 0, errors.Wrap(err, "get image paths")
 	}
-	config.ImagePaths = imagePaths
+	config.AttachmentPaths = attPaths
 	if config.Options.OutputPDF || config.Options.CopyAttachments {
-		for _, msgPaths := range imagePaths {
+		for _, msgPaths := range attPaths {
 			if len(msgPaths) == 0 {
 				continue
 			}
@@ -200,8 +200,8 @@ func writeFile(config configuration, entityName string, guids []string, messageI
 	if err := config.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return 0, errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
-	fileName := strings.Join(guids, ";;;")
-	chatPath := filepath.Join(chatDirPath, fileName)
+	filename := strings.Join(guids, ";;;")
+	chatPath := filepath.Join(chatDirPath, filename)
 	outFile, err := config.NewOutFile(chatPath, config.Options.OutputPDF, config.Options.IncludePPA)
 	if err != nil {
 		return 0, errors.Wrapf(err, "open/create file %q", chatPath)
@@ -224,22 +224,22 @@ func writeFile(config configuration, entityName string, guids []string, messageI
 		if err := outFile.WriteMessage(msg); err != nil {
 			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
 		}
-		if msgPaths, ok := config.ImagePaths[messageID.ID]; ok {
-			for _, imgPath := range msgPaths {
+		if msgPaths, ok := config.AttachmentPaths[messageID.ID]; ok {
+			for _, attPath := range msgPaths {
 				if config.Options.CopyAttachments {
-					if err := config.CopyFile(imgPath, attDir); err != nil {
-						return count, errors.Wrapf(err, "copy attachment %q to %q - POSSIBLE FIX: %s", imgPath, attDir, _readmeURL)
+					if err := config.CopyFile(attPath, attDir); err != nil {
+						return count, errors.Wrapf(err, "copy attachment %q to %q - POSSIBLE FIX: %s", attPath, attDir, _readmeURL)
 					}
 				}
 				if config.Options.OutputPDF {
 					var err error
-					imgPath, err = config.HEIC2JPG(imgPath)
+					attPath, err = config.HEIC2JPG(attPath)
 					if err != nil {
-						return 0, errors.Wrapf(err, "convert HEIC file %q to JPG", imgPath)
+						return 0, errors.Wrapf(err, "convert HEIC file %q to JPG", attPath)
 					}
 				}
-				if err := outFile.WriteImage(imgPath); err != nil {
-					return count, errors.Wrapf(err, "write image %q to file %q", imgPath, outFile.Name())
+				if err := outFile.WriteAttachment(attPath); err != nil {
+					return count, errors.Wrapf(err, "include attachment %q in file %q", attPath, outFile.Name())
 				}
 			}
 		}

@@ -1,4 +1,4 @@
-// Copyright (C) 2020 David Tagatac <david@tagatac.net>
+// Copyright (C) 2020-2022 David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
 // Package opsys provides an interface OS for interacting with the running
@@ -37,9 +37,17 @@ type (
 		// addresses specified in those cards, from the vcard file at the given
 		// path.
 		GetContactMap(path string) (map[string]*vcard.Card, error)
+		// CopyFile copies the src file to the dstDir directory.
 		CopyFile(src, dstDir string) error
+		// RmTempDir removes the temporary directory used by this package for
+		// staging converted images for inclusion in PDF files.
 		RmTempDir() error
+		// HEIC2JPG converts the src file to a JPEG image if the src file is an
+		// HEIC image, returning the path to the JPEG image. Otherwise the src
+		// path is returned.
 		HEIC2JPG(src string) (string, error)
+		// NewOutfile opens and returns a new Outfile with the given path and
+		// format (text or PDF).
 		NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, error)
 	}
 

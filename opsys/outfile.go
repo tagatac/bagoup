@@ -1,3 +1,6 @@
+// Copyright (C) 2020-2022 David Tagatac <david@tagatac.net>
+// See main.go for usage terms.
+
 package opsys
 
 import (
@@ -15,21 +18,30 @@ import (
 	"golang.org/x/net/html"
 )
 
-var _unhandledAttachmentTypes []string = []string{".mov"}
-
 //go:embed outfile_html.tmpl
 var _embedFS embed.FS
 
+var _unhandledAttachmentTypes []string = []string{".mov"}
+var _errFileClosed error = errors.New("file already closed")
+
 type (
+	// Outfile represents single messages export file, either text or PDF.
 	OutFile interface {
+		// Name returns the filepath of the Outfile.
 		Name() string
+		// WriteMessage adds the given message to the Outfile.
 		WriteMessage(msg string) error
-		WriteImage(imgPath string) error
+		// WriteAttachment embeds the given attachment in the Outfile, or adds a
+		// reference to it if embedding is not possible (e.g. if the Outfile is
+		// plain text, or the attachment is a movie).
+		WriteAttachment(attPath string) error
+		// Close closes the outfile, writing it to disk. Writes
 		Close() error
 	}
 
 	txtFile struct {
 		afero.File
+		closed bool
 	}
 
 	pdfFile struct {
@@ -71,16 +83,27 @@ func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, err
 		return &thisFile, nil
 	}
 	chatFile, err := s.OpenFile(fmt.Sprintf("%s.txt", filePath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	return txtFile{chatFile}, err
+	return &txtFile{File: chatFile}, err
 }
 
 func (f txtFile) WriteMessage(msg string) error {
+	if f.closed {
+		return _errFileClosed
+	}
 	_, err := f.WriteString(msg)
 	return err
 }
 
-func (f txtFile) WriteImage(imgPath string) error {
-	return f.WriteMessage(fmt.Sprintf("<%s>\n", filepath.Base(imgPath)))
+func (f txtFile) WriteAttachment(attPath string) error {
+	if f.closed {
+		return _errFileClosed
+	}
+	return f.WriteMessage(fmt.Sprintf("<%s>\n", filepath.Base(attPath)))
+}
+
+func (f *txtFile) Close() error {
+	f.closed = true
+	return f.File.Close()
 }
 
 func (f *pdfFile) Name() string {
@@ -88,21 +111,27 @@ func (f *pdfFile) Name() string {
 }
 
 func (f *pdfFile) WriteMessage(msg string) error {
+	if f.closed {
+		return _errFileClosed
+	}
 	htmlMsg := template.HTML(strings.ReplaceAll(html.EscapeString(msg), "\n", "<br/>"))
 	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: htmlMsg})
 	return nil
 }
 
-func (f *pdfFile) WriteImage(imgPath string) error {
-	img := template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", imgPath, filepath.Base(imgPath)))
-	ext := strings.ToLower(filepath.Ext(imgPath))
+func (f *pdfFile) WriteAttachment(attPath string) error {
+	if f.closed {
+		return _errFileClosed
+	}
+	att := template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", attPath, filepath.Base(attPath)))
+	ext := strings.ToLower(filepath.Ext(attPath))
 	for _, t := range f.unhandledAttachmentTypes {
 		if ext == t {
-			img = template.HTML(fmt.Sprintf("<em>%s</em><br/>", filepath.Base(imgPath)))
+			att = template.HTML(fmt.Sprintf("<em>%s</em><br/>", filepath.Base(attPath)))
 			break
 		}
 	}
-	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: img})
+	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: att})
 	return nil
 }
 
