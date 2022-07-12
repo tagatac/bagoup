@@ -30,7 +30,7 @@ places on your filesystem.
 
 To to backup your messages, you have two options. If you wish to export to PDFs
 with images (`--pdf`), or to copy attachments (`--copy-attachments`), you must use
-the second option.
+the first option.
 ### Option 1 (required for attachments): Give your terminal emulator full disk access
 From [osxdaily.com](https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/):
 1. Pull down the Apple menu and choose "System Preferences"
