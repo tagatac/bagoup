@@ -7,7 +7,7 @@ conversations saved in Messages to readable, searchable text or PDF files.
 
 ## Example Export
 ```
-$ cat "backup/Novak Djokovic/iMessage;-;+3815555555555.txt"
+$ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 [2020-03-01 15:34:05] Me: Want to play tennis?
 [2020-03-01 15:34:41] Novak: I can't today. I'm still at the Dubai Open
 [2020-03-01 15:34:53] Me: Ah, okay. When are you back in SF?
