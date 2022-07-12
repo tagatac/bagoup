@@ -98,7 +98,7 @@ func (f txtFile) WriteAttachment(attPath string) error {
 	if f.closed {
 		return _errFileClosed
 	}
-	return f.WriteMessage(fmt.Sprintf("<%s>\n", filepath.Base(attPath)))
+	return f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filepath.Base(attPath)))
 }
 
 func (f *txtFile) Close() error {
@@ -127,7 +127,7 @@ func (f *pdfFile) WriteAttachment(attPath string) error {
 	ext := strings.ToLower(filepath.Ext(attPath))
 	for _, t := range f.unhandledAttachmentTypes {
 		if ext == t {
-			att = template.HTML(fmt.Sprintf("<em>%s</em><br/>", filepath.Base(attPath)))
+			att = template.HTML(fmt.Sprintf("<em>&lt;attached: %s&gt;</em><br/>", filepath.Base(attPath)))
 			break
 		}
 	}
