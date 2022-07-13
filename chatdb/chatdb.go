@@ -251,11 +251,11 @@ func (d *chatDB) GetAttachmentPaths() (map[int][]string, error) {
 	for attachmentJoins.Next() {
 		var msgID, attID int
 		if err := attachmentJoins.Scan(&msgID, &attID); err != nil {
-			return nil, errors.Wrap(err, "read data from message_attachment_join table")
+			return attPaths, errors.Wrap(err, "read data from message_attachment_join table")
 		}
 		filename, _, err := d.getAttachmentPath(attID)
 		if err != nil {
-			return nil, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
+			return attPaths, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
 		}
 		attPaths[msgID] = append(attPaths[msgID], filename)
 	}

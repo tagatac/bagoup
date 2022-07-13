@@ -46,7 +46,7 @@ func TestFileExist(t *testing.T) {
 			s := NewOS(nil, osStat, nil)
 			exist, err := s.FileExist("testfile")
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -85,7 +85,7 @@ func TestGetMacOSVersion(t *testing.T) {
 			s := NewOS(nil, nil, genFakeExecCommand(tt.swVersOutput, tt.swVersErr))
 			v, err := s.GetMacOSVersion()
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -219,7 +219,7 @@ END:VCARD
 			setupFs: func(fs afero.Fs) {
 				afero.WriteFile(fs, "contacts.vcf", []byte("BEGIN::VCARD\n"), 0644)
 			},
-			wantErr: "vcard: invalid BEGIN value",
+			wantErr: "decode vcard: vcard: invalid BEGIN value",
 		},
 		{
 			msg: "shared email address",
@@ -257,7 +257,7 @@ END:VCARD
 			s := NewOS(fs, nil, nil)
 			contactMap, err := s.GetContactMap("contacts.vcf")
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
