@@ -74,7 +74,7 @@ Application Options:
   -m, --mac-os-version=   Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)
   -c, --contacts-path=    Path to the contacts vCard file
   -s, --self-handle=      Prefix to use for for messages sent by you (default: Me)
-      --separate-chats    Do not merge chats with the same contact into a single file, e.g. iMessage and SMS
+      --separate-chats    Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file
   -p, --pdf               Export text and images to PDF files (requires full disk access)
       --include-ppa       Include plugin payload attachments (e.g. link previews) in generated PDFs
   -a, --copy-attachments  Copy attachments to the same folder as the chat which included them (requires full disk access)
