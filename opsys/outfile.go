@@ -21,7 +21,10 @@ import (
 //go:embed templates/* testdata/*
 var _embedFS embed.FS
 
-var _unhandledAttachmentTypes []string = []string{".mov"}
+var _unhandledAttachmentTypes []string = []string{
+	".heic",
+	".mov",
+}
 var _errFileClosed error = errors.New("file already closed")
 
 //go:generate mockgen -destination=mock_opsys/mock_outfile.go github.com/tagatac/bagoup/opsys OutFile
@@ -43,15 +46,15 @@ type (
 
 	txtFile struct {
 		afero.File
-		closed bool
 	}
 
 	pdfFile struct {
+		afero.File
 		*wkhtmltopdf.PDFGenerator
-		filePath                 string
 		contents                 htmlFileData
 		closed                   bool
 		unhandledAttachmentTypes []string
+		html                     template.HTML
 	}
 
 	htmlFileData struct {
@@ -64,52 +67,45 @@ type (
 )
 
 func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, error) {
+	title := filepath.Base(filePath)
 	if isPDF {
+		filePath = fmt.Sprintf("%s.pdf", filePath)
+		chatFile, err := s.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, "open file %q", filePath)
+		}
 		pdfg, err := wkhtmltopdf.NewPDFGenerator()
 		if err != nil {
 			return nil, errors.Wrap(err, "create PDF generator")
 		}
+		pdfg.SetOutput(chatFile)
 		unhandledAttachmentTypes := _unhandledAttachmentTypes
 		if !includePPA {
 			unhandledAttachmentTypes = append(unhandledAttachmentTypes, ".pluginpayloadattachment")
 		}
 		thisFile := pdfFile{
+			File:         chatFile,
 			PDFGenerator: pdfg,
-			filePath:     fmt.Sprintf("%s.pdf", filePath),
 			contents: htmlFileData{
-				Title: filepath.Base(filePath),
+				Title: title,
 				Lines: []htmlFileLine{},
 			},
 			unhandledAttachmentTypes: unhandledAttachmentTypes,
 		}
 		return &thisFile, nil
 	}
-	chatFile, err := s.OpenFile(fmt.Sprintf("%s.txt", filePath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	return &txtFile{File: chatFile}, err
+	filePath = fmt.Sprintf("%s.txt", filePath)
+	chatFile, err := s.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	return &txtFile{File: chatFile}, errors.Wrapf(err, "open file %q", filePath)
 }
 
 func (f txtFile) WriteMessage(msg string) error {
-	if f.closed {
-		return _errFileClosed
-	}
 	_, err := f.WriteString(msg)
 	return err
 }
 
 func (f txtFile) WriteAttachment(attPath string) error {
-	if f.closed {
-		return _errFileClosed
-	}
 	return f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filepath.Base(attPath)))
-}
-
-func (f *txtFile) Close() error {
-	f.closed = true
-	return f.File.Close()
-}
-
-func (f *pdfFile) Name() string {
-	return f.filePath
 }
 
 func (f *pdfFile) WriteMessage(msg string) error {
@@ -141,7 +137,6 @@ func (f *pdfFile) Close() error {
 	if f.closed {
 		return nil
 	}
-	f.closed = true
 	tmpl, err := template.ParseFS(_embedFS, "templates/outfile_html.tmpl")
 	if err != nil {
 		return errors.Wrap(err, "parse HTML template")
@@ -150,11 +145,13 @@ func (f *pdfFile) Close() error {
 	if err := tmpl.Execute(&buf, f.contents); err != nil {
 		return errors.Wrap(err, "execute HTML template")
 	}
+	f.html = template.HTML(buf.String())
 	page := wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
 	page.EnableLocalFileAccess.Set(true)
 	f.AddPage(page)
+	f.closed = true
 	if err := f.Create(); err != nil {
-		return errors.Wrap(err, "create PDF in internal buffer")
+		return errors.Wrap(err, "write out PDF")
 	}
-	return errors.Wrap(f.WriteFile(f.filePath), "write buffer contents to file")
+	return errors.Wrap(f.File.Close(), "close PDF")
 }
