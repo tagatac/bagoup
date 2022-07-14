@@ -2,7 +2,8 @@ language: go
 go:
   - 1.x
 before_install:
-  - sudo apt-get -y install wkhtmltopdf
+  - sudo apt-get -y install wkhtmltopdf xvfb
+  - alias wkhtmltopdf='xvfb-run wkhtmltopdf'
 install:
   - go mod download
 script:
