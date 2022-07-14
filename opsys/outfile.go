@@ -21,9 +21,22 @@ import (
 //go:embed templates/* testdata/*
 var _embedFS embed.FS
 
-var _unhandledAttachmentTypes []string = []string{
-	".heic",
-	".mov",
+// Embeddable image types copied from
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+// but many types are untested. If you find one that doesn't work or one that
+// should work but is not embedded, please open an issue.
+var _embeddableImageTypes []string = []string{
+	".avif",
+	".bmp",
+	".gif",
+	".ico",
+	".jpeg",
+	".jpg",
+	".png",
+	".svg",
+	".tif",
+	".tiff",
+	".webp",
 }
 var _errFileClosed error = errors.New("file already closed")
 
@@ -51,10 +64,10 @@ type (
 	pdfFile struct {
 		afero.File
 		*wkhtmltopdf.PDFGenerator
-		contents                 htmlFileData
-		closed                   bool
-		unhandledAttachmentTypes []string
-		html                     template.HTML
+		contents             htmlFileData
+		closed               bool
+		embeddableImageTypes []string
+		html                 template.HTML
 	}
 
 	htmlFileData struct {
@@ -79,9 +92,9 @@ func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, err
 			return nil, errors.Wrap(err, "create PDF generator")
 		}
 		pdfg.SetOutput(chatFile)
-		unhandledAttachmentTypes := _unhandledAttachmentTypes
-		if !includePPA {
-			unhandledAttachmentTypes = append(unhandledAttachmentTypes, ".pluginpayloadattachment")
+		embeddableImageTypes := _embeddableImageTypes
+		if includePPA {
+			embeddableImageTypes = append(embeddableImageTypes, ".pluginpayloadattachment")
 		}
 		thisFile := pdfFile{
 			File:         chatFile,
@@ -90,7 +103,7 @@ func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, err
 				Title: title,
 				Lines: []htmlFileLine{},
 			},
-			unhandledAttachmentTypes: unhandledAttachmentTypes,
+			embeddableImageTypes: embeddableImageTypes,
 		}
 		return &thisFile, nil
 	}
@@ -121,11 +134,11 @@ func (f *pdfFile) WriteAttachment(attPath string) error {
 	if f.closed {
 		return _errFileClosed
 	}
-	att := template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", attPath, filepath.Base(attPath)))
+	att := template.HTML(fmt.Sprintf("<em>&lt;attached: %s&gt;</em><br/>", filepath.Base(attPath)))
 	ext := strings.ToLower(filepath.Ext(attPath))
-	for _, t := range f.unhandledAttachmentTypes {
+	for _, t := range f.embeddableImageTypes {
 		if ext == t {
-			att = template.HTML(fmt.Sprintf("<em>&lt;attached: %s&gt;</em><br/>", filepath.Base(attPath)))
+			att = template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", attPath, filepath.Base(attPath)))
 			break
 		}
 	}
