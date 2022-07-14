@@ -414,9 +414,9 @@ func TestTempDir(t *testing.T) {
 	}{
 		{
 			msg:         "temp dir already exists",
-			prevTempDir: filepath.Join(os.TempDir(), "bagoup-12345"),
+			prevTempDir: filepath.Join(os.TempDir(), "bagoup12345"),
 			setupFS: func(fs afero.Fs) {
-				err := fs.Mkdir(filepath.Join(os.TempDir(), "bagoup-12345"), os.ModePerm)
+				err := fs.Mkdir(filepath.Join(os.TempDir(), "bagoup12345"), os.ModePerm)
 				assert.NilError(t, err)
 			},
 		},
@@ -440,7 +440,6 @@ func TestTempDir(t *testing.T) {
 			assert.NilError(t, err)
 			prefix := filepath.Join(os.TempDir(), "bagoup")
 			assert.Assert(t, strings.HasPrefix(tempDir, prefix), "temp dir %q does not start with %q", tempDir, prefix)
-			fmt.Println(tempDir)
 			isDir, err := afero.IsDir(rwFS, tempDir)
 			assert.NilError(t, err)
 			assert.Assert(t, isDir, `temp dir %q has not been created`, tempDir)
@@ -451,6 +450,7 @@ func TestTempDir(t *testing.T) {
 			}
 			assert.Error(t, roOS.RmTempDir(), fmt.Sprintf("remove temporary directory %q: operation not permitted", roOS.tempDir))
 
+			assert.Assert(t, rwOS.tempDir != "")
 			assert.NilError(t, rwOS.RmTempDir())
 			assert.Equal(t, rwOS.tempDir, "")
 			assert.NilError(t, rwOS.RmTempDir())

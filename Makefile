@@ -5,7 +5,7 @@ LIBDE265_VENDOR_DIR=$(GOHEIF_VENDOR_DIR)/libde265
 
 build: bagoup
 
-bagoup: main.go opsys/opsys.go opsys/outfile.go opsys/*.tmpl chatdb/chatdb.go pathtools/pathtools.go vendor
+bagoup: main.go opsys/opsys.go opsys/outfile.go opsys/templates/* chatdb/chatdb.go pathtools/pathtools.go vendor
 	go build -o $@ $<
 
 vendor: go.mod go.sum

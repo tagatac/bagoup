@@ -18,7 +18,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-//go:embed outfile_html.tmpl testdata/*
+//go:embed templates/* testdata/*
 var _embedFS embed.FS
 
 var _unhandledAttachmentTypes []string = []string{".mov"}
@@ -142,7 +142,7 @@ func (f *pdfFile) Close() error {
 		return nil
 	}
 	f.closed = true
-	tmpl, err := template.ParseFS(_embedFS, "outfile_html.tmpl")
+	tmpl, err := template.ParseFS(_embedFS, "templates/outfile_html.tmpl")
 	if err != nil {
 		return errors.Wrap(err, "parse HTML template")
 	}
