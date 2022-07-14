@@ -1,4 +1,4 @@
-// Copyright (C) 2020 David Tagatac <david@tagatac.net>
+// Copyright (C) 2020-2022 David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
 package opsys
@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Masterminds/semver"
@@ -15,6 +17,53 @@ import (
 	"github.com/spf13/afero"
 	"gotest.tools/v3/assert"
 )
+
+func TestFileAccess(t *testing.T) {
+	tests := []struct {
+		msg     string
+		setupFS func(afero.Fs)
+		wantErr string
+	}{
+		{
+			msg: "have access",
+			setupFS: func(fs afero.Fs) {
+				_, err := fs.Create("testfile")
+				assert.NilError(t, err)
+			},
+		},
+		//Uncomment this when https://github.com/spf13/afero/issues/150 is resolved.
+		// {
+		// 	msg: "no access",
+		// 	setupFS: func(fs afero.Fs) {
+		// 		_, err := fs.Create("testfile")
+		// 		assert.NilError(t, err)
+		// 		err = fs.Chmod("testfile", 0000)
+		// 		assert.NilError(t, err)
+		// 	},
+		// 	wantErr: `open file "testfile": permissions`,
+		// },
+		{
+			msg:     "file doesn't exist",
+			wantErr: "open testfile: file does not exist",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			fs := afero.NewMemMapFs()
+			if tt.setupFS != nil {
+				tt.setupFS(fs)
+			}
+			s := NewOS(fs, nil, nil)
+			err := s.FileAccess("testfile")
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+		})
+	}
+}
 
 func TestFileExist(t *testing.T) {
 	tests := []struct {
@@ -34,7 +83,7 @@ func TestFileExist(t *testing.T) {
 		{
 			msg:     "stat error",
 			err:     errors.New("this is a stat error"),
-			wantErr: "check existence of file \"testfile\": this is a stat error",
+			wantErr: `check existence of file "testfile": this is a stat error`,
 		},
 	}
 
@@ -46,7 +95,7 @@ func TestFileExist(t *testing.T) {
 			s := NewOS(nil, osStat, nil)
 			exist, err := s.FileExist("testfile")
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -76,7 +125,7 @@ func TestGetMacOSVersion(t *testing.T) {
 		{
 			msg:          "bad version",
 			swVersOutput: "asdf",
-			wantErr:      "parse semantic version \"asdf\": Invalid Semantic Version",
+			wantErr:      `parse semantic version "asdf": Invalid Semantic Version`,
 		},
 	}
 
@@ -85,7 +134,7 @@ func TestGetMacOSVersion(t *testing.T) {
 			s := NewOS(nil, nil, genFakeExecCommand(tt.swVersOutput, tt.swVersErr))
 			v, err := s.GetMacOSVersion()
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -113,10 +162,10 @@ func TestRunExecCmd(t *testing.T) {
 	if os.Getenv("BAGOUP_WANT_TEST_RUN_EXEC_CMD") != "1" {
 		return
 	}
-	fmt.Fprintf(os.Stdout, os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_OUTPUT"))
+	fmt.Fprint(os.Stdout, os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_OUTPUT"))
 	err := os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_ERROR")
 	if err != "" {
-		fmt.Fprintf(os.Stderr, err)
+		fmt.Fprint(os.Stderr, err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -219,7 +268,7 @@ END:VCARD
 			setupFs: func(fs afero.Fs) {
 				afero.WriteFile(fs, "contacts.vcf", []byte("BEGIN::VCARD\n"), 0644)
 			},
-			wantErr: "vcard: invalid BEGIN value",
+			wantErr: "decode vcard: vcard: invalid BEGIN value",
 		},
 		{
 			msg: "shared email address",
@@ -253,11 +302,10 @@ END:VCARD
 			if tt.setupFs != nil {
 				tt.setupFs(fs)
 			}
-
 			s := NewOS(fs, nil, nil)
 			contactMap, err := s.GetContactMap("contacts.vcf")
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -287,6 +335,125 @@ func TestSanitizePhone(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			assert.Equal(t, tt.clean, sanitizePhone(tt.dirty))
+		})
+	}
+}
+
+func TestCopyFile(t *testing.T) {
+	textBytes, err := _embedFS.ReadFile("testdata/text.txt")
+	assert.NilError(t, err)
+	jpegBytes, err := _embedFS.ReadFile("testdata/tennisballs.jpeg")
+	assert.NilError(t, err)
+
+	tests := []struct {
+		msg       string
+		setupFS   func(afero.Fs)
+		roFS      bool
+		wantBytes []byte
+		wantErr   string
+	}{
+		{
+			msg: "text file",
+			setupFS: func(fs afero.Fs) {
+				assert.NilError(t, afero.WriteFile(fs, "testfile", textBytes, os.ModePerm))
+				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
+			},
+			wantBytes: textBytes,
+		},
+		{
+			msg: "jpeg file",
+			setupFS: func(fs afero.Fs) {
+				assert.NilError(t, afero.WriteFile(fs, "testfile", jpegBytes, os.ModePerm))
+				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
+			},
+			wantBytes: jpegBytes,
+		},
+		{
+			msg:     "source file does not exist",
+			wantErr: "open testfile: file does not exist",
+		},
+		{
+			msg: "read only filesystem",
+			setupFS: func(fs afero.Fs) {
+				assert.NilError(t, afero.WriteFile(fs, "testfile", textBytes, os.ModePerm))
+				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
+			},
+			roFS:    true,
+			wantErr: `create destination file "destinationdir/testfile": operation not permitted`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			fs := afero.NewMemMapFs()
+			if tt.setupFS != nil {
+				tt.setupFS(fs)
+			}
+			if tt.roFS {
+				fs = afero.NewReadOnlyFs(fs)
+			}
+			s := NewOS(fs, nil, nil)
+			err := s.CopyFile("testfile", "destinationdir")
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			newBytes, err := afero.ReadFile(fs, "destinationdir/testfile")
+			assert.NilError(t, err)
+			assert.DeepEqual(t, newBytes, tt.wantBytes)
+		})
+	}
+}
+
+func TestTempDir(t *testing.T) {
+	tests := []struct {
+		msg         string
+		prevTempDir string
+		setupFS     func(afero.Fs)
+	}{
+		{
+			msg:         "temp dir already exists",
+			prevTempDir: filepath.Join(os.TempDir(), "bagoup12345"),
+			setupFS: func(fs afero.Fs) {
+				err := fs.Mkdir(filepath.Join(os.TempDir(), "bagoup12345"), os.ModePerm)
+				assert.NilError(t, err)
+			},
+		},
+		{
+			msg: "temp dir doesn't exist",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			rwFS := afero.NewOsFs()
+			rwOS := &opSys{
+				Fs:      rwFS,
+				tempDir: tt.prevTempDir,
+			}
+			if tt.setupFS != nil {
+				tt.setupFS(rwFS)
+			}
+
+			tempDir, err := rwOS.getTempDir()
+			assert.NilError(t, err)
+			prefix := filepath.Join(os.TempDir(), "bagoup")
+			assert.Assert(t, strings.HasPrefix(tempDir, prefix), "temp dir %q does not start with %q", tempDir, prefix)
+			isDir, err := afero.IsDir(rwFS, tempDir)
+			assert.NilError(t, err)
+			assert.Assert(t, isDir, `temp dir %q has not been created`, tempDir)
+
+			roOS := &opSys{
+				Fs:      afero.NewReadOnlyFs(rwFS),
+				tempDir: rwOS.tempDir,
+			}
+			assert.Error(t, roOS.RmTempDir(), fmt.Sprintf("remove temporary directory %q: operation not permitted", roOS.tempDir))
+
+			assert.Assert(t, rwOS.tempDir != "")
+			assert.NilError(t, rwOS.RmTempDir())
+			assert.Equal(t, rwOS.tempDir, "")
+			assert.NilError(t, rwOS.RmTempDir())
 		})
 	}
 }

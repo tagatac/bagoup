@@ -22,7 +22,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -34,26 +34,30 @@ import (
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/opsys"
+	"github.com/tagatac/bagoup/pathtools"
 )
 
-const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#chatdb-access"
-const _defaultDBPath = "~/Library/Messages/chat.db"
+const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access"
 
 type options struct {
-	DBPath        string  `short:"i" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
-	ExportPath    string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"backup"`
-	MacOSVersion  *string `short:"m" long:"mac-os-version" description:"Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
-	ContactsPath  *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
-	SelfHandle    string  `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
-	SeparateChats bool    `long:"separate-chats" description:"Do not merge chats with the same contact into a single file, e.g. iMessage and SMS"`
+	DBPath          string  `short:"i" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
+	ExportPath      string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"messages-export"`
+	MacOSVersion    *string `short:"m" long:"mac-os-version" description:"Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
+	ContactsPath    *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
+	SelfHandle      string  `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
+	SeparateChats   bool    `long:"separate-chats" description:"Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file"`
+	OutputPDF       bool    `short:"p" long:"pdf" description:"Export text and images to PDF files (requires full disk access)"`
+	IncludePPA      bool    `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
+	CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
 }
 
 type configuration struct {
+	Options options
 	opsys.OS
 	chatdb.ChatDB
-	ExportPath   string
-	MacOSVersion *semver.Version
-	HandleMap    map[int]string
+	MacOSVersion    *semver.Version
+	HandleMap       map[int]string
+	AttachmentPaths map[int][]string
 }
 
 func main() {
@@ -63,6 +67,9 @@ func main() {
 		os.Exit(0)
 	}
 	logFatalOnErr(errors.Wrap(err, "parse flags"))
+	dbPath, err := pathtools.ReplaceTilde(opts.DBPath)
+	logFatalOnErr(errors.Wrap(err, "replace tilde"))
+	opts.DBPath = dbPath
 
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
 	db, err := sql.Open("sqlite3", opts.DBPath)
@@ -71,11 +78,11 @@ func main() {
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	config := configuration{
-		OS:         s,
-		ChatDB:     cdb,
-		ExportPath: opts.ExportPath,
+		OS:      s,
+		ChatDB:  cdb,
+		Options: opts,
 	}
-	logFatalOnErr(bagoup(opts, config))
+	logFatalOnErr(config.bagoup())
 }
 
 func logFatalOnErr(err error) {
@@ -84,7 +91,8 @@ func logFatalOnErr(err error) {
 	}
 }
 
-func bagoup(opts options, config configuration) error {
+func (config configuration) bagoup() error {
+	opts := config.Options
 	if err := validatePaths(config.OS, opts); err != nil {
 		return err
 	}
@@ -112,23 +120,19 @@ func bagoup(opts options, config configuration) error {
 		return errors.Wrap(err, "get handle map")
 	}
 
-	count, err := exportChats(config, contactMap, !opts.SeparateChats)
-	fmt.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
+	defer config.RmTempDir()
+	count, err := config.exportChats(contactMap)
+	log.Printf("%d messages successfully exported to folder %q\n", count, opts.ExportPath)
 	if err != nil {
 		return errors.Wrap(err, "export chats")
 	}
-	return nil
+	return config.RmTempDir()
 }
 
 func validatePaths(s opsys.OS, opts options) error {
-	if opts.DBPath == _defaultDBPath {
-		f, err := s.Open(opts.DBPath)
-		if err != nil {
-			return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
-		}
-		f.Close()
+	if err := s.FileAccess(opts.DBPath); err != nil {
+		return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
 	}
-
 	if exist, err := s.FileExist(opts.ExportPath); exist {
 		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", opts.ExportPath)
 	} else if err != nil {
@@ -137,67 +141,138 @@ func validatePaths(s opsys.OS, opts options) error {
 	return nil
 }
 
-func exportChats(config configuration, contactMap map[string]*vcard.Card, mergeChats bool) (int, error) {
-	count := 0
-	chats, err := config.ChatDB.GetChats(contactMap)
-	if err != nil {
-		return count, errors.Wrap(err, "get chats")
+func (config configuration) exportChats(contactMap map[string]*vcard.Card) (int, error) {
+	if err := getAttachmentPaths(&config); err != nil {
+		return 0, err
 	}
+	chats, err := config.GetChats(contactMap)
+	if err != nil {
+		return 0, errors.Wrap(err, "get chats")
+	}
+
+	count := 0
 	for _, entityChats := range chats {
-		var guids []string
-		var entityMessageIDs []chatdb.DatedMessageID
-		for _, chat := range entityChats.Chats {
-			messageIDs, err := config.ChatDB.GetMessageIDs(chat.ID)
-			if err != nil {
-				return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
+		thisCount, err := config.exportEntityChats(entityChats)
+		count += thisCount
+		if err != nil {
+			return count, err
+		}
+	}
+	return count, nil
+}
+
+func getAttachmentPaths(config *configuration) error {
+	attPaths, err := config.GetAttachmentPaths()
+	if err != nil {
+		return errors.Wrap(err, "get attachment paths")
+	}
+	config.AttachmentPaths = attPaths
+	if config.Options.OutputPDF || config.Options.CopyAttachments {
+		for _, msgPaths := range attPaths {
+			if len(msgPaths) == 0 {
+				continue
 			}
-			if mergeChats {
-				guids = append(guids, chat.GUID)
-				entityMessageIDs = append(entityMessageIDs, messageIDs...)
-			} else {
-				thisCount, err := writeFile(config, entityChats.Name, []string{chat.GUID}, messageIDs)
-				if err != nil {
-					return count + thisCount, err
-				}
-				count += thisCount
+			if err := config.FileAccess(msgPaths[0]); err != nil {
+				return errors.Wrapf(err, "access to attachments - FIX: %s", _readmeURL)
 			}
+			break
+		}
+	}
+	return nil
+}
+
+func (config configuration) exportEntityChats(entityChats chatdb.EntityChats) (int, error) {
+	mergeChats := !config.Options.SeparateChats
+	var guids []string
+	var entityMessageIDs []chatdb.DatedMessageID
+	count := 0
+	for _, chat := range entityChats.Chats {
+		messageIDs, err := config.GetMessageIDs(chat.ID)
+		if err != nil {
+			return count, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 		}
 		if mergeChats {
-			thisCount, err := writeFile(config, entityChats.Name, guids, entityMessageIDs)
+			guids = append(guids, chat.GUID)
+			entityMessageIDs = append(entityMessageIDs, messageIDs...)
+		} else {
+			thisCount, err := config.writeFile(entityChats.Name, []string{chat.GUID}, messageIDs)
 			if err != nil {
 				return count + thisCount, err
 			}
 			count += thisCount
 		}
 	}
+	if mergeChats {
+		thisCount, err := config.writeFile(entityChats.Name, guids, entityMessageIDs)
+		if err != nil {
+			return count + thisCount, err
+		}
+		count += thisCount
+	}
 	return count, nil
 }
 
-func writeFile(config configuration, entityName string, guids []string, messageIDs []chatdb.DatedMessageID) (int, error) {
-	chatDirPath := path.Join(config.ExportPath, entityName)
-	if err := config.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
+func (config configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) (int, error) {
+	chatDirPath := filepath.Join(config.Options.ExportPath, entityName)
+	if err := config.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return 0, errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
-	fileName := strings.Join(guids, ";;;")
-	chatPath := path.Join(chatDirPath, fmt.Sprintf("%s.txt", fileName))
-	chatFile, err := config.OS.OpenFile(chatPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	filename := strings.Join(guids, ";;;")
+	chatPath := filepath.Join(chatDirPath, filename)
+	outFile, err := config.NewOutFile(chatPath, config.Options.OutputPDF, config.Options.IncludePPA)
 	if err != nil {
-		return 0, errors.Wrapf(err, "open/create file %s", chatPath)
+		return 0, errors.Wrapf(err, "open/create file %q", chatPath)
 	}
-	defer chatFile.Close()
+	defer outFile.Close()
+	attDir := filepath.Join(chatDirPath, "attachments")
+	if config.Options.CopyAttachments {
+		if err := config.Mkdir(attDir, os.ModePerm); err != nil {
+			return 0, errors.Wrapf(err, "create directory %q", attDir)
+		}
+	}
 
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	var count int
 	for _, messageID := range messageIDs {
-		msg, err := config.ChatDB.GetMessage(messageID.ID, config.HandleMap, config.MacOSVersion)
+		msg, err := config.GetMessage(messageID.ID, config.HandleMap, config.MacOSVersion)
 		if err != nil {
-			return count, errors.Wrapf(err, "get message with ID %d", messageID)
+			return count, errors.Wrapf(err, "get message with ID %d", messageID.ID)
 		}
-		if _, err := chatFile.WriteString(msg); err != nil {
-			return count, errors.Wrapf(err, "write message %q to file %q", msg, chatFile.Name())
+		if err := outFile.WriteMessage(msg); err != nil {
+			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
+		}
+		if err := config.copyAndWriteAttachments(outFile, messageID.ID, attDir); err != nil {
+			return count, err
 		}
 		count++
 	}
-	chatFile.Close()
-	return count, nil
+	err = outFile.Close()
+	return count, err
+}
+
+func (config configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
+	msgPaths, ok := config.AttachmentPaths[msgID]
+	if !ok {
+		return nil
+	}
+	for _, attPath := range msgPaths {
+		if config.Options.CopyAttachments {
+			if err := config.CopyFile(attPath, attDir); err != nil {
+				return errors.Wrapf(err, "copy attachment %q to %q - POSSIBLE FIX: %s", attPath, attDir, _readmeURL)
+			}
+		}
+		if config.Options.OutputPDF {
+			var jpgPath string
+			var err error
+			jpgPath, err = config.HEIC2JPG(attPath)
+			if err != nil {
+				return errors.Wrapf(err, "convert HEIC file %q to JPG", attPath)
+			}
+			attPath = jpgPath
+		}
+		if err := outFile.WriteAttachment(attPath); err != nil {
+			return errors.Wrapf(err, "include attachment %q in file %q", attPath, outFile.Name())
+		}
+	}
+	return nil
 }

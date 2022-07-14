@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
+	"github.com/tagatac/bagoup/pathtools"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/emersion/go-vcard"
@@ -95,7 +96,7 @@ func TestGetHandleMap(t *testing.T) {
 			cdb := NewChatDB(db, "Me")
 			handleMap, err := cdb.GetHandleMap(tt.contactMap)
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -217,7 +218,7 @@ func TestGetChats(t *testing.T) {
 
 			chats, err := cdb.GetChats(tt.contactMap)
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -276,7 +277,7 @@ func TestGetMessageIDs(t *testing.T) {
 
 			ids, err := cdb.GetMessageIDs(42)
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -328,7 +329,7 @@ func TestGetMessage(t *testing.T) {
 					AddRow(0, nil, "message text", "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
-			wantErr: "read data for message ID 42: sql: Scan error on column index 1, name \"handle_id\": converting NULL to int is unsupported",
+			wantErr: `read data for message ID 42: sql: Scan error on column index 1, name "handle_id": converting NULL to int is unsupported`,
 		},
 		{
 			msg: "duplicate message ID",
@@ -353,7 +354,7 @@ func TestGetMessage(t *testing.T) {
 
 			message, err := cdb.GetMessage(42, handleMap, nil)
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
@@ -399,6 +400,123 @@ func TestGetDatetimeFormula(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			cdb := &chatDB{datetimeFormula: tt.prevFormula}
 			assert.Equal(t, tt.wantFormula, cdb.getDatetimeFormula(tt.v))
+		})
+	}
+}
+
+func TestGetAttachmentPaths(t *testing.T) {
+	tests := []struct {
+		msg          string
+		setupMock    func(sqlmock.Sqlmock)
+		wantAttPaths map[int][]string
+		wantErr      string
+	}{
+		{
+			msg: "two attachments to one message, one to another",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id", "attachment_id"}).
+					AddRow(1, 1).
+					AddRow(1, 2).
+					AddRow(2, 3)
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("attachment1.jpeg", "image/jpeg")
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("~/attachment2.heic", "image/heic")
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("/var/folder/attachment3.mp4", "video/mp4")
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=3`).WillReturnRows(rows)
+			},
+			wantAttPaths: map[int][]string{
+				1: {"attachment1.jpeg", pathtools.MustReplaceTilde("~/attachment2.heic")},
+				2: {"/var/folder/0/attachment3.mp4"},
+			},
+		},
+		{
+			msg: "join table query error",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnError(errors.New("this is a DB error"))
+			},
+			wantErr: "scan message_attachment_join table: this is a DB error",
+		},
+		{
+			msg: "join table row scan error",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id", "attachment_id"}).
+					AddRow(1, nil)
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
+			},
+			wantErr: `read data from message_attachment_join table: sql: Scan error on column index 1, name "attachment_id": converting NULL to int is unsupported`,
+		},
+		{
+			msg: "attachments table query error",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id", "attachment_id"}).
+					AddRow(1, 1).
+					AddRow(1, 2).
+					AddRow(2, 3)
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("attachment1.jpeg", "image/jpeg")
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnError(errors.New("this is a DB error"))
+			},
+			wantErr: "get path for attachment 2 to message 1: query attachment table for ID 2: this is a DB error",
+		},
+		{
+			msg: "attachments table row scan error",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id", "attachment_id"}).
+					AddRow(1, 1).
+					AddRow(1, 2).
+					AddRow(2, 3)
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("attachment1.jpeg", "image/jpeg")
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("~/attachment2.heic", nil)
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
+			},
+			wantErr: `get path for attachment 2 to message 1: read data for attachment ID 2: sql: Scan error on column index 1, name "mime_type": converting NULL to string is unsupported`,
+		},
+		{
+			msg: "duplicate attachment ID",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id", "attachment_id"}).
+					AddRow(1, 1).
+					AddRow(1, 2).
+					AddRow(2, 3)
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("attachment1.jpeg", "image/jpeg")
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
+					AddRow("~/attachment2.heic", "image/heic").
+					AddRow("attachment2.mov", "video/mov")
+				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
+			},
+			wantErr: "get path for attachment 2 to message 1: multiple attachments with the same ID: 2 - attachment ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			db, sMock, err := sqlmock.New()
+			assert.NilError(t, err)
+			defer db.Close()
+			tt.setupMock(sMock)
+			cdb := &chatDB{DB: db}
+
+			attPaths, err := cdb.GetAttachmentPaths()
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			assert.DeepEqual(t, tt.wantAttPaths, attPaths)
 		})
 	}
 }

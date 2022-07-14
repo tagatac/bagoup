@@ -12,12 +12,15 @@ package chatdb
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
+	"github.com/tagatac/bagoup/pathtools"
 )
 
 const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issues"
@@ -63,6 +66,9 @@ type (
 		// GetMessage returns a message retrieved from the database formatted for
 		// writing to a chat file.
 		GetMessage(messageID int, handleMap map[int]string, macOSVersion *semver.Version) (string, error)
+		// GetImagePaths returns a list of attachment filepaths associated with
+		// each message ID.
+		GetAttachmentPaths() (map[int][]string, error)
 	}
 
 	// DatedMessageID pairs a message ID and its date, in the legacy date format.
@@ -232,4 +238,50 @@ func (d *chatDB) getDatetimeFormula(macOSVersion *semver.Version) string {
 		return _datetimeFormulaLegacy
 	}
 	return _datetimeFormula
+}
+
+func (d *chatDB) GetAttachmentPaths() (map[int][]string, error) {
+	attachmentJoins, err := d.DB.Query("SELECT message_id, attachment_id FROM message_attachment_join")
+	if err != nil {
+		return nil, errors.Wrapf(err, "scan message_attachment_join table")
+	}
+	defer attachmentJoins.Close()
+
+	attPaths := map[int][]string{}
+	for attachmentJoins.Next() {
+		var msgID, attID int
+		if err := attachmentJoins.Scan(&msgID, &attID); err != nil {
+			return attPaths, errors.Wrap(err, "read data from message_attachment_join table")
+		}
+		filename, _, err := d.getAttachmentPath(attID)
+		if err != nil {
+			return attPaths, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
+		}
+		attPaths[msgID] = append(attPaths[msgID], filename)
+	}
+	return attPaths, nil
+}
+
+func (d *chatDB) getAttachmentPath(attachmentID int) (string, string, error) {
+	attachments, err := d.DB.Query(fmt.Sprintf("SELECT filename, COALESCE(mime_type, '') FROM attachment WHERE ROWID=%d", attachmentID))
+	if err != nil {
+		return "", "", errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
+	}
+	defer attachments.Close()
+	attachments.Next()
+	var filename, mimeType string
+	if err := attachments.Scan(&filename, &mimeType); err != nil {
+		return "", "", errors.Wrapf(err, "read data for attachment ID %d", attachmentID)
+	}
+	if attachments.Next() {
+		return "", "", fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)
+	}
+	filename, err = pathtools.ReplaceTilde(filename)
+	if err != nil {
+		return "", "", errors.Wrap(err, "replace tilde")
+	}
+	if strings.HasPrefix(filename, "/var") {
+		filename = filepath.Join(filepath.Dir(filename), "0", filepath.Base(filename))
+	}
+	return filename, mimeType, nil
 }
