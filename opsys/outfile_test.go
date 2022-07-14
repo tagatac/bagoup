@@ -143,7 +143,7 @@ func TestPDFFile(t *testing.T) {
 </html>
 `,
 			),
-			wantErr: "write out PDF: Loading pages",
+			wantErr: "write out PDF: Loading page",
 		},
 	}
 
