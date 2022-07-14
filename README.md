@@ -83,15 +83,15 @@ Help Options:
   -h, --help              Show this help message
 ```
 All conversations will be exported as text files to the specified export path.
-See https://github.com/tagatac/bagoup/tree/master/example-export for an example
+See https://github.com/tagatac/bagoup/tree/main/example-export for an example
 export directory structure.
 
 ## Author
 Copyright (C) 2020-2022 [David Tagatac](mailto:david@tagatac.net)
 
-[ci-img]: https://travis-ci.com/tagatac/bagoup.svg?branch=master
+[ci-img]: https://travis-ci.com/tagatac/bagoup.svg?branch=main
 [ci]: https://app.travis-ci.com/github/tagatac/bagoup
-[cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/master/graph/badge.svg
+[cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/main/graph/badge.svg
 [cov]: https://codecov.io/gh/tagatac/bagoup
 [card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup
 [card]: https://goreportcard.com/report/github.com/tagatac/bagoup
