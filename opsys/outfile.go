@@ -18,7 +18,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-//go:embed outfile_html.tmpl
+//go:embed outfile_html.tmpl testdata/*
 var _embedFS embed.FS
 
 var _unhandledAttachmentTypes []string = []string{".mov"}

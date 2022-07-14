@@ -463,9 +463,6 @@ func TestGetAttachmentPaths(t *testing.T) {
 				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
 				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnError(errors.New("this is a DB error"))
 			},
-			wantAttPaths: map[int][]string{
-				1: {"attachment1.jpeg"},
-			},
 			wantErr: "get path for attachment 2 to message 1: query attachment table for ID 2: this is a DB error",
 		},
 		{
@@ -482,9 +479,6 @@ func TestGetAttachmentPaths(t *testing.T) {
 				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
 					AddRow("~/attachment2.heic", nil)
 				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
-			},
-			wantAttPaths: map[int][]string{
-				1: {"attachment1.jpeg"},
 			},
 			wantErr: `get path for attachment 2 to message 1: read data for attachment ID 2: sql: Scan error on column index 1, name "mime_type": converting NULL to string is unsupported`,
 		},
@@ -503,9 +497,6 @@ func TestGetAttachmentPaths(t *testing.T) {
 					AddRow("~/attachment2.heic", "image/heic").
 					AddRow("attachment2.mov", "video/mov")
 				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
-			},
-			wantAttPaths: map[int][]string{
-				1: {"attachment1.jpeg"},
 			},
 			wantErr: "get path for attachment 2 to message 1: multiple attachments with the same ID: 2 - attachment ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
 		},

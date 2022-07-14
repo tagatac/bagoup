@@ -67,7 +67,7 @@ func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand fu
 func (s opSys) FileAccess(fp string) error {
 	f, err := s.Open(fp)
 	if err != nil {
-		return errors.Wrapf(err, "open file %q", fp)
+		return err
 	}
 	f.Close()
 	return nil
@@ -146,7 +146,7 @@ func sanitizePhone(dirty string) string {
 func (s opSys) CopyFile(src, dstDir string) error {
 	fin, err := s.Open(src)
 	if err != nil {
-		return errors.Wrapf(err, "open source file %q", src)
+		return err
 	}
 	defer fin.Close()
 	dst := filepath.Join(dstDir, filepath.Base(src))
@@ -166,7 +166,7 @@ func (s *opSys) getTempDir() (string, error) {
 	}
 	p, err := os.MkdirTemp("", "bagoup")
 	if err != nil {
-		return "", errors.Wrap(err, "create temporary directory")
+		return "", errors.Wrapf(err, "create temporary directory %q", p)
 	}
 	s.tempDir = p
 	return p, nil
