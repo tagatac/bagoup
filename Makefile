@@ -13,8 +13,6 @@ vendor: go.mod go.sum
 	rm -vrf $(LIBDE265_VENDOR_DIR)
 	@echo "Copy files pruned by `go mod vendor` (see https://github.com/golang/go/issues/26366). Sudo permissions will be required"
 	cp -vR $(shell go env GOPATH)/pkg/mod/github.com/adrium/goheif@v0.0.0-20210309200126-b184a7b446fa/libde265 $(GOHEIF_VENDOR_DIR)
-	sudo chmod -vR u+rw $(LIBDE265_VENDOR_DIR)
-	chmod -v u+x $(LIBDE265_VENDOR_DIR)
 
 .PHONY: deps generate test zip clean codecov
 
@@ -35,6 +33,7 @@ zip: build
 	zip $(ZIPFILE) bagoup
 
 clean:
+	sudo rm -vrf $(LIBDE265_VENDOR_DIR)
 	rm -vrf bagoup \
 	vendor \
 	$(COVERAGE_FILE) \
