@@ -15,8 +15,13 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 [2020-03-01 15:35:50] Me: 👍
 ```
 
-## Installation
+## Dependencies
+- [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for exports to plaintext)
+```
+brew install wkhtmltopdf
+```
 
+## Installation
 ```
 brew tap tagatac/bagoup
 brew install bagoup
