@@ -419,20 +419,44 @@ func TestGetAttachmentPaths(t *testing.T) {
 					AddRow(1, 2).
 					AddRow(2, 3)
 				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("attachment1.jpeg", "image/jpeg")
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("~/attachment2.heic", "image/heic")
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("/var/folder/attachment3.mp4", "video/mp4")
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=3`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("attachment1.jpeg", "image/jpeg", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("~/attachment2.heic", "image/heic", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("/var/folder/attachment3.mp4", "video/mp4", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=3`).WillReturnRows(rows)
 			},
 			wantAttPaths: map[int][]string{
 				1: {"attachment1.jpeg", pathtools.MustReplaceTilde("~/attachment2.heic")},
 				2: {"/var/folder/0/attachment3.mp4"},
 			},
+		},
+		{
+			msg: "invalid transfer state",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id", "attachment_id"}).
+					AddRow(1, 1)
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("attachment1.jpeg", "image/jpeg", 0)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+			},
+			wantAttPaths: map[int][]string{},
+		},
+		{
+			msg: "missing attachment",
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id", "attachment_id"}).
+					AddRow(1, 1)
+				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("", "image/jpeg", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+			},
+			wantAttPaths: map[int][]string{},
 		},
 		{
 			msg: "join table query error",
@@ -458,10 +482,10 @@ func TestGetAttachmentPaths(t *testing.T) {
 					AddRow(1, 2).
 					AddRow(2, 3)
 				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("attachment1.jpeg", "image/jpeg")
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnError(errors.New("this is a DB error"))
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("attachment1.jpeg", "image/jpeg", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=2`).WillReturnError(errors.New("this is a DB error"))
 			},
 			wantErr: "get path for attachment 2 to message 1: query attachment table for ID 2: this is a DB error",
 		},
@@ -473,12 +497,12 @@ func TestGetAttachmentPaths(t *testing.T) {
 					AddRow(1, 2).
 					AddRow(2, 3)
 				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("attachment1.jpeg", "image/jpeg")
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("~/attachment2.heic", nil)
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("attachment1.jpeg", "image/jpeg", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("~/attachment2.heic", nil, 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
 			},
 			wantErr: `get path for attachment 2 to message 1: read data for attachment ID 2: sql: Scan error on column index 1, name "mime_type": converting NULL to string is unsupported`,
 		},
@@ -490,13 +514,13 @@ func TestGetAttachmentPaths(t *testing.T) {
 					AddRow(1, 2).
 					AddRow(2, 3)
 				sMock.ExpectQuery("SELECT message_id, attachment_id FROM message_attachment_join").WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("attachment1.jpeg", "image/jpeg")
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
-				rows = sqlmock.NewRows([]string{"filename", "mime_type"}).
-					AddRow("~/attachment2.heic", "image/heic").
-					AddRow("attachment2.mov", "video/mov")
-				sMock.ExpectQuery(`SELECT filename, COALESCE\(mime_type, ''\) FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("attachment1.jpeg", "image/jpeg", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=1`).WillReturnRows(rows)
+				rows = sqlmock.NewRows([]string{"filename", "mime_type", "transfer_state"}).
+					AddRow("~/attachment2.heic", "image/heic", 5).
+					AddRow("attachment2.mov", "video/mov", 5)
+				sMock.ExpectQuery(`SELECT COALESCE\(filename, ''\), COALESCE\(mime_type, ''\), transfer_state FROM attachment WHERE ROWID\=2`).WillReturnRows(rows)
 			},
 			wantErr: "get path for attachment 2 to message 1: multiple attachments with the same ID: 2 - attachment ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
 		},

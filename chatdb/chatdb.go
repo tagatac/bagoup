@@ -12,6 +12,7 @@ package chatdb
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -30,6 +31,8 @@ const (
 	_newDateMultiple       = 1_000_000_000
 	_datetimeFormulaLegacy = "date + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 )
+
+const _attachmentValidTransferState = 5
 
 var _datetimeFormula = "(date/" + strconv.Itoa(_newDateMultiple) + ") + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 var _modernVersion = semver.MustParse("10.13")
@@ -253,35 +256,44 @@ func (d *chatDB) GetAttachmentPaths() (map[int][]string, error) {
 		if err := attachmentJoins.Scan(&msgID, &attID); err != nil {
 			return attPaths, errors.Wrap(err, "read data from message_attachment_join table")
 		}
-		filename, _, err := d.getAttachmentPath(attID)
+		filename, mimeType, transferState, err := d.getAttachmentPath(attID)
 		if err != nil {
 			return attPaths, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
+		}
+		if transferState != _attachmentValidTransferState {
+			log.Printf("WARN: %s attachment %d to message %d has not been transferred", mimeType, attID, msgID)
+			continue
+		}
+		if filename == "" {
+			log.Printf("WARN: %s attachment %d to message %d has no local filename", mimeType, attID, msgID)
+			continue
 		}
 		attPaths[msgID] = append(attPaths[msgID], filename)
 	}
 	return attPaths, nil
 }
 
-func (d *chatDB) getAttachmentPath(attachmentID int) (string, string, error) {
-	attachments, err := d.DB.Query(fmt.Sprintf("SELECT filename, COALESCE(mime_type, '') FROM attachment WHERE ROWID=%d", attachmentID))
+func (d *chatDB) getAttachmentPath(attachmentID int) (string, string, int, error) {
+	attachments, err := d.DB.Query(fmt.Sprintf("SELECT COALESCE(filename, ''), COALESCE(mime_type, ''), transfer_state FROM attachment WHERE ROWID=%d", attachmentID))
 	if err != nil {
-		return "", "", errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
+		return "", "", 0, errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
 	}
 	defer attachments.Close()
 	attachments.Next()
 	var filename, mimeType string
-	if err := attachments.Scan(&filename, &mimeType); err != nil {
-		return "", "", errors.Wrapf(err, "read data for attachment ID %d", attachmentID)
+	var transferState int
+	if err := attachments.Scan(&filename, &mimeType, &transferState); err != nil {
+		return "", "", 0, errors.Wrapf(err, "read data for attachment ID %d", attachmentID)
 	}
 	if attachments.Next() {
-		return "", "", fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)
+		return "", "", 0, fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)
 	}
 	filename, err = pathtools.ReplaceTilde(filename)
 	if err != nil {
-		return "", "", errors.Wrap(err, "replace tilde")
+		return "", "", 0, errors.Wrap(err, "replace tilde")
 	}
 	if strings.HasPrefix(filename, "/var") {
 		filename = filepath.Join(filepath.Dir(filename), "0", filepath.Base(filename))
 	}
-	return filename, mimeType, nil
+	return filename, mimeType, transferState, nil
 }
