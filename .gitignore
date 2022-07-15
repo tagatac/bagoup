@@ -2,7 +2,7 @@
 .vscode/
 /backup/
 bagoup
-bagoup-*-*.zip
+bagoup-*-*-*.zip
 chat.db
 contacts.vcf
 coverage.out

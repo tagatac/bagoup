@@ -1,25 +1,28 @@
 COVERAGE_FILE=coverage.out
-ZIPFILE="bagoup-$(shell uname -s)-$(shell uname -m).zip"
+VERSION=$(shell git describe --tags | sed 's/^v//g')
+ZIPFILE="bagoup-$(VERSION)-$(shell uname -s)-$(shell uname -m).zip"
 
 build: bagoup
 
-bagoup: main.go opsys/opsys.go opsys/outfile.go opsys/templates/* chatdb/chatdb.go pathtools/pathtools.go
-	go mod download
+bagoup: main.go opsys/opsys.go opsys/outfile.go opsys/templates/* chatdb/chatdb.go pathtools/pathtools.go download
 	go build -o $@ $<
 
-.PHONY: deps generate test zip clean codecov
+.PHONY: deps download generate test zip clean codecov
 
 deps:
 	go get -u -v ./...
 	go mod tidy -v
 	go get -u golang.org/x/tools/cover
 
+download:
+	go mod download
+
 generate: clean
 	go get -u github.com/golang/mock/mockgen
 	go generate ./...
 	make deps
 
-test:
+test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) ./...
 	go tool cover -func=$(COVERAGE_FILE)
 
