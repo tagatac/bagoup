@@ -58,6 +58,7 @@ func TestTxtFile(t *testing.T) {
 	assert.Error(t, rwOF.WriteMessage("attachment"), "File is closed")
 }
 
+// TODO: Add a test that this wraps long URLs properly.
 func TestPDFFile(t *testing.T) {
 	tests := []struct {
 		msg          string
@@ -77,6 +78,16 @@ func TestPDFFile(t *testing.T) {
         <title>testfile</title>
         <meta charset="utf-8">
 
+        <style>
+            body {
+                word-wrap: break-word;
+            }
+            img {
+                max-width: 875px;
+                max-height: 1300px;
+            }
+        </style>
+
         
         <style>
             img.emoji {
@@ -89,12 +100,6 @@ func TestPDFFile(t *testing.T) {
         <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
         <script>window.onload = function () { twemoji.parse(document.body); }</script>
 
-        <style>
-            img {
-                max-width: 875px;
-                max-height: 1300px;
-            }
-        </style>
     </head>
     <body>
         test message<br/>
@@ -120,6 +125,16 @@ func TestPDFFile(t *testing.T) {
         <title>testfile</title>
         <meta charset="utf-8">
 
+        <style>
+            body {
+                word-wrap: break-word;
+            }
+            img {
+                max-width: 875px;
+                max-height: 1300px;
+            }
+        </style>
+
         
         <style>
             img.emoji {
@@ -132,12 +147,6 @@ func TestPDFFile(t *testing.T) {
         <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
         <script>window.onload = function () { twemoji.parse(document.body); }</script>
 
-        <style>
-            img {
-                max-width: 875px;
-                max-height: 1300px;
-            }
-        </style>
     </head>
     <body>
         test message<br/>

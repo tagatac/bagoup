@@ -463,7 +463,7 @@ func TestTempDir(t *testing.T) {
 	}
 }
 
-// TODO: test this better with a fake syscall
+// TODO: Test this better with a fake syscall.
 func TestOpenFilesLimit(t *testing.T) {
 	s, err := NewOS(afero.NewMemMapFs(), nil, nil)
 	assert.NilError(t, err)

@@ -71,7 +71,6 @@ type (
 		closed               bool
 		embeddableImageTypes []string
 		html                 template.HTML
-		imageCount           int
 	}
 
 	htmlFileData struct {
