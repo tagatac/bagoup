@@ -6,12 +6,14 @@
 package opsys
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"unicode"
 
 	"github.com/Masterminds/semver"
@@ -42,6 +44,12 @@ type (
 		// RmTempDir removes the temporary directory used by this package for
 		// staging converted images for inclusion in PDF files.
 		RmTempDir() error
+		GetOpenFilesLimit() int
+		SetOpenFilesLimit(n int) error
+		// ResetOpenFilesLimit resets the maximum number of open files to the
+		// value first seen by bagoup. This limit may be increased during
+		// bagoup's operation.
+		ResetOpenFilesLimit() error
 		// HEIC2JPG converts the src file to a JPEG image if the src file is an
 		// HEIC image, returning the path to the JPEG image. Otherwise the src
 		// path is returned.
@@ -53,15 +61,27 @@ type (
 
 	opSys struct {
 		afero.Fs
-		osStat      func(string) (os.FileInfo, error)
-		execCommand func(string, ...string) *exec.Cmd
-		tempDir     string
+		osStat                 func(string) (os.FileInfo, error)
+		execCommand            func(string, ...string) *exec.Cmd
+		tempDir                string
+		originalOpenFilesLimit syscall.Rlimit
+		openFilesLimit         int
 	}
 )
 
 // NewOS returns an OS from a given filesystem, os Stat, and exec Command.
-func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand func(string, ...string) *exec.Cmd) OS {
-	return &opSys{Fs: fs, osStat: osStat, execCommand: execCommand}
+func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand func(string, ...string) *exec.Cmd) (OS, error) {
+	var openFilesLimit syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &openFilesLimit); err != nil {
+		return nil, errors.Wrap(err, "check file count limit")
+	}
+	return &opSys{
+		Fs:                     fs,
+		osStat:                 osStat,
+		execCommand:            execCommand,
+		originalOpenFilesLimit: openFilesLimit,
+		openFilesLimit:         int(openFilesLimit.Cur),
+	}, nil
 }
 
 func (s opSys) FileAccess(fp string) error {
@@ -181,5 +201,32 @@ func (s *opSys) RmTempDir() error {
 		return errors.Wrapf(err, "remove temporary directory %q", s.tempDir)
 	}
 	s.tempDir = ""
+	return nil
+}
+
+func (s opSys) GetOpenFilesLimit() int {
+	return int(s.openFilesLimit)
+}
+
+func (s *opSys) SetOpenFilesLimit(n int) error {
+	if n > int(s.originalOpenFilesLimit.Max) {
+		return fmt.Errorf("%d exceeds the open fd hard limit of %d - this can be increased with `sudo ulimit -Hn %d`", n, s.originalOpenFilesLimit.Max, n)
+	}
+	numFilesLimit := syscall.Rlimit{
+		Cur: uint64(n),
+		Max: s.originalOpenFilesLimit.Max,
+	}
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &numFilesLimit); err != nil {
+		return err
+	}
+	s.openFilesLimit = n
+	return nil
+}
+
+func (s *opSys) ResetOpenFilesLimit() error {
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &s.originalOpenFilesLimit); err != nil {
+		return err
+	}
+	s.openFilesLimit = int(s.originalOpenFilesLimit.Cur)
 	return nil
 }

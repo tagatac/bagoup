@@ -16,13 +16,14 @@ func TestTxtFile(t *testing.T) {
 	rwFS := afero.NewMemMapFs()
 
 	// Create OutFile in read/write filesystem
-	rwOS := NewOS(rwFS, nil, nil)
-	var err error
+	rwOS, err := NewOS(rwFS, nil, nil)
+	assert.NilError(t, err)
 	rwOF, err := rwOS.NewOutFile("testfile", false, false)
 	assert.NilError(t, err)
 
 	// Create OutFile in read-only filesystem
-	roOS := NewOS(afero.NewReadOnlyFs(rwFS), nil, nil)
+	roOS, err := NewOS(afero.NewReadOnlyFs(rwFS), nil, nil)
+	assert.NilError(t, err)
 	_, err = roOS.NewOutFile("testfile", false, false)
 	assert.Error(t, err, `open file "testfile.txt": operation not permitted`)
 	roFile, err := roOS.OpenFile("testfile.txt", os.O_RDONLY, 0444)
@@ -40,7 +41,10 @@ func TestTxtFile(t *testing.T) {
 	assert.NilError(t, rwOF.WriteAttachment("tennisballs.jpeg"))
 	assert.Error(t, roOF.WriteAttachment("tennisballs.jpeg"), "write testfile.txt: file handle is read only")
 
-	// Close
+	// Stage (no-op) and close the text file
+	imgCount, err := rwOF.Stage()
+	assert.NilError(t, err)
+	assert.Equal(t, imgCount, 0)
 	assert.NilError(t, rwOF.Close())
 	assert.NilError(t, rwOF.Close())
 
@@ -56,10 +60,11 @@ func TestTxtFile(t *testing.T) {
 
 func TestPDFFile(t *testing.T) {
 	tests := []struct {
-		msg        string
-		includePPA bool
-		wantHTML   template.HTML
-		wantErr    string
+		msg          string
+		includePPA   bool
+		wantHTML     template.HTML
+		wantImgCount int
+		wantErr      string
 	}{
 		{
 			msg: "happy",
@@ -101,6 +106,7 @@ func TestPDFFile(t *testing.T) {
 </html>
 `,
 			),
+			wantImgCount: 1,
 		},
 		{
 			msg:        "include plugin payload attachments",
@@ -143,18 +149,23 @@ func TestPDFFile(t *testing.T) {
 </html>
 `,
 			),
-			wantErr: "write out PDF: Loading page",
+			wantImgCount: 2,
+			wantErr:      "write out PDF: Loading page",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			// Create OutFile in read/write filesystem
-			of, err := NewOS(afero.NewMemMapFs(), nil, nil).NewOutFile("testfile", true, tt.includePPA)
+			rwOS, err := NewOS(afero.NewMemMapFs(), nil, nil)
+			assert.NilError(t, err)
+			of, err := rwOS.NewOutFile("testfile", true, tt.includePPA)
 			assert.NilError(t, err)
 
 			// Create OutFile in read-only filesystem
-			_, err = NewOS(afero.NewReadOnlyFs(afero.NewMemMapFs()), nil, nil).NewOutFile("testfile", true, tt.includePPA)
+			roOS, err := NewOS(afero.NewReadOnlyFs(afero.NewMemMapFs()), nil, nil)
+			assert.NilError(t, err)
+			_, err = roOS.NewOutFile("testfile", true, tt.includePPA)
 			assert.Error(t, err, `open file "testfile.pdf": operation not permitted`)
 
 			// Get name
@@ -168,6 +179,10 @@ func TestPDFFile(t *testing.T) {
 			assert.NilError(t, of.WriteAttachment("video.mov"))
 			assert.NilError(t, of.WriteAttachment("signallogo.pluginPayloadAttachment"))
 
+			// Stage, write, and close the PDF
+			imgCount, err := of.Stage()
+			assert.NilError(t, err)
+			assert.Equal(t, tt.wantImgCount, imgCount)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, of.Close(), tt.wantErr)
 			}
@@ -178,9 +193,11 @@ func TestPDFFile(t *testing.T) {
 			pdf := of.(*pdfFile)
 			assert.Equal(t, pdf.html, tt.wantHTML)
 
-			// Write after closing
+			// Write/stage after closing
 			assert.Error(t, of.WriteMessage("test message after closing\n"), _errFileClosed.Error())
 			assert.Error(t, of.WriteAttachment("attachment"), _errFileClosed.Error())
+			_, err = of.Stage()
+			assert.Error(t, err, _errFileClosed.Error())
 		})
 	}
 }

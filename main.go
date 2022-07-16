@@ -71,7 +71,9 @@ func main() {
 	logFatalOnErr(errors.Wrap(err, "replace tilde"))
 	opts.DBPath = dbPath
 
-	s := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
+	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
+	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
+	defer s.ResetOpenFilesLimit()
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
 	defer db.Close()
@@ -197,7 +199,7 @@ func (config configuration) exportEntityChats(entityChats chatdb.EntityChats) (i
 		} else {
 			thisCount, err := config.writeFile(entityChats.Name, []string{chat.GUID}, messageIDs)
 			if err != nil {
-				return count + thisCount, err
+				return count, err
 			}
 			count += thisCount
 		}
@@ -205,7 +207,7 @@ func (config configuration) exportEntityChats(entityChats chatdb.EntityChats) (i
 	if mergeChats {
 		thisCount, err := config.writeFile(entityChats.Name, guids, entityMessageIDs)
 		if err != nil {
-			return count + thisCount, err
+			return count, err
 		}
 		count += thisCount
 	}
@@ -236,18 +238,26 @@ func (config configuration) writeFile(entityName string, guids []string, message
 	for _, messageID := range messageIDs {
 		msg, err := config.GetMessage(messageID.ID, config.HandleMap, config.MacOSVersion)
 		if err != nil {
-			return count, errors.Wrapf(err, "get message with ID %d", messageID.ID)
+			return 0, errors.Wrapf(err, "get message with ID %d", messageID.ID)
 		}
 		if err := outFile.WriteMessage(msg); err != nil {
-			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
+			return 0, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
 		}
 		if err := config.copyAndWriteAttachments(outFile, messageID.ID, attDir); err != nil {
-			return count, errors.Wrapf(err, "chat file %q - message %d", outFile.Name(), messageID.ID)
+			return 0, errors.Wrapf(err, "chat file %q - message %d", outFile.Name(), messageID.ID)
 		}
 		count++
 	}
-	err = outFile.Close()
-	return count, err
+	imgCount, err := outFile.Stage()
+	if err != nil {
+		return 0, errors.Wrapf(err, "stage chat file %q for writing/closing", outFile.Name())
+	}
+	if openFilesLimit := config.GetOpenFilesLimit(); imgCount*2 > openFilesLimit {
+		if err := config.SetOpenFilesLimit(imgCount * 2); err != nil {
+			return 0, errors.Wrapf(err, "chat file %q - increase the open file limit from %d to %d to support %d embedded images", outFile.Name(), openFilesLimit, imgCount*2, imgCount)
+		}
+	}
+	return count, errors.Wrapf(outFile.Close(), "write/close chat file %q", outFile.Name())
 }
 
 func (config configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
