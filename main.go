@@ -242,7 +242,7 @@ func (config configuration) writeFile(entityName string, guids []string, message
 			return count, errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
 		}
 		if err := config.copyAndWriteAttachments(outFile, messageID.ID, attDir); err != nil {
-			return count, err
+			return count, errors.Wrapf(err, "chat file %q - message %d", outFile.Name(), messageID.ID)
 		}
 		count++
 	}
@@ -255,10 +255,17 @@ func (config configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgID
 	if !ok {
 		return nil
 	}
+
 	for _, attPath := range msgPaths {
+		if ok, err := config.FileExist(attPath); err != nil {
+			return errors.Wrapf(err, "check existence of file %q - POSSIBLE FIX: %s", attPath, _readmeURL)
+		} else if !ok {
+			log.Printf("WARN: chat file %q - message %d - attachment %q does not exist locally", outFile.Name(), msgID, attPath)
+			continue
+		}
 		if config.Options.CopyAttachments {
 			if err := config.CopyFile(attPath, attDir); err != nil {
-				return errors.Wrapf(err, "copy attachment %q to %q - POSSIBLE FIX: %s", attPath, attDir, _readmeURL)
+				return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
 			}
 		}
 		if config.Options.OutputPDF {
@@ -271,7 +278,7 @@ func (config configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgID
 			attPath = jpgPath
 		}
 		if err := outFile.WriteAttachment(attPath); err != nil {
-			return errors.Wrapf(err, "include attachment %q in file %q", attPath, outFile.Name())
+			return errors.Wrapf(err, "include attachment %q", attPath)
 		}
 	}
 	return nil
