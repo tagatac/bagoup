@@ -54,8 +54,9 @@ func TestFileAccess(t *testing.T) {
 			if tt.setupFS != nil {
 				tt.setupFS(fs)
 			}
-			s := NewOS(fs, nil, nil)
-			err := s.FileAccess("testfile")
+			s, err := NewOS(fs, nil, nil)
+			assert.NilError(t, err)
+			err = s.FileAccess("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
@@ -92,7 +93,8 @@ func TestFileExist(t *testing.T) {
 			osStat := func(string) (os.FileInfo, error) {
 				return nil, tt.err
 			}
-			s := NewOS(nil, osStat, nil)
+			s, err := NewOS(nil, osStat, nil)
+			assert.NilError(t, err)
 			exist, err := s.FileExist("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -131,7 +133,8 @@ func TestGetMacOSVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			s := NewOS(nil, nil, genFakeExecCommand(tt.swVersOutput, tt.swVersErr))
+			s, err := NewOS(nil, nil, genFakeExecCommand(tt.swVersOutput, tt.swVersErr))
+			assert.NilError(t, err)
 			v, err := s.GetMacOSVersion()
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -302,7 +305,8 @@ END:VCARD
 			if tt.setupFs != nil {
 				tt.setupFs(fs)
 			}
-			s := NewOS(fs, nil, nil)
+			s, err := NewOS(fs, nil, nil)
+			assert.NilError(t, err)
 			contactMap, err := s.GetContactMap("contacts.vcf")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -392,8 +396,9 @@ func TestCopyFile(t *testing.T) {
 			if tt.roFS {
 				fs = afero.NewReadOnlyFs(fs)
 			}
-			s := NewOS(fs, nil, nil)
-			err := s.CopyFile("testfile", "destinationdir")
+			s, err := NewOS(fs, nil, nil)
+			assert.NilError(t, err)
+			err = s.CopyFile("testfile", "destinationdir")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
@@ -456,4 +461,14 @@ func TestTempDir(t *testing.T) {
 			assert.NilError(t, rwOS.RmTempDir())
 		})
 	}
+}
+
+// TODO: Test this better with a fake syscall.
+func TestOpenFilesLimit(t *testing.T) {
+	s, err := NewOS(afero.NewMemMapFs(), nil, nil)
+	assert.NilError(t, err)
+	err = s.SetOpenFilesLimit(256)
+	assert.NilError(t, err)
+	assert.Equal(t, s.GetOpenFilesLimit(), 256)
+	assert.Error(t, s.SetOpenFilesLimit(-1), "invalid argument")
 }

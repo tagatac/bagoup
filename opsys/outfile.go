@@ -53,7 +53,10 @@ type (
 		// reference to it if embedding is not possible (e.g. if the Outfile is
 		// plain text, or the attachment is a movie).
 		WriteAttachment(attPath string) error
-		// Close closes the outfile, writing it to disk. Writes
+		// Stage prepares an OutFile for writing and closing, and returns the
+		// number of images to be embedded in the OutFile.
+		Stage() (int, error)
+		// Close closes the OutFile, writing it to disk. Writes
 		Close() error
 	}
 
@@ -121,6 +124,10 @@ func (f txtFile) WriteAttachment(attPath string) error {
 	return f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filepath.Base(attPath)))
 }
 
+func (f txtFile) Stage() (int, error) {
+	return 0, nil
+}
+
 func (f *pdfFile) WriteMessage(msg string) error {
 	if f.closed {
 		return _errFileClosed
@@ -146,22 +153,29 @@ func (f *pdfFile) WriteAttachment(attPath string) error {
 	return nil
 }
 
-func (f *pdfFile) Close() error {
+func (f *pdfFile) Stage() (int, error) {
 	if f.closed {
-		return nil
+		return 0, _errFileClosed
 	}
 	tmpl, err := template.ParseFS(_embedFS, "templates/outfile_html.tmpl")
 	if err != nil {
-		return errors.Wrap(err, "parse HTML template")
+		return 0, errors.Wrap(err, "parse HTML template")
 	}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, f.contents); err != nil {
-		return errors.Wrap(err, "execute HTML template")
+		return 0, errors.Wrap(err, "execute HTML template")
 	}
 	f.html = template.HTML(buf.String())
 	page := wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
 	page.EnableLocalFileAccess.Set(true)
 	f.AddPage(page)
+	return strings.Count(string(f.html), "<img"), nil
+}
+
+func (f *pdfFile) Close() error {
+	if f.closed {
+		return nil
+	}
 	f.closed = true
 	if err := f.Create(); err != nil {
 		return errors.Wrap(err, "write out PDF")

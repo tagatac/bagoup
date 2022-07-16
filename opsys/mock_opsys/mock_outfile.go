@@ -61,6 +61,21 @@ func (mr *MockOutFileMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockOutFile)(nil).Name))
 }
 
+// Stage mocks base method.
+func (m *MockOutFile) Stage() (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Stage")
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Stage indicates an expected call of Stage.
+func (mr *MockOutFileMockRecorder) Stage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stage", reflect.TypeOf((*MockOutFile)(nil).Stage))
+}
+
 // WriteAttachment mocks base method.
 func (m *MockOutFile) WriteAttachment(arg0 string) error {
 	m.ctrl.T.Helper()

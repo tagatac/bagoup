@@ -169,6 +169,20 @@ func (mr *MockOSMockRecorder) GetMacOSVersion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMacOSVersion", reflect.TypeOf((*MockOS)(nil).GetMacOSVersion))
 }
 
+// GetOpenFilesLimit mocks base method.
+func (m *MockOS) GetOpenFilesLimit() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenFilesLimit")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetOpenFilesLimit indicates an expected call of GetOpenFilesLimit.
+func (mr *MockOSMockRecorder) GetOpenFilesLimit() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenFilesLimit", reflect.TypeOf((*MockOS)(nil).GetOpenFilesLimit))
+}
+
 // HEIC2JPG mocks base method.
 func (m *MockOS) HEIC2JPG(arg0 string) (string, error) {
 	m.ctrl.T.Helper()
@@ -313,6 +327,20 @@ func (mr *MockOSMockRecorder) Rename(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rename", reflect.TypeOf((*MockOS)(nil).Rename), arg0, arg1)
 }
 
+// ResetOpenFilesLimit mocks base method.
+func (m *MockOS) ResetOpenFilesLimit() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResetOpenFilesLimit")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResetOpenFilesLimit indicates an expected call of ResetOpenFilesLimit.
+func (mr *MockOSMockRecorder) ResetOpenFilesLimit() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetOpenFilesLimit", reflect.TypeOf((*MockOS)(nil).ResetOpenFilesLimit))
+}
+
 // RmTempDir mocks base method.
 func (m *MockOS) RmTempDir() error {
 	m.ctrl.T.Helper()
@@ -325,6 +353,20 @@ func (m *MockOS) RmTempDir() error {
 func (mr *MockOSMockRecorder) RmTempDir() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RmTempDir", reflect.TypeOf((*MockOS)(nil).RmTempDir))
+}
+
+// SetOpenFilesLimit mocks base method.
+func (m *MockOS) SetOpenFilesLimit(arg0 int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetOpenFilesLimit", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetOpenFilesLimit indicates an expected call of SetOpenFilesLimit.
+func (mr *MockOSMockRecorder) SetOpenFilesLimit(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOpenFilesLimit", reflect.TypeOf((*MockOS)(nil).SetOpenFilesLimit), arg0)
 }
 
 // Stat mocks base method.
