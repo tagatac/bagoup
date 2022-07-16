@@ -44,12 +44,12 @@ type (
 		// RmTempDir removes the temporary directory used by this package for
 		// staging converted images for inclusion in PDF files.
 		RmTempDir() error
+		// GetOpenFilesLimit gets the current limit on the number of open files.
 		GetOpenFilesLimit() int
+		// SetOpenFilesLimit sets the open files limit to the given value to
+		// accommodate wkhtmltopdf:
+		// https://github.com/wkhtmltopdf/wkhtmltopdf/issues/3081#issue-172083214
 		SetOpenFilesLimit(n int) error
-		// ResetOpenFilesLimit resets the maximum number of open files to the
-		// value first seen by bagoup. This limit may be increased during
-		// bagoup's operation.
-		ResetOpenFilesLimit() error
 		// HEIC2JPG converts the src file to a JPEG image if the src file is an
 		// HEIC image, returning the path to the JPEG image. Otherwise the src
 		// path is returned.
@@ -61,11 +61,11 @@ type (
 
 	opSys struct {
 		afero.Fs
-		osStat                 func(string) (os.FileInfo, error)
-		execCommand            func(string, ...string) *exec.Cmd
-		tempDir                string
-		originalOpenFilesLimit syscall.Rlimit
-		openFilesLimit         int
+		osStat             func(string) (os.FileInfo, error)
+		execCommand        func(string, ...string) *exec.Cmd
+		tempDir            string
+		openFilesLimitHard uint64
+		openFilesLimitSoft int
 	}
 )
 
@@ -76,11 +76,11 @@ func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand fu
 		return nil, errors.Wrap(err, "check file count limit")
 	}
 	return &opSys{
-		Fs:                     fs,
-		osStat:                 osStat,
-		execCommand:            execCommand,
-		originalOpenFilesLimit: openFilesLimit,
-		openFilesLimit:         int(openFilesLimit.Cur),
+		Fs:                 fs,
+		osStat:             osStat,
+		execCommand:        execCommand,
+		openFilesLimitHard: openFilesLimit.Max,
+		openFilesLimitSoft: int(openFilesLimit.Cur),
 	}, nil
 }
 
@@ -205,28 +205,20 @@ func (s *opSys) RmTempDir() error {
 }
 
 func (s opSys) GetOpenFilesLimit() int {
-	return int(s.openFilesLimit)
+	return int(s.openFilesLimitSoft)
 }
 
 func (s *opSys) SetOpenFilesLimit(n int) error {
-	if n > int(s.originalOpenFilesLimit.Max) {
-		return fmt.Errorf("%d exceeds the open fd hard limit of %d - this can be increased with `sudo ulimit -Hn %d`", n, s.originalOpenFilesLimit.Max, n)
+	if n > int(s.openFilesLimitHard) {
+		return fmt.Errorf("%d exceeds the open fd hard limit of %d - this can be increased with `sudo ulimit -Hn %d`", n, s.openFilesLimitHard, n)
 	}
 	numFilesLimit := syscall.Rlimit{
 		Cur: uint64(n),
-		Max: s.originalOpenFilesLimit.Max,
+		Max: s.openFilesLimitHard,
 	}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &numFilesLimit); err != nil {
 		return err
 	}
-	s.openFilesLimit = n
-	return nil
-}
-
-func (s *opSys) ResetOpenFilesLimit() error {
-	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &s.originalOpenFilesLimit); err != nil {
-		return err
-	}
-	s.openFilesLimit = int(s.originalOpenFilesLimit.Cur)
+	s.openFilesLimitSoft = n
 	return nil
 }

@@ -73,7 +73,6 @@ func main() {
 
 	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
 	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
-	defer s.ResetOpenFilesLimit()
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
 	defer db.Close()
