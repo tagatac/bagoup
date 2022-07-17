@@ -51,8 +51,9 @@ type (
 		WriteMessage(msg string) error
 		// WriteAttachment embeds the given attachment in the Outfile, or adds a
 		// reference to it if embedding is not possible (e.g. if the Outfile is
-		// plain text, or the attachment is a movie).
-		WriteAttachment(attPath string) error
+		// plain text, or the attachment is a movie). The return value lets the
+		// caller know whether the file was embedded or not.
+		WriteAttachment(attPath string) (bool, error)
 		// Stage prepares an OutFile for writing and closing, and returns the
 		// number of images to be embedded in the OutFile.
 		Stage() (int, error)
@@ -120,8 +121,8 @@ func (f txtFile) WriteMessage(msg string) error {
 	return err
 }
 
-func (f txtFile) WriteAttachment(attPath string) error {
-	return f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filepath.Base(attPath)))
+func (f txtFile) WriteAttachment(attPath string) (bool, error) {
+	return false, f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filepath.Base(attPath)))
 }
 
 func (f txtFile) Stage() (int, error) {
@@ -137,20 +138,22 @@ func (f *pdfFile) WriteMessage(msg string) error {
 	return nil
 }
 
-func (f *pdfFile) WriteAttachment(attPath string) error {
+func (f *pdfFile) WriteAttachment(attPath string) (bool, error) {
 	if f.closed {
-		return _errFileClosed
+		return false, _errFileClosed
 	}
+	embedded := false
 	att := template.HTML(fmt.Sprintf("<em>&lt;attached: %s&gt;</em><br/>", filepath.Base(attPath)))
 	ext := strings.ToLower(filepath.Ext(attPath))
 	for _, t := range f.embeddableImageTypes {
 		if ext == t {
+			embedded = true
 			att = template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", attPath, filepath.Base(attPath)))
 			break
 		}
 	}
 	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: att})
-	return nil
+	return embedded, nil
 }
 
 func (f *pdfFile) Stage() (int, error) {

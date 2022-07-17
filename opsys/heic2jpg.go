@@ -34,13 +34,13 @@ func (s *opSys) HEIC2JPG(src string) (string, error) {
 	}
 	tempDir, err := s.getTempDir()
 	if err != nil {
-		return "", err
+		return src, err
 	}
 	jpgFileName := strings.TrimRight(filepath.Base(src), "HEICheic") + "jpeg"
 	dst := filepath.Join(tempDir, jpgFileName)
 	fin, err := s.Open(src)
 	if err != nil {
-		return "", errors.Wrapf(err, "open HEIC file %q", src)
+		return src, errors.Wrapf(err, "open HEIC file %q", src)
 	}
 	defer fin.Close()
 	exif, err := goheif.ExtractExif(fin)
@@ -49,20 +49,20 @@ func (s *opSys) HEIC2JPG(src string) (string, error) {
 	}
 	img, err := goheif.Decode(fin)
 	if err != nil {
-		return "", errors.Wrap(err, "decode HEIC image")
+		return src, errors.Wrap(err, "decode HEIC image")
 	}
 	fout, err := s.Create(dst)
 	if err != nil {
-		return "", errors.Wrapf(err, "create JPG file %q", dst)
+		return src, errors.Wrapf(err, "create JPG file %q", dst)
 	}
 	defer fout.Close()
 	w, err := newWriterExif(fout, exif)
 	if err != nil {
-		return "", errors.Wrap(err, "create writer with EXIF")
+		return src, errors.Wrap(err, "create writer with EXIF")
 	}
 	err = jpeg.Encode(w, img, nil)
 	if err != nil {
-		return "", errors.Wrap(err, "encode JPG image")
+		return src, errors.Wrap(err, "encode JPG image")
 	}
 	return dst, nil
 }
