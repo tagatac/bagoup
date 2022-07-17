@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
@@ -59,6 +60,7 @@ type (
 		HandleMap       map[int]string
 		AttachmentPaths map[int][]chatdb.Attachment
 		Counts          counts
+		StartTime       time.Time
 	}
 	counts struct {
 		files               int
@@ -73,6 +75,7 @@ type (
 )
 
 func main() {
+	startTime := time.Now()
 	var opts options
 	_, err := flags.Parse(&opts)
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
@@ -91,10 +94,11 @@ func main() {
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	config := configuration{
-		OS:      s,
-		ChatDB:  cdb,
-		Options: opts,
-		Counts:  counts{attachments: map[string]int{}, attachmentsEmbedded: map[string]int{}},
+		OS:        s,
+		ChatDB:    cdb,
+		Options:   opts,
+		Counts:    counts{attachments: map[string]int{}, attachmentsEmbedded: map[string]int{}},
+		StartTime: startTime,
 	}
 	logFatalOnErr(config.bagoup())
 }
@@ -136,7 +140,7 @@ func (config configuration) bagoup() error {
 
 	defer config.RmTempDir()
 	err = config.exportChats(contactMap)
-	printResults(opts.ExportPath, config.Counts)
+	printResults(opts.ExportPath, config.Counts, time.Since(config.StartTime))
 	if err != nil {
 		return errors.Wrap(err, "export chats")
 	}
@@ -311,7 +315,7 @@ func (config *configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgI
 	return nil
 }
 
-func printResults(exportPath string, c counts) {
+func printResults(exportPath string, c counts, duration time.Duration) {
 	var attachmentsString string
 	for mimeType, count := range c.attachments {
 		attachmentsString += fmt.Sprintf("\n\t%s: %d", mimeType, count)
@@ -335,7 +339,8 @@ Attachments referenced or embedded: %s
 Attachments embedded: %s
 Attachments missing (see warnings above): %d
 HEIC conversions completed: %d
-HEIC conversions failed (see warnings above): %d%s`,
+HEIC conversions failed (see warnings above): %d
+Time elapsed: %s%s`,
 		"\x1b[1m",
 		exportPath,
 		c.files,
@@ -346,6 +351,7 @@ HEIC conversions failed (see warnings above): %d%s`,
 		c.attachmentsMissing,
 		c.conversions,
 		c.conversionsFailed,
+		duration.String(),
 		"\x1b[0m",
 	)
 }
