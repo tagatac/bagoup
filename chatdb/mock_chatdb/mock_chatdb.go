@@ -37,12 +37,13 @@ func (m *MockChatDB) EXPECT() *MockChatDBMockRecorder {
 }
 
 // GetAttachmentPaths mocks base method.
-func (m *MockChatDB) GetAttachmentPaths() (map[int][]string, error) {
+func (m *MockChatDB) GetAttachmentPaths() (map[int][]chatdb.Attachment, int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAttachmentPaths")
-	ret0, _ := ret[0].(map[int][]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(map[int][]chatdb.Attachment)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // GetAttachmentPaths indicates an expected call of GetAttachmentPaths.

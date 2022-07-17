@@ -77,11 +77,12 @@ func (mr *MockOutFileMockRecorder) Stage() *gomock.Call {
 }
 
 // WriteAttachment mocks base method.
-func (m *MockOutFile) WriteAttachment(arg0 string) error {
+func (m *MockOutFile) WriteAttachment(arg0 string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteAttachment", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // WriteAttachment indicates an expected call of WriteAttachment.

@@ -70,14 +70,21 @@ type (
 		// writing to a chat file.
 		GetMessage(messageID int, handleMap map[int]string, macOSVersion *semver.Version) (string, error)
 		// GetImagePaths returns a list of attachment filepaths associated with
-		// each message ID.
-		GetAttachmentPaths() (map[int][]string, error)
+		// each message ID, as well as a count of the attachments without
+		// filepaths.
+		GetAttachmentPaths() (map[int][]Attachment, int, error)
 	}
 
 	// DatedMessageID pairs a message ID and its date, in the legacy date format.
 	DatedMessageID struct {
 		ID   int
 		Date int
+	}
+
+	Attachment struct {
+		Filename      string
+		MIMEType      string
+		TransferState int
 	}
 
 	chatDB struct {
@@ -243,57 +250,55 @@ func (d *chatDB) getDatetimeFormula(macOSVersion *semver.Version) string {
 	return _datetimeFormula
 }
 
-func (d *chatDB) GetAttachmentPaths() (map[int][]string, error) {
+func (d *chatDB) GetAttachmentPaths() (map[int][]Attachment, int, error) {
 	attachmentJoins, err := d.DB.Query("SELECT message_id, attachment_id FROM message_attachment_join")
 	if err != nil {
-		return nil, errors.Wrapf(err, "scan message_attachment_join table")
+		return nil, 0, errors.Wrapf(err, "scan message_attachment_join table")
 	}
 	defer attachmentJoins.Close()
 
-	attPaths := map[int][]string{}
+	atts := map[int][]Attachment{}
+	missing := 0
 	for attachmentJoins.Next() {
 		var msgID, attID int
 		if err := attachmentJoins.Scan(&msgID, &attID); err != nil {
-			return attPaths, errors.Wrap(err, "read data from message_attachment_join table")
+			return atts, missing, errors.Wrap(err, "read data from message_attachment_join table")
 		}
-		filename, mimeType, transferState, err := d.getAttachmentPath(attID)
+		att, err := d.getAttachmentPath(attID)
 		if err != nil {
-			return attPaths, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
+			return atts, missing, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
 		}
-		if transferState != _attachmentValidTransferState {
-			log.Printf("WARN: %s attachment %d to message %d has not been transferred", mimeType, attID, msgID)
+		if att.Filename == "" {
+			missing += 1
+			log.Printf("WARN: %s attachment %d to message %d has no local filename", att.MIMEType, attID, msgID)
 			continue
 		}
-		if filename == "" {
-			log.Printf("WARN: %s attachment %d to message %d has no local filename", mimeType, attID, msgID)
-			continue
-		}
-		attPaths[msgID] = append(attPaths[msgID], filename)
+		atts[msgID] = append(atts[msgID], att)
 	}
-	return attPaths, nil
+	return atts, missing, nil
 }
 
-func (d *chatDB) getAttachmentPath(attachmentID int) (string, string, int, error) {
-	attachments, err := d.DB.Query(fmt.Sprintf("SELECT COALESCE(filename, ''), COALESCE(mime_type, ''), transfer_state FROM attachment WHERE ROWID=%d", attachmentID))
+func (d *chatDB) getAttachmentPath(attachmentID int) (Attachment, error) {
+	attachments, err := d.DB.Query(fmt.Sprintf("SELECT COALESCE(filename, ''), COALESCE(mime_type, 'application/octet-stream'), transfer_state FROM attachment WHERE ROWID=%d", attachmentID))
 	if err != nil {
-		return "", "", 0, errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
+		return Attachment{}, errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
 	}
 	defer attachments.Close()
 	attachments.Next()
 	var filename, mimeType string
 	var transferState int
 	if err := attachments.Scan(&filename, &mimeType, &transferState); err != nil {
-		return "", "", 0, errors.Wrapf(err, "read data for attachment ID %d", attachmentID)
+		return Attachment{}, errors.Wrapf(err, "read data for attachment ID %d", attachmentID)
 	}
 	if attachments.Next() {
-		return "", "", 0, fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)
+		return Attachment{}, fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)
 	}
 	filename, err = pathtools.ReplaceTilde(filename)
 	if err != nil {
-		return "", "", 0, errors.Wrap(err, "replace tilde")
+		return Attachment{}, errors.Wrap(err, "replace tilde")
 	}
 	if strings.HasPrefix(filename, "/var") {
 		filename = filepath.Join(filepath.Dir(filename), "0", filepath.Base(filename))
 	}
-	return filename, mimeType, transferState, nil
+	return Attachment{Filename: filename, MIMEType: mimeType, TransferState: transferState}, nil
 }

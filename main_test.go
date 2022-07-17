@@ -224,16 +224,15 @@ func TestExportChats(t *testing.T) {
 		pdf             bool
 		copyAttachments bool
 		setupMocks      func(*mock_chatdb.MockChatDB, *mock_opsys.MockOS, []*mock_opsys.MockOutFile)
-		wantCount       int
 		wantErr         string
 	}{
 		{
 			msg: "two chats for one display name, one for another",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+					}, 0, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -264,29 +263,24 @@ func TestExportChats(t *testing.T) {
 					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid;;;testguid2", false, false).Return(ofMocks[0], nil),
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close(),
-					ofMocks[0].EXPECT().Name().Return("messages-export/testdisplayname/testguid;;;testguid2.txt"),
-					ofMocks[0].EXPECT().Close(),
+					ofMocks[0].EXPECT().Close().Times(2),
 					dbMock.EXPECT().GetMessageIDs(3),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
 					osMock.EXPECT().NewOutFile("messages-export/testdisplayname2/testguid3", false, false).Return(ofMocks[1], nil),
 					ofMocks[1].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[1].EXPECT().Close(),
-					ofMocks[1].EXPECT().Name().Return("messages-export/testdisplayname/testguid3.txt"),
-					ofMocks[1].EXPECT().Close(),
+					ofMocks[1].EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 0,
 		},
 		{
 			msg:           "separate chats",
 			separateChats: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+					}, 0, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -307,29 +301,24 @@ func TestExportChats(t *testing.T) {
 					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid", false, false).Return(ofMocks[0], nil),
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close(),
-					ofMocks[0].EXPECT().Name().Return("messages-export/testdisplayname/testguid.txt"),
-					ofMocks[0].EXPECT().Close(),
+					ofMocks[0].EXPECT().Close().Times(2),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
 					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid2", false, false).Return(ofMocks[1], nil),
 					ofMocks[1].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[1].EXPECT().Close(),
-					ofMocks[1].EXPECT().Name().Return("messages-export/testdisplayname/testguid2.txt"),
-					ofMocks[1].EXPECT().Close(),
+					ofMocks[1].EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 0,
 		},
 		{
 			msg: "pdf",
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+					}, 0, nil),
 					osMock.EXPECT().FileAccess("attachmentpath"),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
@@ -347,21 +336,18 @@ func TestExportChats(t *testing.T) {
 					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid", true, false).Return(ofMocks[0], nil),
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close(),
-					ofMocks[0].EXPECT().Name().Return("messages-export/testdisplayname/testguid.pdf"),
-					ofMocks[0].EXPECT().Close(),
+					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 0,
 		},
 		{
 			msg: "pdf without attachments",
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
+					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
 						100: {},
-					}, nil),
+					}, 0, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -378,21 +364,18 @@ func TestExportChats(t *testing.T) {
 					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid", true, false).Return(ofMocks[0], nil),
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close(),
-					ofMocks[0].EXPECT().Name().Return("messages-export/testdisplayname/testguid.pdf"),
-					ofMocks[0].EXPECT().Close(),
+					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 0,
 		},
 		{
 			msg:             "copy attachments",
 			copyAttachments: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+					}, 0, nil),
 					osMock.EXPECT().FileAccess("attachmentpath"),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
@@ -411,29 +394,25 @@ func TestExportChats(t *testing.T) {
 					osMock.EXPECT().Mkdir("messages-export/testdisplayname/attachments", os.ModePerm),
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close(),
-					ofMocks[0].EXPECT().Name().Return("messages-export/testdisplayname/testguid.txt"),
-					ofMocks[0].EXPECT().Close(),
+					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 0,
 		},
 		{
 			msg: "error getting attachment paths",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
-				dbMock.EXPECT().GetAttachmentPaths().Return(nil, errors.New("this is a DB error"))
+				dbMock.EXPECT().GetAttachmentPaths().Return(nil, 0, errors.New("this is a DB error"))
 			},
-			wantCount: 0,
-			wantErr:   "get attachment paths: this is a DB error",
+			wantErr: "get attachment paths: this is a DB error",
 		},
 		{
 			msg: "pdf export - no access to attachment path",
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+					}, 0, nil),
 					osMock.EXPECT().FileAccess("attachmentpath").Return(errors.New("this is a permissions error")),
 				)
 			},
@@ -443,9 +422,7 @@ func TestExportChats(t *testing.T) {
 			msg: "GetMessageIDs error",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths(),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -466,9 +443,7 @@ func TestExportChats(t *testing.T) {
 			msg: "writeFile error",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths(),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -491,9 +466,7 @@ func TestExportChats(t *testing.T) {
 			separateChats: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]string{
-						100: {"attachmentpath"},
-					}, nil),
+					dbMock.EXPECT().GetAttachmentPaths(),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -530,6 +503,10 @@ func TestExportChats(t *testing.T) {
 			}
 			tt.setupMocks(dbMock, osMock, ofMocks)
 
+			cnts := counts{
+				attachments:         map[string]int{},
+				attachmentsEmbedded: map[string]int{},
+			}
 			cfg := configuration{
 				Options: options{
 					ExportPath:      "messages-export",
@@ -539,14 +516,14 @@ func TestExportChats(t *testing.T) {
 				},
 				OS:     osMock,
 				ChatDB: dbMock,
+				Counts: cnts,
 			}
-			count, err := cfg.exportChats(nil)
+			err := cfg.exportChats(nil)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, tt.wantCount, count)
 		})
 	}
 }
@@ -557,7 +534,10 @@ func TestWriteFile(t *testing.T) {
 		pdf             bool
 		copyAttachments bool
 		setupMocks      func(*mock_chatdb.MockChatDB, *mock_opsys.MockOS, *mock_opsys.MockOutFile)
-		wantCount       int
+		wantJPGs        int
+		wantEmbedded    int
+		wantConv        int
+		wantConvFail    int
 		wantErr         string
 	}{
 		{
@@ -570,18 +550,16 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					ofMock.EXPECT().WriteAttachment("attachment2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMock.EXPECT().Close(),
-					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
-					ofMock.EXPECT().Close(),
+					ofMock.EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 2,
+			wantJPGs: 1,
 		},
 		{
 			msg: "pdf export",
@@ -594,20 +572,20 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment1").Return("attachment1", nil),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment2").Return("attachment2", nil),
-					ofMock.EXPECT().WriteAttachment("attachment2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment1.heic").Return("attachment1.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.jpeg").Return(true, nil),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMock.EXPECT().Close(),
-					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
-					ofMock.EXPECT().Close(),
+					ofMock.EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 2,
+			wantJPGs:     2,
+			wantEmbedded: 1,
+			wantConv:     1,
 		},
 		{
 			msg: "pdf export needs open files limit increase",
@@ -620,21 +598,20 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment1").Return("attachment1", nil),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment2").Return("attachment2", nil),
-					ofMock.EXPECT().WriteAttachment("attachment2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment1.heic").Return("attachment1.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.jpeg"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage().Return(500, nil),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
 					osMock.EXPECT().SetOpenFilesLimit(1000),
-					ofMock.EXPECT().Close(),
-					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
-					ofMock.EXPECT().Close(),
+					ofMock.EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 2,
+			wantJPGs: 2,
+			wantConv: 1,
 		},
 		{
 			msg:             "copy attachments",
@@ -648,20 +625,18 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					osMock.EXPECT().CopyFile("attachment1", "messages-export/friend/attachments"),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					osMock.EXPECT().CopyFile("attachment2", "messages-export/friend/attachments"),
-					ofMock.EXPECT().WriteAttachment("attachment2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().CopyFile("attachment1.heic", "messages-export/friend/attachments"),
+					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().CopyFile("attachment2.jpeg", "messages-export/friend/attachments"),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMock.EXPECT().Close(),
-					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
-					ofMock.EXPECT().Close(),
+					ofMock.EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 2,
+			wantJPGs: 1,
 		},
 		{
 			msg: "NewOutFile error",
@@ -727,12 +702,12 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment1").Return("attachment1", nil),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment2").Return("attachment2", nil),
-					ofMock.EXPECT().WriteAttachment("attachment2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment1.heic").Return("attachment1.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.jpeg"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage().Return(0, errors.New("this is a staging error")),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().Close(),
@@ -751,12 +726,12 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment1").Return("attachment1", nil),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment2").Return("attachment2", nil),
-					ofMock.EXPECT().WriteAttachment("attachment2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment1.heic").Return("attachment1.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.jpeg"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage().Return(500, nil),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
 					osMock.EXPECT().SetOpenFilesLimit(1000).Return(errors.New("this is a syscall error")),
@@ -765,6 +740,29 @@ func TestWriteFile(t *testing.T) {
 				)
 			},
 			wantErr: `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf" - increase the open file limit from 256 to 1000 to support 500 embedded images: this is a syscall error`,
+		},
+		{
+			msg: "Close error",
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
+				gomock.InOrder(
+					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
+					osMock.EXPECT().NewOutFile("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com", false, false).Return(ofMock, nil),
+					dbMock.EXPECT().GetMessage(1, nil, semver.MustParse("12.4")).Return("message1", nil),
+					ofMock.EXPECT().WriteMessage("message1"),
+					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
+					ofMock.EXPECT().WriteMessage("message2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
+					ofMock.EXPECT().Stage(),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					ofMock.EXPECT().Close().Return(errors.New("this is a wkhtmltopdf error")),
+					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
+					ofMock.EXPECT().Close(),
+				)
+			},
+			wantErr: `write/close chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt": this is a wkhtmltopdf error`,
 		},
 		{
 			msg: "attachment file does not exist",
@@ -776,18 +774,16 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(false, nil),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(false, nil),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					ofMock.EXPECT().WriteAttachment("attachment2"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMock.EXPECT().Close(),
-					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
-					ofMock.EXPECT().Close(),
+					ofMock.EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 2,
+			wantJPGs: 1,
 		},
 		{
 			msg: "file existence check fails",
@@ -799,13 +795,12 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(false, errors.New("this is a permissions error")),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(false, errors.New("this is a permissions error")),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
 					ofMock.EXPECT().Close(),
 				)
 			},
-			wantCount: 2,
-			wantErr:   `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: check existence of file "attachment1" - POSSIBLE FIX: https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access: this is a permissions error`,
+			wantErr: `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: check existence of file "attachment1.heic" - POSSIBLE FIX: https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access: this is a permissions error`,
 		},
 		{
 			msg:             "CopyFile error",
@@ -819,17 +814,16 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					osMock.EXPECT().CopyFile("attachment1", "messages-export/friend/attachments"),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					osMock.EXPECT().CopyFile("attachment2", "messages-export/friend/attachments").Return(errors.New("this is a permissions error")),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().CopyFile("attachment1.heic", "messages-export/friend/attachments"),
+					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().CopyFile("attachment2.jpeg", "messages-export/friend/attachments").Return(errors.New("this is a permissions error")),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
 					ofMock.EXPECT().Close(),
 				)
 			},
-			wantCount: 1,
-			wantErr:   `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: copy attachment "attachment2" to "messages-export/friend/attachments": this is a permissions error`,
+			wantErr: `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: copy attachment "attachment2.jpeg" to "messages-export/friend/attachments": this is a permissions error`,
 		},
 		{
 			msg: "HEIC conversion error",
@@ -842,17 +836,20 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment1").Return("attachment1", nil),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					osMock.EXPECT().HEIC2JPG("attachment2").Return("attachment2", nil).Return("", errors.New("this is a goheif error")),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment1.heic").Return("attachment1.heic", errors.New("this is a goheif error")),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
-					ofMock.EXPECT().Close(),
+					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
+					ofMock.EXPECT().Stage(),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					ofMock.EXPECT().Close().Times(2),
 				)
 			},
-			wantCount: 1,
-			wantErr:   `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf" - message 2: convert HEIC file "attachment2" to JPG: this is a goheif error`,
+			wantJPGs:     1,
+			wantConvFail: 1,
 		},
 		{
 			msg: "WriteAttachment error",
@@ -864,16 +861,15 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
 					ofMock.EXPECT().WriteMessage("message2"),
-					osMock.EXPECT().FileExist("attachment1").Return(true, nil),
-					ofMock.EXPECT().WriteAttachment("attachment1"),
-					osMock.EXPECT().FileExist("attachment2").Return(true, nil),
-					ofMock.EXPECT().WriteAttachment("attachment2").Return(errors.New("this is an outfile error")),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg").Return(false, errors.New("this is an outfile error")),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
 					ofMock.EXPECT().Close(),
 				)
 			},
-			wantCount: 1,
-			wantErr:   `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: include attachment "attachment2": this is an outfile error`,
+			wantErr: `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: include attachment "attachment2.jpeg": this is an outfile error`,
 		},
 	}
 
@@ -886,6 +882,10 @@ func TestWriteFile(t *testing.T) {
 			ofMock := mock_opsys.NewMockOutFile(ctrl)
 			tt.setupMocks(dbMock, osMock, ofMock)
 
+			cnts := counts{
+				attachments:         map[string]int{},
+				attachmentsEmbedded: map[string]int{},
+			}
 			cfg := configuration{
 				Options: options{
 					ExportPath:      "messages-export",
@@ -895,11 +895,15 @@ func TestWriteFile(t *testing.T) {
 				OS:           osMock,
 				ChatDB:       dbMock,
 				MacOSVersion: semver.MustParse("12.4"),
-				AttachmentPaths: map[int][]string{
-					2: {"attachment1", "attachment2"},
+				AttachmentPaths: map[int][]chatdb.Attachment{
+					2: {
+						chatdb.Attachment{Filename: "attachment1.heic", MIMEType: "image/heic"},
+						chatdb.Attachment{Filename: "attachment2.jpeg", MIMEType: "image/jpeg"},
+					},
 				},
+				Counts: cnts,
 			}
-			count, err := cfg.writeFile(
+			err := cfg.writeFile(
 				"friend",
 				[]string{"iMessage;-;friend@gmail.com", "iMessage;-;friend@hotmail.com"},
 				[]chatdb.DatedMessageID{
@@ -912,7 +916,11 @@ func TestWriteFile(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, tt.wantCount, count)
+			assert.Equal(t, 2, cfg.Counts.messages)
+			assert.Equal(t, tt.wantJPGs, cfg.Counts.attachments["image/jpeg"])
+			assert.Equal(t, tt.wantEmbedded, cfg.Counts.attachmentsEmbedded["image/jpeg"])
+			assert.Equal(t, tt.wantConv, cfg.Counts.conversions)
+			assert.Equal(t, tt.wantConvFail, cfg.Counts.conversionsFailed)
 		})
 	}
 }

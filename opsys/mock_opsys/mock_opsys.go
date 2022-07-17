@@ -327,20 +327,6 @@ func (mr *MockOSMockRecorder) Rename(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rename", reflect.TypeOf((*MockOS)(nil).Rename), arg0, arg1)
 }
 
-// ResetOpenFilesLimit mocks base method.
-func (m *MockOS) ResetOpenFilesLimit() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResetOpenFilesLimit")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResetOpenFilesLimit indicates an expected call of ResetOpenFilesLimit.
-func (mr *MockOSMockRecorder) ResetOpenFilesLimit() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetOpenFilesLimit", reflect.TypeOf((*MockOS)(nil).ResetOpenFilesLimit))
-}
-
 // RmTempDir mocks base method.
 func (m *MockOS) RmTempDir() error {
 	m.ctrl.T.Helper()

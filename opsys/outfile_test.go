@@ -38,8 +38,12 @@ func TestTxtFile(t *testing.T) {
 	assert.Error(t, roOF.WriteMessage("test message\n"), "write testfile.txt: file handle is read only")
 
 	// Write attachment
-	assert.NilError(t, rwOF.WriteAttachment("tennisballs.jpeg"))
-	assert.Error(t, roOF.WriteAttachment("tennisballs.jpeg"), "write testfile.txt: file handle is read only")
+	embedded, err := rwOF.WriteAttachment("tennisballs.jpeg")
+	assert.NilError(t, err)
+	assert.Equal(t, false, embedded)
+	embedded, err = roOF.WriteAttachment("tennisballs.jpeg")
+	assert.Error(t, err, "write testfile.txt: file handle is read only")
+	assert.Equal(t, false, embedded)
 
 	// Stage (no-op) and close the text file
 	imgCount, err := rwOF.Stage()
@@ -184,9 +188,15 @@ func TestPDFFile(t *testing.T) {
 			assert.NilError(t, of.WriteMessage("test message\n"))
 
 			// Write attachments
-			assert.NilError(t, of.WriteAttachment("tennisballs.jpeg"))
-			assert.NilError(t, of.WriteAttachment("video.mov"))
-			assert.NilError(t, of.WriteAttachment("signallogo.pluginPayloadAttachment"))
+			embedded, err := of.WriteAttachment("tennisballs.jpeg")
+			assert.NilError(t, err)
+			assert.Equal(t, true, embedded)
+			embedded, err = of.WriteAttachment("video.mov")
+			assert.NilError(t, err)
+			assert.Equal(t, false, embedded)
+			embedded, err = of.WriteAttachment("signallogo.pluginPayloadAttachment")
+			assert.NilError(t, err)
+			assert.Equal(t, tt.includePPA, embedded)
 
 			// Stage, write, and close the PDF
 			imgCount, err := of.Stage()
@@ -204,7 +214,8 @@ func TestPDFFile(t *testing.T) {
 
 			// Write/stage after closing
 			assert.Error(t, of.WriteMessage("test message after closing\n"), _errFileClosed.Error())
-			assert.Error(t, of.WriteAttachment("attachment"), _errFileClosed.Error())
+			_, err = of.WriteAttachment("attachment")
+			assert.Error(t, err, _errFileClosed.Error())
 			_, err = of.Stage()
 			assert.Error(t, err, _errFileClosed.Error())
 		})
