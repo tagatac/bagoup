@@ -68,7 +68,6 @@ type (
 		tempDir            string
 		openFilesLimitHard uint64
 		openFilesLimitSoft int
-		imgConverter       heic2jpg.Converter
 	}
 )
 

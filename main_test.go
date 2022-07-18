@@ -50,7 +50,7 @@ func TestBagoup(t *testing.T) {
 		{
 			msg:  "missing chatDB read permissions",
 			opts: defaultOpts,
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB) {
 				osMock.EXPECT().FileAccess("~/Library/Messages/chat.db").Return(errors.New("this is a permissions error"))
 			},
 			wantErr: `test DB file "~/Library/Messages/chat.db" - FIX: https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access: this is a permissions error`,
@@ -58,7 +58,7 @@ func TestBagoup(t *testing.T) {
 		{
 			msg:  "running on Windows",
 			opts: defaultOpts,
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
@@ -70,7 +70,7 @@ func TestBagoup(t *testing.T) {
 		{
 			msg:  "export path exists",
 			opts: defaultOpts,
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export").Return(true, nil),
@@ -81,7 +81,7 @@ func TestBagoup(t *testing.T) {
 		{
 			msg:  "error checking export path",
 			opts: defaultOpts,
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export").Return(false, errors.New("this is a stat error")),
@@ -116,7 +116,7 @@ func TestBagoup(t *testing.T) {
 				MacOSVersion: &tenDotTenDotTenDotTen,
 				SelfHandle:   "Me",
 			},
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
@@ -153,7 +153,7 @@ func TestBagoup(t *testing.T) {
 				ContactsPath: &contactsPath,
 				SelfHandle:   "Me",
 			},
-			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
@@ -400,7 +400,7 @@ func TestExportChats(t *testing.T) {
 		},
 		{
 			msg: "error getting attachment paths",
-			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, _ *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				dbMock.EXPECT().GetAttachmentPaths().Return(nil, 0, errors.New("this is a DB error"))
 			},
 			wantErr: "get attachment paths: this is a DB error",
@@ -408,7 +408,7 @@ func TestExportChats(t *testing.T) {
 		{
 			msg: "pdf export - no access to attachment path",
 			pdf: true,
-			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
 						100: {chatdb.Attachment{Filename: "attachmentpath"}},
@@ -420,7 +420,7 @@ func TestExportChats(t *testing.T) {
 		},
 		{
 			msg: "GetMessageIDs error",
-			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, _ *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths(),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
@@ -441,7 +441,7 @@ func TestExportChats(t *testing.T) {
 		},
 		{
 			msg: "writeFile error",
-			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths(),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
@@ -464,7 +464,7 @@ func TestExportChats(t *testing.T) {
 		{
 			msg:           "separate chats - writeFile error",
 			separateChats: true,
-			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths(),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
@@ -640,7 +640,7 @@ func TestWriteFile(t *testing.T) {
 		},
 		{
 			msg: "NewOutFile error",
-			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
+			setupMocks: func(_ *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ *mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().NewOutFile("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com", false, false).Return(nil, errors.New("this is a permissions error")),
@@ -651,7 +651,7 @@ func TestWriteFile(t *testing.T) {
 		{
 			msg:             "error creating attachments folder",
 			copyAttachments: true,
-			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
+			setupMocks: func(_ *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().NewOutFile("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com", false, false).Return(ofMock, nil),
