@@ -411,54 +411,151 @@ func TestCopyFile(t *testing.T) {
 	}
 }
 
-func TestTempDir(t *testing.T) {
+func TestHEIC2JPG(t *testing.T) {
 	tests := []struct {
-		msg         string
-		prevTempDir string
-		setupFS     func(afero.Fs)
+		msg           string
+		filename      string
+		magickErr     string
+		wantFilename  string
+		createTempDir bool
+		wantErr       string
 	}{
 		{
-			msg:         "temp dir already exists",
-			prevTempDir: filepath.Join(os.TempDir(), "bagoup12345"),
-			setupFS: func(fs afero.Fs) {
-				err := fs.Mkdir(filepath.Join(os.TempDir(), "bagoup12345"), os.ModePerm)
-				assert.NilError(t, err)
-			},
+			msg:          "not an HEIC file",
+			filename:     "test.png",
+			wantFilename: "test.png",
 		},
 		{
-			msg: "temp dir doesn't exist",
+			msg:          "successful conversion",
+			filename:     "test.heic",
+			wantFilename: "/var/bagoup12345/test.jpeg",
+		},
+		{
+			msg:           "failure to create temporary directory",
+			filename:      "test.heic",
+			createTempDir: true,
+			wantErr:       "create temporary directory",
+		},
+		{
+			msg:       "conversion error",
+			filename:  "test.heic",
+			magickErr: "this is a conversion error",
+			wantErr:   "run magick command: this is a conversion error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			rwFS := afero.NewOsFs()
-			rwOS := &opSys{
-				Fs:      rwFS,
+			s := &opSys{
+				Fs:          afero.NewReadOnlyFs(afero.NewMemMapFs()),
+				execCommand: genFakeExecCommand("", tt.magickErr),
+				tempDir:     "/var/bagoup12345",
+			}
+			if tt.createTempDir {
+				s.tempDir = ""
+			}
+			jpgFilename, err := s.HEIC2JPG(tt.filename)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			assert.Equal(t, tt.wantFilename, jpgFilename)
+		})
+	}
+}
+
+func TestGetTempDir(t *testing.T) {
+	tests := []struct {
+		msg         string
+		prevTempDir string
+		roFS        bool
+		wantTempDir string
+		wantErr     string
+	}{
+		{
+			msg:         "temp dir already exists",
+			prevTempDir: "/var/bagoup12345",
+			wantTempDir: "/var/bagoup12345",
+		},
+		{
+			msg:         "successful creation",
+			prevTempDir: "",
+		},
+		{
+			msg:     "creation fails",
+			roFS:    true,
+			wantErr: "create temporary directory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			fs := afero.NewMemMapFs()
+			if tt.roFS {
+				fs = afero.NewReadOnlyFs(fs)
+			}
+			s := &opSys{
+				Fs:      fs,
 				tempDir: tt.prevTempDir,
 			}
-			if tt.setupFS != nil {
-				tt.setupFS(rwFS)
+
+			tempDir, err := s.getTempDir()
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			if tt.wantTempDir != "" {
+				assert.Equal(t, tt.wantTempDir, tempDir)
+				return
+			}
+			prefix := filepath.Join(afero.GetTempDir(fs, ""), "bagoup")
+			assert.Assert(t, strings.HasPrefix(tempDir, prefix), "temporary directory %q does not have prefix %q", tempDir, prefix)
+		})
+	}
+}
+
+func TestRmTempDir(t *testing.T) {
+	tests := []struct {
+		msg         string
+		prevTempDir string
+		roFS        bool
+		wantErr     string
+	}{
+		{
+			msg: "no temp dir set",
+		},
+		{
+			msg:         "successful removal",
+			prevTempDir: "/var/bagoup12345",
+		},
+		{
+			msg:         "removal fails",
+			prevTempDir: "/var/bagoup12345",
+			roFS:        true,
+			wantErr:     `remove temporary directory "/var/bagoup12345": operation not permitted`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			fs := afero.NewMemMapFs()
+			if tt.roFS {
+				fs = afero.NewReadOnlyFs(fs)
+			}
+			s := &opSys{
+				Fs:      fs,
+				tempDir: tt.prevTempDir,
 			}
 
-			tempDir, err := rwOS.getTempDir()
-			assert.NilError(t, err)
-			prefix := filepath.Join(os.TempDir(), "bagoup")
-			assert.Assert(t, strings.HasPrefix(tempDir, prefix), "temp dir %q does not start with %q", tempDir, prefix)
-			isDir, err := afero.IsDir(rwFS, tempDir)
-			assert.NilError(t, err)
-			assert.Assert(t, isDir, `temp dir %q has not been created`, tempDir)
-
-			roOS := &opSys{
-				Fs:      afero.NewReadOnlyFs(rwFS),
-				tempDir: rwOS.tempDir,
+			err := s.RmTempDir()
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
 			}
-			assert.Error(t, roOS.RmTempDir(), fmt.Sprintf("remove temporary directory %q: operation not permitted", roOS.tempDir))
-
-			assert.Assert(t, rwOS.tempDir != "")
-			assert.NilError(t, rwOS.RmTempDir())
-			assert.Equal(t, rwOS.tempDir, "")
-			assert.NilError(t, rwOS.RmTempDir())
+			assert.NilError(t, err)
+			assert.Equal(t, "", s.tempDir)
 		})
 	}
 }

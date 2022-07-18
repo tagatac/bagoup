@@ -1,5 +1,3 @@
 coverage:
   status:
     patch: off
-ignore:
-  - "opsys/heic2jpg.go"

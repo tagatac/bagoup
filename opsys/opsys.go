@@ -41,6 +41,10 @@ type (
 		GetContactMap(path string) (map[string]*vcard.Card, error)
 		// CopyFile copies the src file to the dstDir directory.
 		CopyFile(src, dstDir string) error
+		// HEIC2JPG converts the src file to a JPEG image if the src file is an
+		// HEIC image, returning the path to the JPEG image. Otherwise the src
+		// path is returned.
+		HEIC2JPG(src string) (string, error)
 		// RmTempDir removes the temporary directory used by this package for
 		// staging converted images for inclusion in PDF files.
 		RmTempDir() error
@@ -50,10 +54,6 @@ type (
 		// accommodate wkhtmltopdf:
 		// https://github.com/wkhtmltopdf/wkhtmltopdf/issues/3081#issue-172083214
 		SetOpenFilesLimit(n int) error
-		// HEIC2JPG converts the src file to a JPEG image if the src file is an
-		// HEIC image, returning the path to the JPEG image. Otherwise the src
-		// path is returned.
-		HEIC2JPG(src string) (string, error)
 		// NewOutfile opens and returns a new Outfile with the given path and
 		// format (text or PDF).
 		NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, error)
@@ -180,11 +180,31 @@ func (s opSys) CopyFile(src, dstDir string) error {
 	return err
 }
 
+func (s *opSys) HEIC2JPG(src string) (string, error) {
+	if strings.ToLower(filepath.Ext(src)) != ".heic" {
+		return src, nil
+	}
+	tempDir, err := s.getTempDir()
+	if err != nil {
+		return src, err
+	}
+	jpgFilename := strings.TrimRight(filepath.Base(src), "HEICheic") + "jpeg"
+	dst := filepath.Join(tempDir, jpgFilename)
+	cmd := s.execCommand("magick", src, dst)
+	if _, err := cmd.Output(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			err = errors.New(string(exitErr.Stderr))
+		}
+		return src, errors.Wrap(err, "run magick command")
+	}
+	return dst, nil
+}
+
 func (s *opSys) getTempDir() (string, error) {
 	if s.tempDir != "" {
 		return s.tempDir, nil
 	}
-	p, err := os.MkdirTemp("", "bagoup")
+	p, err := afero.TempDir(s, "", "bagoup")
 	if err != nil {
 		return "", errors.Wrapf(err, "create temporary directory %q", p)
 	}
