@@ -184,7 +184,7 @@ func (s *opSys) getTempDir() (string, error) {
 	if s.tempDir != "" {
 		return s.tempDir, nil
 	}
-	p, err := os.MkdirTemp("", "bagoup")
+	p, err := afero.TempDir(s, "", "bagoup")
 	if err != nil {
 		return "", errors.Wrapf(err, "create temporary directory %q", p)
 	}

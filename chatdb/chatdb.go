@@ -32,24 +32,8 @@ const (
 	_datetimeFormulaLegacy = "date + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 )
 
-const _attachmentValidTransferState = 5
-
 var _datetimeFormula = "(date/" + strconv.Itoa(_newDateMultiple) + ") + STRFTIME('%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'"
 var _modernVersion = semver.MustParse("10.13")
-
-// EntityChats represents all of the chats with a given entity (associated
-// with the same vCard, phone number, or email address). In the case of group
-// chats, this struct will only contain a single Chat.
-type EntityChats struct {
-	Name  string
-	Chats []Chat
-}
-
-// Chat represents a row from the chat table.
-type Chat struct {
-	ID   int
-	GUID string
-}
 
 //go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/chatdb ChatDB
 
@@ -75,12 +59,27 @@ type (
 		GetAttachmentPaths() (map[int][]Attachment, int, error)
 	}
 
+	// EntityChats represents all of the chats with a given entity (associated
+	// with the same vCard, phone number, or email address). In the case of group
+	// chats, this struct will only contain a single Chat.
+	EntityChats struct {
+		Name  string
+		Chats []Chat
+	}
+
+	// Chat represents a row from the chat table.
+	Chat struct {
+		ID   int
+		GUID string
+	}
+
 	// DatedMessageID pairs a message ID and its date, in the legacy date format.
 	DatedMessageID struct {
 		ID   int
 		Date int
 	}
 
+	// Attachment represents a row from the attachment table.
 	Attachment struct {
 		Filename      string
 		MIMEType      string
