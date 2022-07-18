@@ -20,6 +20,7 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/tagatac/goheif/heic2jpg"
 )
 
 //go:generate mockgen -destination=mock_opsys/mock_opsys.go github.com/tagatac/bagoup/opsys OS
@@ -61,11 +62,13 @@ type (
 
 	opSys struct {
 		afero.Fs
+		heic2jpg.Converter
 		osStat             func(string) (os.FileInfo, error)
 		execCommand        func(string, ...string) *exec.Cmd
 		tempDir            string
 		openFilesLimitHard uint64
 		openFilesLimitSoft int
+		imgConverter       heic2jpg.Converter
 	}
 )
 
@@ -77,6 +80,7 @@ func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand fu
 	}
 	return &opSys{
 		Fs:                 fs,
+		Converter:          heic2jpg.NewConverter(),
 		osStat:             osStat,
 		execCommand:        execCommand,
 		openFilesLimitHard: openFilesLimit.Max,
