@@ -353,37 +353,61 @@ func TestCopyFile(t *testing.T) {
 		msg       string
 		setupFS   func(afero.Fs)
 		roFS      bool
+		statErr   bool
+		wantFile  string
 		wantBytes []byte
 		wantErr   string
 	}{
 		{
 			msg: "text file",
 			setupFS: func(fs afero.Fs) {
-				assert.NilError(t, afero.WriteFile(fs, "testfile", textBytes, os.ModePerm))
+				assert.NilError(t, afero.WriteFile(fs, "testfile.txt", textBytes, os.ModePerm))
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 			},
+			wantFile:  "destinationdir/testfile.txt",
 			wantBytes: textBytes,
 		},
 		{
 			msg: "jpeg file",
 			setupFS: func(fs afero.Fs) {
-				assert.NilError(t, afero.WriteFile(fs, "testfile", jpegBytes, os.ModePerm))
+				assert.NilError(t, afero.WriteFile(fs, "testfile.txt", jpegBytes, os.ModePerm))
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 			},
+			wantFile:  "destinationdir/testfile.txt",
 			wantBytes: jpegBytes,
 		},
 		{
+			msg: "two files already exist",
+			setupFS: func(fs afero.Fs) {
+				assert.NilError(t, afero.WriteFile(fs, "testfile.txt", textBytes, os.ModePerm))
+				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
+				f, err := fs.Create("destinationdir/testfile.txt")
+				assert.NilError(t, err)
+				f.Close()
+				f, err = fs.Create("destinationdir/testfile1.txt")
+				assert.NilError(t, err)
+				f.Close()
+			},
+			wantFile:  "destinationdir/testfile2.txt",
+			wantBytes: textBytes,
+		},
+		{
+			msg:     "error checking for duplicate files",
+			statErr: true,
+			wantErr: `check existence of file "destinationdir/testfile.txt": this is a stat error`,
+		},
+		{
 			msg:     "source file does not exist",
-			wantErr: "open testfile: file does not exist",
+			wantErr: "open testfile.txt: file does not exist",
 		},
 		{
 			msg: "read only filesystem",
 			setupFS: func(fs afero.Fs) {
-				assert.NilError(t, afero.WriteFile(fs, "testfile", textBytes, os.ModePerm))
+				assert.NilError(t, afero.WriteFile(fs, "testfile.txt", textBytes, os.ModePerm))
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 			},
 			roFS:    true,
-			wantErr: `create destination file "destinationdir/testfile": operation not permitted`,
+			wantErr: `create destination file "destinationdir/testfile.txt": operation not permitted`,
 		},
 	}
 
@@ -396,15 +420,21 @@ func TestCopyFile(t *testing.T) {
 			if tt.roFS {
 				fs = afero.NewReadOnlyFs(fs)
 			}
-			s, err := NewOS(fs, nil, nil)
+			stat := fs.Stat
+			if tt.statErr {
+				stat = func(name string) (os.FileInfo, error) {
+					return nil, errors.New("this is a stat error")
+				}
+			}
+			s, err := NewOS(fs, stat, nil)
 			assert.NilError(t, err)
-			err = s.CopyFile("testfile", "destinationdir")
+			err = s.CopyFile("testfile.txt", "destinationdir")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
-			newBytes, err := afero.ReadFile(fs, "destinationdir/testfile")
+			newBytes, err := afero.ReadFile(fs, tt.wantFile)
 			assert.NilError(t, err)
 			assert.DeepEqual(t, newBytes, tt.wantBytes)
 		})

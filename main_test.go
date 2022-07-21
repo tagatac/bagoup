@@ -533,6 +533,7 @@ func TestWriteFile(t *testing.T) {
 		msg             string
 		pdf             bool
 		copyAttachments bool
+		preservePaths   bool
 		setupMocks      func(*mock_chatdb.MockChatDB, *mock_opsys.MockOS, *mock_opsys.MockOutFile)
 		wantJPGs        int
 		wantEmbedded    int
@@ -630,6 +631,33 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
 					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
 					osMock.EXPECT().CopyFile("attachment2.jpeg", "messages-export/friend/attachments"),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
+					ofMock.EXPECT().Stage(),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					ofMock.EXPECT().Close().Times(2),
+				)
+			},
+			wantJPGs: 1,
+		},
+		{
+			msg:             "copy attachments preserving paths",
+			copyAttachments: true,
+			preservePaths:   true,
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
+				gomock.InOrder(
+					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
+					osMock.EXPECT().NewOutFile("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com", false, false).Return(ofMock, nil),
+					dbMock.EXPECT().GetMessage(1, nil, semver.MustParse("12.4")).Return("message1", nil),
+					ofMock.EXPECT().WriteMessage("message1"),
+					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
+					ofMock.EXPECT().WriteMessage("message2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().MkdirAll("messages-export/bagoup-attachments", os.ModePerm),
+					osMock.EXPECT().CopyFile("attachment1.heic", "messages-export/bagoup-attachments"),
+					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().MkdirAll("messages-export/bagoup-attachments", os.ModePerm),
+					osMock.EXPECT().CopyFile("attachment2.jpeg", "messages-export/bagoup-attachments"),
 					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
 					ofMock.EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
@@ -803,6 +831,26 @@ func TestWriteFile(t *testing.T) {
 			wantErr: `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: check existence of file "attachment1.heic" - POSSIBLE FIX: https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access: this is a permissions error`,
 		},
 		{
+			msg:             "error creating preserved path",
+			copyAttachments: true,
+			preservePaths:   true,
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
+				gomock.InOrder(
+					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
+					osMock.EXPECT().NewOutFile("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com", false, false).Return(ofMock, nil),
+					dbMock.EXPECT().GetMessage(1, nil, semver.MustParse("12.4")).Return("message1", nil),
+					ofMock.EXPECT().WriteMessage("message1"),
+					dbMock.EXPECT().GetMessage(2, nil, semver.MustParse("12.4")).Return("message2", nil),
+					ofMock.EXPECT().WriteMessage("message2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().MkdirAll("messages-export/bagoup-attachments", os.ModePerm).Return(errors.New("this is a permissions error")),
+					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
+					ofMock.EXPECT().Close(),
+				)
+			},
+			wantErr: `chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt" - message 2: create directory "messages-export/bagoup-attachments": this is a permissions error`,
+		},
+		{
 			msg:             "CopyFile error",
 			copyAttachments: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
@@ -891,6 +939,7 @@ func TestWriteFile(t *testing.T) {
 					ExportPath:      "messages-export",
 					OutputPDF:       tt.pdf,
 					CopyAttachments: tt.copyAttachments,
+					PreservePaths:   tt.preservePaths,
 				},
 				OS:           osMock,
 				ChatDB:       dbMock,

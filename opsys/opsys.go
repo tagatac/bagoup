@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"unicode"
@@ -167,12 +168,25 @@ func sanitizePhone(dirty string) string {
 }
 
 func (s opSys) CopyFile(src, dstDir string) error {
+	dstPrefix := filepath.Join(dstDir, strings.TrimSuffix(filepath.Base(src), filepath.Ext(src)))
+	dstExt := filepath.Ext(src)
+	dst := dstPrefix + dstExt
+
+	// Insert a number suffix in the filename in case it already exists.
+	for i := 1; ; i += 1 {
+		if exist, err := s.FileExist(dst); err != nil {
+			return err
+		} else if !exist {
+			break
+		}
+		dst = dstPrefix + strconv.Itoa(i) + dstExt
+	}
+
 	fin, err := s.Open(src)
 	if err != nil {
 		return err
 	}
 	defer fin.Close()
-	dst := filepath.Join(dstDir, filepath.Base(src))
 	fout, err := s.Create(dst)
 	if err != nil {
 		return errors.Wrapf(err, "create destination file %q", dst)

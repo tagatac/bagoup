@@ -51,6 +51,7 @@ type (
 		OutputPDF       bool    `short:"p" long:"pdf" description:"Export text and images to PDF files (requires full disk access)"`
 		IncludePPA      bool    `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
 		CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
+		PreservePaths   bool    `short:"r" long:"preserve-paths" description:"When copying attachments, preserve the full path instead of co-locating them with the chats which included them"`
 	}
 	configuration struct {
 		Options options
@@ -237,7 +238,7 @@ func (config *configuration) writeFile(entityName string, guids []string, messag
 	}
 	defer outFile.Close()
 	attDir := filepath.Join(chatDirPath, "attachments")
-	if config.Options.CopyAttachments {
+	if config.Options.CopyAttachments && !config.Options.PreservePaths {
 		if err := config.Mkdir(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
@@ -290,6 +291,12 @@ func (config *configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgI
 			continue
 		}
 		if config.Options.CopyAttachments {
+			if config.Options.PreservePaths {
+				attDir = filepath.Join(config.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
+				if err := config.MkdirAll(attDir, os.ModePerm); err != nil {
+					return errors.Wrapf(err, "create directory %q", attDir)
+				}
+			}
 			if err := config.CopyFile(attPath, attDir); err != nil {
 				return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
 			}
