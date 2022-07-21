@@ -179,7 +179,9 @@ func (s opSys) CopyFile(src, dstDir string) error {
 		} else if !exist {
 			break
 		}
-		dst = dstPrefix + strconv.Itoa(i) + dstExt
+		newDst := dstPrefix + strconv.Itoa(i) + dstExt
+		log.Printf("WARN: %q already exists; using %q instead - if attachment paths are being preserved (--preserve-paths option), path preservation is imperfect", dst, filepath.Base(newDst))
+		dst = newDst
 	}
 
 	fin, err := s.Open(src)
