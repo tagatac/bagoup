@@ -384,11 +384,11 @@ func TestCopyFile(t *testing.T) {
 				f, err := fs.Create("destinationdir/testfile.txt")
 				assert.NilError(t, err)
 				f.Close()
-				f, err = fs.Create("destinationdir/testfile1.txt")
+				f, err = fs.Create("destinationdir/testfile-1.txt")
 				assert.NilError(t, err)
 				f.Close()
 			},
-			wantFile:  "destinationdir/testfile2.txt",
+			wantFile:  "destinationdir/testfile-2.txt",
 			wantBytes: textBytes,
 		},
 		{
