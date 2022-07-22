@@ -83,6 +83,7 @@ Application Options:
   -p, --pdf               Export text and images to PDF files (requires full disk access)
       --include-ppa       Include plugin payload attachments (e.g. link previews) in generated PDFs
   -a, --copy-attachments  Copy attachments to the same folder as the chat which included them (requires full disk access)
+  -r, --preserve-paths    When copying attachments, preserve the full path instead of co-locating them with the chats which included them
 
 Help Options:
   -h, --help              Show this help message
