@@ -107,7 +107,7 @@ func TestPDFFile(t *testing.T) {
     </head>
     <body>
         test message<br/>
-        <img src="tennisballs.jpeg" alt=tennisballs.jpeg/><br/>
+        <img src="tennisballs.jpeg" alt="tennisballs.jpeg"/><br/>
         <em>&lt;attached: video.mov&gt;</em><br/>
         <em>&lt;attached: signallogo.pluginPayloadAttachment&gt;</em><br/>
         
@@ -154,9 +154,9 @@ func TestPDFFile(t *testing.T) {
     </head>
     <body>
         test message<br/>
-        <img src="tennisballs.jpeg" alt=tennisballs.jpeg/><br/>
+        <img src="tennisballs.jpeg" alt="tennisballs.jpeg"/><br/>
         <em>&lt;attached: video.mov&gt;</em><br/>
-        <img src="signallogo.pluginPayloadAttachment" alt=signallogo.pluginPayloadAttachment/><br/>
+        <img src="signallogo.pluginPayloadAttachment" alt="signallogo.pluginPayloadAttachment"/><br/>
         
     </body>
 </html>
@@ -209,7 +209,7 @@ func TestPDFFile(t *testing.T) {
 			assert.NilError(t, of.Close())
 
 			// Check HTML
-			pdf := of.(*pdfFile)
+			pdf := of.(*wkhtmltopdfFile)
 			assert.Equal(t, pdf.html, tt.wantHTML)
 
 			// Write/stage after closing
