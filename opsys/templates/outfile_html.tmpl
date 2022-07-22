@@ -3,7 +3,6 @@ Copyright (C) 2022 David Tagatac <david@tagatac.net>
 See https://github.com/tagatac/bagoup/blob/main/main.go for usage terms.
 -->
 
-<!doctype html>
 <html>
     <head>
         <title>{{.Title}}</title>
@@ -18,19 +17,6 @@ See https://github.com/tagatac/bagoup/blob/main/main.go for usage terms.
                 max-height: 1300px;
             }
         </style>
-
-        <!-- Convert emojis to images - copied from https://github.com/wkhtmltopdf/wkhtmltopdf/issues/2913#issuecomment-1011269370 -->
-        <style>
-            img.emoji {
-                height: 1em;
-                width: 1em;
-                margin: 0 .05em 0 .1em;
-                vertical-align: -0.1em;
-            }
-        </style>
-        <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
-        <script>window.onload = function () { twemoji.parse(document.body); }</script>
-
     </head>
     <body>
         {{range .Lines}}{{.Element}}
