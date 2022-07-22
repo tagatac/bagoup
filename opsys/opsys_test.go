@@ -354,6 +354,7 @@ func TestCopyFile(t *testing.T) {
 		setupFS   func(afero.Fs)
 		roFS      bool
 		statErr   bool
+		unique    bool
 		wantFile  string
 		wantBytes []byte
 		wantErr   string
@@ -377,7 +378,7 @@ func TestCopyFile(t *testing.T) {
 			wantBytes: jpegBytes,
 		},
 		{
-			msg: "two files already exist",
+			msg: "two files already exist - unique wanted",
 			setupFS: func(fs afero.Fs) {
 				assert.NilError(t, afero.WriteFile(fs, "testfile.txt", textBytes, os.ModePerm))
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
@@ -388,7 +389,16 @@ func TestCopyFile(t *testing.T) {
 				assert.NilError(t, err)
 				f.Close()
 			},
+			unique:    true,
 			wantFile:  "destinationdir/testfile-2.txt",
+			wantBytes: textBytes,
+		},
+		{
+			msg: "file already exists - unique not wanted",
+			setupFS: func(fs afero.Fs) {
+				assert.NilError(t, afero.WriteFile(fs, "destinationdir/testfile.txt", textBytes, os.ModePerm))
+			},
+			wantFile:  "destinationdir/testfile.txt",
 			wantBytes: textBytes,
 		},
 		{
@@ -428,7 +438,7 @@ func TestCopyFile(t *testing.T) {
 			}
 			s, err := NewOS(fs, stat, nil)
 			assert.NilError(t, err)
-			err = s.CopyFile("testfile.txt", "destinationdir")
+			err = s.CopyFile("testfile.txt", "destinationdir", tt.unique)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return

@@ -40,8 +40,10 @@ type (
 		// addresses specified in those cards, from the vcard file at the given
 		// path.
 		GetContactMap(path string) (map[string]*vcard.Card, error)
-		// CopyFile copies the src file to the dstDir directory.
-		CopyFile(src, dstDir string) error
+		// CopyFile copies the src file to the dstDir directory. If the file is
+		// designated as unique and it already exists in the destination directory,
+		// a numbered suffix will be added to the copied file name.
+		CopyFile(src, dstDir string, unique bool) error
 		// RmTempDir removes the temporary directory used by this package for
 		// staging converted images for inclusion in PDF files.
 		RmTempDir() error
@@ -166,21 +168,27 @@ func sanitizePhone(dirty string) string {
 	)
 }
 
-func (s opSys) CopyFile(src, dstDir string) error {
+func (s opSys) CopyFile(src, dstDir string, unique bool) error {
 	dstPrefix := filepath.Join(dstDir, strings.TrimSuffix(filepath.Base(src), filepath.Ext(src)))
 	dstExt := filepath.Ext(src)
 	dst := dstPrefix + dstExt
 
 	// Insert a number suffix in the filename in case it already exists.
+	suffixInserted := false
 	for i := 1; ; i += 1 {
 		if exist, err := s.FileExist(dst); err != nil {
 			return err
 		} else if !exist {
 			break
+		} else if !unique {
+			// The file is not unique, so there is no need to copy it again.
+			return nil
 		}
-		newDst := fmt.Sprintf("%s-%d%s", dstPrefix, i, dstExt)
-		log.Printf("WARN: %q already exists; using %q instead - if attachment paths are being preserved (--preserve-paths option), path preservation is imperfect", dst, filepath.Base(newDst))
-		dst = newDst
+		suffixInserted = true
+		dst = fmt.Sprintf("%s-%d%s", dstPrefix, i, dstExt)
+	}
+	if suffixInserted {
+		log.Printf("WARN: copy %q to %q - %q already exists; using %q instead", src, dstDir, filepath.Base(src), filepath.Base(dst))
 	}
 
 	fin, err := s.Open(src)

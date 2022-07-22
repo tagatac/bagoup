@@ -82,17 +82,17 @@ func (mr *MockOSMockRecorder) Chtimes(arg0, arg1, arg2 interface{}) *gomock.Call
 }
 
 // CopyFile mocks base method.
-func (m *MockOS) CopyFile(arg0, arg1 string) error {
+func (m *MockOS) CopyFile(arg0, arg1 string, arg2 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopyFile", arg0, arg1)
+	ret := m.ctrl.Call(m, "CopyFile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CopyFile indicates an expected call of CopyFile.
-func (mr *MockOSMockRecorder) CopyFile(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOSMockRecorder) CopyFile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyFile", reflect.TypeOf((*MockOS)(nil).CopyFile), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyFile", reflect.TypeOf((*MockOS)(nil).CopyFile), arg0, arg1, arg2)
 }
 
 // Create mocks base method.

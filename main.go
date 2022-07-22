@@ -291,13 +291,15 @@ func (config *configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgI
 			continue
 		}
 		if config.Options.CopyAttachments {
+			unique := true
 			if config.Options.PreservePaths {
+				unique = false
 				attDir = filepath.Join(config.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
 				if err := config.MkdirAll(attDir, os.ModePerm); err != nil {
 					return errors.Wrapf(err, "create directory %q", attDir)
 				}
 			}
-			if err := config.CopyFile(attPath, attDir); err != nil {
+			if err := config.CopyFile(attPath, attDir, unique); err != nil {
 				return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
 			}
 		}
