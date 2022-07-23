@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -31,17 +32,17 @@ var _embedFS embed.FS
 // but many types are untested. If you find one that doesn't work or one that
 // should work but is not embedded, please open an issue.
 var _embeddableImageTypes []string = []string{
-	".avif",
-	".bmp",
-	".gif",
-	".ico",
+	//".avif",
+	//".bmp",
+	//".gif",
+	//".ico",
 	".jpeg",
 	".jpg",
-	".png",
-	".svg",
-	".tif",
-	".tiff",
-	".webp",
+	//".png",
+	//".svg",
+	//".tif",
+	//".tiff",
+	//".webp",
 }
 var _errFileClosed error = errors.New("file already closed")
 
@@ -233,7 +234,12 @@ func (f *chromedpPDFFile) WriteAttachment(attPath string) (bool, error) {
 	for _, t := range f.embeddableImageTypes {
 		if ext == t {
 			embedded = true
-			att = template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", "file://"+attPath, filepath.Base(attPath)))
+			data, err := ioutil.ReadFile(attPath)
+			if err != nil {
+				return false, errors.Wrap(err, "read attachment file")
+			}
+			imgSrc := fmt.Sprintf("data:image/jpeg;base64, %s", base64.StdEncoding.EncodeToString(data))
+			att = template.HTML(fmt.Sprintf("<img src=%q alt=%s/><br/>", imgSrc, filepath.Base(attPath)))
 			break
 		}
 	}
@@ -256,7 +262,7 @@ func (f *chromedpPDFFile) Stage() (int, error) {
 		return 0, errors.Wrap(err, "execute HTML template")
 	}
 	f.html = template.HTML(buf.String())
-	fmt.Println(f.html)
+	//fmt.Println(f.html)
 
 	if err := chromedp.Run(f.Context,
 		chromedp.Navigate("about:blank"),
