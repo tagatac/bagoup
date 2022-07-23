@@ -17,8 +17,11 @@ require (
 	gotest.tools/v3 v3.0.2
 )
 
+require github.com/phpdave11/gofpdi v1.0.11 // indirect
+
 require (
 	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/signintech/gopdf v0.14.0
 	golang.org/x/sys v0.0.0-20220721230656-c6bc011c0c49 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.11 // indirect

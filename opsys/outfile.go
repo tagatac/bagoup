@@ -9,16 +9,19 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/pkg/errors"
+	"github.com/signintech/gopdf"
 	"github.com/spf13/afero"
 	"golang.org/x/net/html"
 )
 
-//go:embed templates/* testdata/*
+//go:embed templates/* testdata/* fonts/*
 var _embedFS embed.FS
 
 // Embeddable image types copied from
@@ -63,29 +66,38 @@ type (
 )
 
 func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, error) {
-	title := filepath.Base(filePath)
 	if isPDF {
-		filePath = fmt.Sprintf("%s.pdf", filePath)
-		chatFile, err := s.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		currentUser, err := user.Current()
 		if err != nil {
-			return nil, errors.Wrapf(err, "open file %q", filePath)
+			return nil, errors.Wrap(err, "get current user")
 		}
-		pdfg, err := wkhtmltopdf.NewPDFGenerator()
+		pdf := gopdf.GoPdf{}
+		pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
+		pdf.SetInfo(gopdf.PdfInfo{
+			Title:        filepath.Base(filePath),
+			Author:       currentUser.Username,
+			Subject:      "Mac OS Messages Backup",
+			Producer:     "bagoup",
+			CreationDate: time.Now(),
+		})
+		pdf.AddPage()
+		fontData, err := _embedFS.ReadFile("fonts/seguiemj.ttf")
 		if err != nil {
-			return nil, errors.Wrap(err, "create PDF generator")
+			return nil, errors.Wrap(err, "add font")
 		}
-		pdfg.SetOutput(chatFile)
+		if err := pdf.AddTTFFontData("SegoeUIColorEmoji", fontData); err != nil {
+			return nil, errors.Wrap(err, "load font")
+		}
+		if err := pdf.SetFont("SegoeUIColorEmoji", "", 14); err != nil {
+			return nil, errors.Wrap(err, "set font")
+		}
 		embeddableImageTypes := _embeddableImageTypes
 		if includePPA {
 			embeddableImageTypes = append(embeddableImageTypes, ".pluginpayloadattachment")
 		}
-		thisFile := wkhtmltopdfFile{
-			File:         chatFile,
-			PDFGenerator: pdfg,
-			contents: htmlFileData{
-				Title: title,
-				Lines: []htmlFileLine{},
-			},
+		thisFile := gopdfFile{
+			GoPdf:                &pdf,
+			filePath:             fmt.Sprintf("%s.pdf", filePath),
 			embeddableImageTypes: embeddableImageTypes,
 		}
 		return &thisFile, nil
@@ -187,4 +199,32 @@ func (f *wkhtmltopdfFile) Close() error {
 		return errors.Wrap(err, "write out PDF")
 	}
 	return errors.Wrap(f.File.Close(), "close PDF")
+}
+
+type gopdfFile struct {
+	*gopdf.GoPdf
+	filePath             string
+	embeddableImageTypes []string
+}
+
+func (f gopdfFile) Name() string {
+	return f.filePath
+}
+
+func (f gopdfFile) WriteMessage(msg string) error {
+	f.Cell(nil, fmt.Sprintln(msg))
+	return nil
+}
+
+func (f gopdfFile) WriteAttachment(attPath string) (bool, error) {
+	msg := fmt.Sprintf("<attached: %s>", filepath.Base(attPath))
+	return false, f.WriteMessage(msg)
+}
+
+func (f gopdfFile) Stage() (int, error) {
+	return 0, nil
+}
+
+func (f gopdfFile) Close() error {
+	return errors.Wrap(f.WritePdf(f.filePath), "write PDF")
 }
