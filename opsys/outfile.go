@@ -1,17 +1,21 @@
 package opsys
 
 import (
+	"embed"
 	"fmt"
 	"image/jpeg"
 	"math"
 	"os"
 
-	"github.com/johnfercher/maroto/pkg/consts"
-	"github.com/johnfercher/maroto/pkg/pdf"
-	"github.com/johnfercher/maroto/pkg/props"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/tagatac/maroto/pkg/consts"
+	"github.com/tagatac/maroto/pkg/pdf"
+	"github.com/tagatac/maroto/pkg/props"
 )
+
+//go:embed fonts/*
+var _embedFS embed.FS
 
 type (
 	OutFile interface {
@@ -37,6 +41,11 @@ type (
 func (s opSys) NewOutFile(filePath string, isPDF bool) (OutFile, error) {
 	if isPDF {
 		m := pdf.NewMaroto(consts.Portrait, consts.Letter)
+		font, err := _embedFS.ReadFile("fonts/seguiemj.ttf")
+		if err != nil {
+			return nil, errors.Wrap(err, "read font file")
+		}
+		m.AddUTF8FontFromBytes("SegoeUIColorEmoji", "", font)
 		m.AddPage()
 		pageWidth, pageHeight := m.GetPageSize()
 		leftMargin, topMargin, rightMargin, bottomMargin := m.GetPageMargins()
