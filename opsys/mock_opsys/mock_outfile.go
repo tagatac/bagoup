@@ -61,6 +61,20 @@ func (mr *MockOutFileMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockOutFile)(nil).Name))
 }
 
+// ReferenceAttachment mocks base method.
+func (m *MockOutFile) ReferenceAttachment(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReferenceAttachment", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReferenceAttachment indicates an expected call of ReferenceAttachment.
+func (mr *MockOutFileMockRecorder) ReferenceAttachment(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReferenceAttachment", reflect.TypeOf((*MockOutFile)(nil).ReferenceAttachment), arg0)
+}
+
 // Stage mocks base method.
 func (m *MockOutFile) Stage() (int, error) {
 	m.ctrl.T.Helper()

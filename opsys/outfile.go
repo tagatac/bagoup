@@ -54,6 +54,8 @@ type (
 		// plain text, or the attachment is a movie). The return value lets the
 		// caller know whether the file was embedded or not.
 		WriteAttachment(attPath string) (bool, error)
+		// ReferenceAttachment adds a reference to the given filename in the Outfile.
+		ReferenceAttachment(filename string) error
 		// Stage prepares an OutFile for writing and closing, and returns the
 		// number of images to be embedded in the OutFile.
 		Stage() (int, error)
@@ -66,20 +68,19 @@ func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, err
 	title := filepath.Base(filePath)
 	if isPDF {
 		filePath = fmt.Sprintf("%s.pdf", filePath)
-		chatFile, err := s.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		chatFile, err := s.Fs.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return nil, errors.Wrapf(err, "open file %q", filePath)
 		}
-		pdfg, err := wkhtmltopdf.NewPDFGenerator()
+		pdfg, err := NewPDFGenerator(chatFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "create PDF generator")
 		}
-		pdfg.SetOutput(chatFile)
 		embeddableImageTypes := _embeddableImageTypes
 		if includePPA {
 			embeddableImageTypes = append(embeddableImageTypes, ".pluginpayloadattachment")
 		}
-		thisFile := wkhtmltopdfFile{
+		thisFile := pdfFile{
 			File:         chatFile,
 			PDFGenerator: pdfg,
 			contents: htmlFileData{
@@ -91,7 +92,7 @@ func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, err
 		return &thisFile, nil
 	}
 	filePath = fmt.Sprintf("%s.txt", filePath)
-	chatFile, err := s.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	chatFile, err := s.Fs.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	return &txtFile{File: chatFile}, errors.Wrapf(err, "open file %q", filePath)
 }
 
@@ -100,12 +101,16 @@ type txtFile struct {
 }
 
 func (f txtFile) WriteMessage(msg string) error {
-	_, err := f.WriteString(msg)
+	_, err := f.File.WriteString(msg)
 	return err
 }
 
 func (f txtFile) WriteAttachment(attPath string) (bool, error) {
-	return false, f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filepath.Base(attPath)))
+	return false, f.ReferenceAttachment(filepath.Base(attPath))
+}
+
+func (f txtFile) ReferenceAttachment(filename string) error {
+	return f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filename))
 }
 
 func (f txtFile) Stage() (int, error) {
@@ -113,9 +118,9 @@ func (f txtFile) Stage() (int, error) {
 }
 
 type (
-	wkhtmltopdfFile struct {
+	pdfFile struct {
 		afero.File
-		*wkhtmltopdf.PDFGenerator
+		PDFGenerator
 		contents             htmlFileData
 		closed               bool
 		embeddableImageTypes []string
@@ -131,7 +136,7 @@ type (
 	}
 )
 
-func (f *wkhtmltopdfFile) WriteMessage(msg string) error {
+func (f *pdfFile) WriteMessage(msg string) error {
 	if f.closed {
 		return _errFileClosed
 	}
@@ -140,12 +145,12 @@ func (f *wkhtmltopdfFile) WriteMessage(msg string) error {
 	return nil
 }
 
-func (f *wkhtmltopdfFile) WriteAttachment(attPath string) (bool, error) {
+func (f *pdfFile) WriteAttachment(attPath string) (bool, error) {
 	if f.closed {
 		return false, _errFileClosed
 	}
 	embedded := false
-	att := template.HTML(fmt.Sprintf("<em>&lt;attached: %s&gt;</em><br/>", filepath.Base(attPath)))
+	var att template.HTML
 	ext := strings.ToLower(filepath.Ext(attPath))
 	for _, t := range f.embeddableImageTypes {
 		if ext == t {
@@ -157,11 +162,23 @@ func (f *wkhtmltopdfFile) WriteAttachment(attPath string) (bool, error) {
 			break
 		}
 	}
+	if !embedded {
+		return false, f.ReferenceAttachment(filepath.Base(attPath))
+	}
 	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: att})
-	return embedded, nil
+	return true, nil
 }
 
-func (f *wkhtmltopdfFile) Stage() (int, error) {
+func (f *pdfFile) ReferenceAttachment(filename string) error {
+	if f.closed {
+		return _errFileClosed
+	}
+	att := template.HTML(fmt.Sprintf("<em>&lt;attached: %s&gt;</em><br/>", filename))
+	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: att})
+	return nil
+}
+
+func (f *pdfFile) Stage() (int, error) {
 	if f.closed {
 		return 0, _errFileClosed
 	}
@@ -176,17 +193,17 @@ func (f *wkhtmltopdfFile) Stage() (int, error) {
 	f.html = template.HTML(buf.String())
 	page := wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
 	page.EnableLocalFileAccess.Set(true)
-	f.AddPage(page)
+	f.PDFGenerator.AddPage(page)
 	return strings.Count(string(f.html), "<img"), nil
 }
 
-func (f *wkhtmltopdfFile) Close() error {
+func (f *pdfFile) Close() error {
 	if f.closed {
 		return nil
 	}
 	defer f.File.Close()
 	f.closed = true
-	if err := f.Create(); err != nil {
+	if err := f.PDFGenerator.Create(); err != nil {
 		return errors.Wrap(err, "write out PDF")
 	}
 	return errors.Wrap(f.File.Close(), "close PDF")
