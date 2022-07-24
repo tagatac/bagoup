@@ -26,8 +26,8 @@ func (s *opSys) HEIC2JPG(src string) (string, error) {
 	if err != nil {
 		return src, err
 	}
-	jpgFileName := strings.TrimRight(filepath.Base(src), "HEICheic") + "jpeg"
-	dst := filepath.Join(tempDir, jpgFileName)
+	jpgFilename := strings.TrimRight(filepath.Base(src), "HEICheic") + "jpeg"
+	dst := filepath.Join(tempDir, jpgFilename)
 	if err := s.Converter.HEIC2JPG(src, dst); err != nil {
 		return src, errors.Wrapf(err, "convert HEIC file to JPG file %q", dst)
 	}

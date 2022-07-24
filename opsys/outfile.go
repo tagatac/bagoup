@@ -150,6 +150,9 @@ func (f *wkhtmltopdfFile) WriteAttachment(attPath string) (bool, error) {
 	for _, t := range f.embeddableImageTypes {
 		if ext == t {
 			embedded = true
+			// whktmltopdf doesn't handle URLs quite right:
+			// https://github.com/wkhtmltopdf/wkhtmltopdf/issues/4406
+			attPath = strings.ReplaceAll(attPath, "?", "%3F")
 			att = template.HTML(fmt.Sprintf("<img src=%q alt=%q/><br/>", attPath, filepath.Base(attPath)))
 			break
 		}
