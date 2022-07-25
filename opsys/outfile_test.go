@@ -5,7 +5,6 @@ package opsys
 
 import (
 	"html/template"
-	"os"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -26,7 +25,7 @@ func TestTxtFile(t *testing.T) {
 	assert.NilError(t, err)
 	_, err = roOS.NewOutFile("testfile", false, false)
 	assert.Error(t, err, `create file "testfile.txt": operation not permitted`)
-	roFile, err := roOS.OpenFile("testfile.txt", os.O_RDONLY, 0444)
+	roFile, err := roOS.Open("testfile.txt")
 	assert.NilError(t, err)
 	roOF := &txtFile{File: roFile}
 
