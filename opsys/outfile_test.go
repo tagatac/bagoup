@@ -216,6 +216,7 @@ func TestPDFFile(t *testing.T) {
 			assert.Error(t, of.WriteMessage("test message after closing\n"), _errFileClosed.Error())
 			_, err = of.WriteAttachment("attachment")
 			assert.Error(t, err, _errFileClosed.Error())
+			assert.Error(t, of.ReferenceAttachment("tennisballs.jpeg"), _errFileClosed.Error())
 			_, err = of.Stage()
 			assert.Error(t, err, _errFileClosed.Error())
 		})
