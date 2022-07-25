@@ -25,7 +25,7 @@ func TestTxtFile(t *testing.T) {
 	roOS, err := NewOS(afero.NewReadOnlyFs(rwFS), nil, nil)
 	assert.NilError(t, err)
 	_, err = roOS.NewOutFile("testfile", false, false)
-	assert.Error(t, err, `open file "testfile.txt": operation not permitted`)
+	assert.Error(t, err, `create file "testfile.txt": operation not permitted`)
 	roFile, err := roOS.OpenFile("testfile.txt", os.O_RDONLY, 0444)
 	assert.NilError(t, err)
 	roOF := &txtFile{File: roFile}
@@ -179,7 +179,7 @@ func TestPDFFile(t *testing.T) {
 			roOS, err := NewOS(afero.NewReadOnlyFs(afero.NewMemMapFs()), nil, nil)
 			assert.NilError(t, err)
 			_, err = roOS.NewOutFile("testfile", true, tt.includePPA)
-			assert.Error(t, err, `open file "testfile.pdf": operation not permitted`)
+			assert.Error(t, err, `create file "testfile.pdf": operation not permitted`)
 
 			// Get name
 			assert.Equal(t, of.Name(), "testfile.pdf")

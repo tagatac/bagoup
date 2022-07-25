@@ -8,7 +8,6 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -68,9 +67,9 @@ func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, err
 	title := filepath.Base(filePath)
 	if isPDF {
 		filePath = fmt.Sprintf("%s.pdf", filePath)
-		chatFile, err := s.Fs.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		chatFile, err := s.Fs.Create(filePath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "open file %q", filePath)
+			return nil, errors.Wrapf(err, "create file %q", filePath)
 		}
 		pdfg, err := NewPDFGenerator(chatFile)
 		if err != nil {
@@ -92,8 +91,8 @@ func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, err
 		return &thisFile, nil
 	}
 	filePath = fmt.Sprintf("%s.txt", filePath)
-	chatFile, err := s.Fs.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	return &txtFile{File: chatFile}, errors.Wrapf(err, "open file %q", filePath)
+	chatFile, err := s.Fs.Create(filePath)
+	return &txtFile{File: chatFile}, errors.Wrapf(err, "create file %q", filePath)
 }
 
 type txtFile struct {

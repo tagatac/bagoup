@@ -5,6 +5,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/Masterminds/semver"
@@ -23,6 +24,8 @@ func TestBagoup(t *testing.T) {
 	tenDotTwelve := "10.12"
 	tenDotTenDotTenDotTen := "10.10.10.10"
 	contactsPath := "contacts.vcf"
+	devnull, err := os.Open(os.DevNull)
+	assert.NilError(t, err)
 
 	tests := []struct {
 		msg        string
@@ -34,9 +37,12 @@ func TestBagoup(t *testing.T) {
 			msg:  "default options",
 			opts: defaultOpts,
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
 					dbMock.EXPECT().Init(semver.MustParse("12.4")),
 					dbMock.EXPECT().GetHandleMap(nil),
@@ -61,6 +67,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(nil, errors.New("this is an exec error")),
 				)
 			},
@@ -89,6 +97,33 @@ func TestBagoup(t *testing.T) {
 			wantErr: `check export path "messages-export": this is a stat error`,
 		},
 		{
+			msg:  "error creating log directory",
+			opts: defaultOpts,
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+
+				gomock.InOrder(
+					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
+					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm).Return(errors.New("this is a permissions error")),
+				)
+			},
+			wantErr: "make log directory: this is a permissions error",
+		},
+		{
+			msg:  "error creating log file",
+			opts: defaultOpts,
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
+
+				gomock.InOrder(
+					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
+					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, errors.New("this is a permissions error")),
+				)
+			},
+			wantErr: "create log file: this is a permissions error",
+		},
+		{
 			msg: "chat.db version specified",
 			opts: options{
 				DBPath:       "~/Library/Messages/chat.db",
@@ -100,6 +135,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					dbMock.EXPECT().Init(semver.MustParse("10.12")),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(),
@@ -120,6 +157,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 				)
 			},
 			wantErr: `parse Mac OS version "10.10.10.10": Invalid Semantic Version`,
@@ -136,6 +175,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
 					osMock.EXPECT().GetContactMap("contacts.vcf"),
 					dbMock.EXPECT().Init(semver.MustParse("12.4")),
@@ -158,6 +199,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
 					osMock.EXPECT().GetContactMap("contacts.vcf").Return(nil, errors.New("this is an os error")),
 				)
@@ -171,6 +214,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
 					dbMock.EXPECT().Init(semver.MustParse("12.4")).Return(errors.New("this is a DB error")),
 				)
@@ -184,6 +229,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
 					dbMock.EXPECT().Init(semver.MustParse("12.4")),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, errors.New("this is a DB error")),
@@ -198,6 +245,8 @@ func TestBagoup(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
 					dbMock.EXPECT().Init(semver.MustParse("12.4")),
 					dbMock.EXPECT().GetHandleMap(nil),

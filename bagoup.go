@@ -5,7 +5,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -20,7 +23,17 @@ func (cfg configuration) bagoup() error {
 		return err
 	}
 
-	var err error
+	logDir := filepath.Join(cfg.Options.ExportPath, ".bagoup")
+	if err := cfg.OS.MkdirAll(logDir, os.ModePerm); err != nil {
+		return errors.Wrap(err, "make log directory")
+	}
+	logFile, err := cfg.OS.Create(filepath.Join(logDir, "out.log"))
+	if err != nil {
+		return errors.Wrap(err, "create log file")
+	}
+	defer logFile.Close()
+	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
+
 	if opts.MacOSVersion != nil {
 		cfg.MacOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
 		if err != nil {
