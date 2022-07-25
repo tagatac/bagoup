@@ -27,6 +27,8 @@ const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issu
 // The modern version of Mac OS as it pertains to date representation in chat.db
 var _modernVersion = semver.MustParse("10.13")
 
+const _modernVersionDateDivisor = 1_000_000_000
+
 //go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/chatdb ChatDB
 
 type (
@@ -75,11 +77,10 @@ type (
 
 	// Attachment represents a row from the attachment table.
 	Attachment struct {
-		ID            int
-		Filename      string
-		MIMEType      string
-		TransferState int
-		TransferName  string
+		ID           int
+		Filename     string
+		MIMEType     string
+		TransferName string
 	}
 
 	chatDB struct {
@@ -102,7 +103,7 @@ func NewChatDB(db *sql.DB, selfHandle string) ChatDB {
 func (d *chatDB) Init(macOSVersion *semver.Version) error {
 	// Set the datetime divisor. Adapted from
 	// https://apple.stackexchange.com/a/300997/267331
-	d.dateDivisor = 1_000_000_000
+	d.dateDivisor = _modernVersionDateDivisor
 	if macOSVersion != nil && macOSVersion.LessThan(_modernVersion) {
 		d.dateDivisor = 1
 	}
@@ -116,12 +117,11 @@ func (d *chatDB) Init(macOSVersion *semver.Version) error {
 	defer columns.Close()
 	for columns.Next() {
 		var cid, notnull, pk int
-		var name, typ string
-		var dflt_value sql.NullString
+		var name, typ, dflt_value sql.NullString
 		if err := columns.Scan(&cid, &name, &typ, &notnull, &dflt_value, &pk); err != nil {
 			return errors.Wrap(err, "read chat_message_join column info")
 		}
-		if name == "message_date" {
+		if name.String == "message_date" {
 			d.cmJoinHasDates = true
 			break
 		}
@@ -275,7 +275,7 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 			return nil, errors.Wrapf(err, "read date for message ID %d", msgID.ID)
 		}
 		if messages.Next() {
-			return nil, fmt.Errorf("multiple messages with the same ID: %d - message ID uniqeness assumption violated - %s", msgID.ID, _githubIssueMsg)
+			return nil, fmt.Errorf("multiple messages with the same ID: %d - message ID uniqueness assumption violated - %s", msgID.ID, _githubIssueMsg)
 		}
 		msgIDs[i].Date = date
 	}
@@ -285,25 +285,26 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 
 func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, error) {
 	datetimeFormula := fmt.Sprintf("(date/%d) + STRFTIME('%%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'", d.dateDivisor)
-	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, COALESCE(text, ''), DATETIME(%s) FROM message WHERE ROWID=%d", datetimeFormula, messageID))
+	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, DATETIME(%s) FROM message WHERE ROWID=%d", datetimeFormula, messageID))
 	if err != nil {
 		return "", errors.Wrapf(err, "query message table for ID %d", messageID)
 	}
 	defer messages.Close()
 	messages.Next()
 	var fromMe, handleID int
-	var text, date string
+	var text sql.NullString
+	var date string
 	if err := messages.Scan(&fromMe, &handleID, &text, &date); err != nil {
 		return "", errors.Wrapf(err, "read data for message ID %d", messageID)
 	}
 	if messages.Next() {
-		return "", fmt.Errorf("multiple messages with the same ID: %d - message ID uniqeness assumption violated - %s", messageID, _githubIssueMsg)
+		return "", fmt.Errorf("multiple messages with the same ID: %d - message ID uniqueness assumption violated - %s", messageID, _githubIssueMsg)
 	}
 	handle := handleMap[handleID]
 	if fromMe == 1 {
 		handle = d.selfHandle
 	}
-	return fmt.Sprintf("[%s] %s: %s\n", date, handle, text), nil
+	return fmt.Sprintf("[%s] %s: %s\n", date, handle, text.String), nil
 }
 
 func (d *chatDB) GetAttachmentPaths() (map[int][]Attachment, error) {
@@ -329,15 +330,14 @@ func (d *chatDB) GetAttachmentPaths() (map[int][]Attachment, error) {
 }
 
 func (d *chatDB) getAttachmentPath(attachmentID int) (Attachment, error) {
-	attachments, err := d.DB.Query(fmt.Sprintf("SELECT filename, mime_type, transfer_state, transfer_name FROM attachment WHERE ROWID=%d", attachmentID))
+	attachments, err := d.DB.Query(fmt.Sprintf("SELECT filename, mime_type, transfer_name FROM attachment WHERE ROWID=%d", attachmentID))
 	if err != nil {
 		return Attachment{}, errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
 	}
 	defer attachments.Close()
 	attachments.Next()
 	var filenameOrNull, mimeTypeOrNull, transferNameOrNull sql.NullString
-	var transferState int
-	if err := attachments.Scan(&filenameOrNull, &mimeTypeOrNull, &transferState, &transferNameOrNull); err != nil {
+	if err := attachments.Scan(&filenameOrNull, &mimeTypeOrNull, &transferNameOrNull); err != nil {
 		return Attachment{}, errors.Wrapf(err, "read data for attachment ID %d", attachmentID)
 	}
 	if attachments.Next() {
@@ -359,5 +359,5 @@ func (d *chatDB) getAttachmentPath(attachmentID int) (Attachment, error) {
 	if transferNameOrNull.Valid {
 		transferName = transferNameOrNull.String
 	}
-	return Attachment{ID: attachmentID, Filename: filename, MIMEType: mimeType, TransferState: transferState, TransferName: transferName}, nil
+	return Attachment{ID: attachmentID, Filename: filename, MIMEType: mimeType, TransferName: transferName}, nil
 }

@@ -209,7 +209,7 @@ func TestPDFFile(t *testing.T) {
 			assert.NilError(t, of.Close())
 
 			// Check HTML
-			pdf := of.(*wkhtmltopdfFile)
+			pdf := of.(*pdfFile)
 			assert.Equal(t, pdf.html, tt.wantHTML)
 
 			// Write/stage after closing
