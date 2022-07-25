@@ -1,4 +1,4 @@
-// Copyright (C) 2022 David Tagatac <david@tagatac.net>
+// Copyright (C) 2022  David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
 // Package pathtools provides filepath-related functions used by multiple other

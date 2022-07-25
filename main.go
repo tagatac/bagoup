@@ -1,5 +1,5 @@
 // bagoup - An export utility for Mac OS Messages.
-// Copyright (C) 2020-2022 David Tagatac <david@tagatac.net>
+// Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -22,13 +22,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/emersion/go-vcard"
 	"github.com/jessevdk/go-flags"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -38,7 +34,10 @@ import (
 	"github.com/tagatac/bagoup/pathtools"
 )
 
+const _license = "Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>\nSee the source for usage terms."
 const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access"
+
+var _version string
 
 type (
 	options struct {
@@ -52,6 +51,7 @@ type (
 		IncludePPA      bool    `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
 		CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
 		PreservePaths   bool    `short:"r" long:"preserve-paths" description:"When copying attachments, preserve the full path instead of co-locating them with the chats which included them"`
+		PrintVersion    bool    `short:"v" long:"version" description:"Show the version of bagoup"`
 	}
 	configuration struct {
 		Options options
@@ -83,6 +83,11 @@ func main() {
 		os.Exit(0)
 	}
 	logFatalOnErr(errors.Wrap(err, "parse flags"))
+	if opts.PrintVersion {
+		fmt.Printf("bagoup version %s\n%s\n", _version, _license)
+		return
+	}
+
 	dbPath, err := pathtools.ReplaceTilde(opts.DBPath)
 	logFatalOnErr(errors.Wrap(err, "replace tilde"))
 	opts.DBPath = dbPath
@@ -108,303 +113,4 @@ func logFatalOnErr(err error) {
 	if err != nil {
 		log.Fatalf("ERROR: %s", err)
 	}
-}
-
-func (cfg configuration) bagoup() error {
-	opts := cfg.Options
-	if err := validatePaths(cfg.OS, opts); err != nil {
-		return err
-	}
-
-	var err error
-	if opts.MacOSVersion != nil {
-		cfg.MacOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
-		if err != nil {
-			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
-		}
-	} else if cfg.MacOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
-		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
-	}
-
-	var contactMap map[string]*vcard.Card
-	if opts.ContactsPath != nil {
-		contactMap, err = cfg.OS.GetContactMap(*opts.ContactsPath)
-		if err != nil {
-			return errors.Wrapf(err, "get contacts from vcard file %q", *opts.ContactsPath)
-		}
-	}
-
-	if err := cfg.ChatDB.Init(cfg.MacOSVersion); err != nil {
-		return errors.Wrapf(err, "initialize the database for reading on Mac OS version %s", cfg.MacOSVersion.String())
-	}
-
-	cfg.HandleMap, err = cfg.ChatDB.GetHandleMap(contactMap)
-	if err != nil {
-		return errors.Wrap(err, "get handle map")
-	}
-
-	defer cfg.OS.RmTempDir()
-	err = cfg.exportChats(contactMap)
-	printResults(opts.ExportPath, cfg.Counts, time.Since(cfg.StartTime))
-	if err != nil {
-		return errors.Wrap(err, "export chats")
-	}
-	return cfg.OS.RmTempDir()
-}
-
-func validatePaths(s opsys.OS, opts options) error {
-	if err := s.FileAccess(opts.DBPath); err != nil {
-		return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
-	}
-	if exist, err := s.FileExist(opts.ExportPath); exist {
-		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", opts.ExportPath)
-	} else if err != nil {
-		return errors.Wrapf(err, "check export path %q", opts.ExportPath)
-	}
-	return nil
-}
-
-func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
-	if err := getAttachmentPaths(cfg); err != nil {
-		return err
-	}
-	chats, err := cfg.ChatDB.GetChats(contactMap)
-	if err != nil {
-		return errors.Wrap(err, "get chats")
-	}
-
-	for _, entityChats := range chats {
-		if err := cfg.exportEntityChats(entityChats); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func getAttachmentPaths(cfg *configuration) error {
-	attPaths, err := cfg.ChatDB.GetAttachmentPaths()
-	if err != nil {
-		return errors.Wrap(err, "get attachment paths")
-	}
-	cfg.AttachmentPaths = attPaths
-	if cfg.Options.OutputPDF || cfg.Options.CopyAttachments {
-		for _, msgPaths := range attPaths {
-			if len(msgPaths) == 0 {
-				continue
-			}
-			if msgPaths[0].Filename == "" {
-				continue
-			}
-			if err := cfg.OS.FileAccess(msgPaths[0].Filename); err != nil {
-				return errors.Wrapf(err, "access to attachments - FIX: %s", _readmeURL)
-			}
-			break
-		}
-	}
-	return nil
-}
-
-func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) error {
-	mergeChats := !cfg.Options.SeparateChats
-	var guids []string
-	var entityMessageIDs []chatdb.DatedMessageID
-	for _, chat := range entityChats.Chats {
-		messageIDs, err := cfg.ChatDB.GetMessageIDs(chat.ID)
-		if err != nil {
-			return errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
-		}
-		if mergeChats {
-			guids = append(guids, chat.GUID)
-			entityMessageIDs = append(entityMessageIDs, messageIDs...)
-		} else {
-			if err := cfg.writeFile(entityChats.Name, []string{chat.GUID}, messageIDs); err != nil {
-				return err
-			}
-		}
-		cfg.Counts.chats += 1
-	}
-	if mergeChats {
-		if err := cfg.writeFile(entityChats.Name, guids, entityMessageIDs); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
-	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
-	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-		return errors.Wrapf(err, "create directory %q", chatDirPath)
-	}
-	filename := strings.Join(guids, ";;;")
-	chatPath := filepath.Join(chatDirPath, filename)
-	outFile, err := cfg.OS.NewOutFile(chatPath, cfg.Options.OutputPDF, cfg.Options.IncludePPA)
-	if err != nil {
-		return errors.Wrapf(err, "open/create file %q", chatPath)
-	}
-	defer outFile.Close()
-	attDir := filepath.Join(chatDirPath, "attachments")
-	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
-		if err := cfg.OS.Mkdir(attDir, os.ModePerm); err != nil {
-			return errors.Wrapf(err, "create directory %q", attDir)
-		}
-	}
-
-	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
-	msgCount := 0
-	for _, messageID := range messageIDs {
-		msg, err := cfg.ChatDB.GetMessage(messageID.ID, cfg.HandleMap)
-		if err != nil {
-			return errors.Wrapf(err, "get message with ID %d", messageID.ID)
-		}
-		if err := outFile.WriteMessage(msg); err != nil {
-			return errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
-		}
-		if err := cfg.handleAttachments(outFile, messageID.ID, attDir); err != nil {
-			return errors.Wrapf(err, "chat file %q - message %d", outFile.Name(), messageID.ID)
-		}
-		msgCount += 1
-	}
-	imgCount, err := outFile.Stage()
-	if err != nil {
-		return errors.Wrapf(err, "stage chat file %q for writing/closing", outFile.Name())
-	}
-	if openFilesLimit := cfg.OS.GetOpenFilesLimit(); imgCount*2 > openFilesLimit {
-		if err := cfg.OS.SetOpenFilesLimit(imgCount * 2); err != nil {
-			return errors.Wrapf(err, "chat file %q - increase the open file limit from %d to %d to support %d embedded images", outFile.Name(), openFilesLimit, imgCount*2, imgCount)
-		}
-	}
-	if err := outFile.Close(); err != nil {
-		return errors.Wrapf(err, "write/close chat file %q", outFile.Name())
-	}
-	cfg.Counts.files += 1
-	cfg.Counts.messages += msgCount
-	return nil
-}
-
-func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
-	msgPaths, ok := cfg.AttachmentPaths[msgID]
-	if !ok {
-		return nil
-	}
-	for _, att := range msgPaths {
-		attPath, mimeType, transferName := att.Filename, att.MIMEType, att.TransferName
-		err := validateAttachmentPath(cfg.OS, attPath)
-		if _, ok := err.(errorMissingAttachment); ok {
-			// Attachment is missing. Just reference it, and skip copying/embedding.
-			cfg.Counts.attachmentsMissing += 1
-			log.Printf("WARN: chat file %q - message %d - %s attachment %q (ID %d) - %s", outFile.Name(), msgID, mimeType, transferName, att.ID, err)
-			if err := outFile.ReferenceAttachment(transferName); err != nil {
-				return errors.Wrapf(err, "reference attachment %q", transferName)
-			}
-			cfg.Counts.attachments[mimeType] += 1
-			continue
-		} else if err != nil {
-			return err
-		}
-		if err := cfg.copyAttachment(attPath, attDir); err != nil {
-			return err
-		}
-		if err := cfg.writeAttachment(outFile, att); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-type errorMissingAttachment struct{ err error }
-
-func (e errorMissingAttachment) Error() string { return e.err.Error() }
-
-func validateAttachmentPath(s opsys.OS, attPath string) error {
-	if attPath == "" {
-		return errorMissingAttachment{err: errors.New("attachment has no local filename")}
-	}
-	if ok, err := s.FileExist(attPath); err != nil {
-		return errors.Wrapf(err, "check existence of file %q - POSSIBLE FIX: %s", attPath, _readmeURL)
-	} else if !ok {
-		return errorMissingAttachment{err: errors.New("attachment does not exist locally")}
-	}
-	return nil
-}
-
-func (cfg configuration) copyAttachment(attPath, attDir string) error {
-	if !cfg.Options.CopyAttachments {
-		return nil
-	}
-	unique := true
-	if cfg.Options.PreservePaths {
-		unique = false
-		attDir = filepath.Join(cfg.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
-		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
-			return errors.Wrapf(err, "create directory %q", attDir)
-		}
-	}
-	if err := cfg.OS.CopyFile(attPath, attDir, unique); err != nil {
-		return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
-	}
-	return nil
-}
-
-func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
-	attPath, mimeType := att.Filename, att.MIMEType
-	if cfg.Options.OutputPDF {
-		if jpgPath, err := cfg.OS.HEIC2JPG(attPath); err != nil {
-			cfg.Counts.conversionsFailed += 1
-			log.Printf("WARN: chat file %q - convert HEIC file %q to JPG: %s", outFile.Name(), attPath, err)
-		} else if jpgPath != attPath {
-			cfg.Counts.conversions += 1
-			attPath, mimeType = jpgPath, "image/jpeg"
-		}
-	}
-	embedded, err := outFile.WriteAttachment(attPath)
-	if err != nil {
-		return errors.Wrapf(err, "include attachment %q", attPath)
-	}
-	if embedded {
-		cfg.Counts.attachmentsEmbedded[mimeType] += 1
-	}
-	cfg.Counts.attachments[mimeType] += 1
-	return nil
-}
-
-func printResults(exportPath string, c counts, duration time.Duration) {
-	var attachmentsString string
-	for mimeType, count := range c.attachments {
-		attachmentsString += fmt.Sprintf("\n\t%s: %d", mimeType, count)
-	}
-	if attachmentsString == "" {
-		attachmentsString = "0"
-	}
-	var attachmentsEmbeddedString string
-	for mimeType, count := range c.attachmentsEmbedded {
-		attachmentsEmbeddedString += fmt.Sprintf("\n\t%s: %d", mimeType, count)
-	}
-	if attachmentsEmbeddedString == "" {
-		attachmentsEmbeddedString = "0"
-	}
-	log.Printf(`%sBAGOUP RESULTS:
-Export folder: %q
-Export files written: %d
-Chats exported: %d
-Messages exported: %d
-Attachments referenced or embedded: %s
-Attachments embedded: %s
-Attachments missing (see warnings above): %d
-HEIC conversions completed: %d
-HEIC conversions failed (see warnings above): %d
-Time elapsed: %s%s`,
-		"\x1b[1m",
-		exportPath,
-		c.files,
-		c.chats,
-		c.messages,
-		attachmentsString,
-		attachmentsEmbeddedString,
-		c.attachmentsMissing,
-		c.conversions,
-		c.conversionsFailed,
-		duration.String(),
-		"\x1b[0m",
-	)
 }

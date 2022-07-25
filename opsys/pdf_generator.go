@@ -1,3 +1,6 @@
+// Copyright (C) 2022  David Tagatac <david@tagatac.net>
+// See main.go for usage terms.
+
 package opsys
 
 import (

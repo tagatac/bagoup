@@ -1,13 +1,22 @@
 COVERAGE_FILE=coverage.out
-VERSION=$(shell git describe --tags | sed 's/^v//g')
-ZIPFILE="bagoup-$(VERSION)-$(shell uname -s)-$(shell uname -m).zip"
+BAGOUP_VERSION?=$(shell git describe --tags | sed 's/^v//g')
+ZIPFILE="bagoup-$(BAGOUP_VERSION)-$(shell uname -s)-$(shell uname -m).zip"
+
+SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_*.go')
+TEMPLATES=$(shell find . -type f -name '*.tmpl')
+
+ARCH=$(shell uname -s)/$(shell uname -m)
+LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(ARCH)"'
 
 build: bagoup
 
-bagoup: main.go opsys/opsys.go opsys/outfile.go opsys/templates/* chatdb/chatdb.go pathtools/pathtools.go download
-	go build -o $@ $<
+bagoup: $(SRC) $(TEMPLATES) download
+	go build $(LDFLAGS) -o $@ .
 
 .PHONY: deps download generate test zip clean codecov
+
+from-archive:
+	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make bagoup
 
 deps:
 	go get -u -v ./...
