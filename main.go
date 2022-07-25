@@ -260,7 +260,7 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 		if err := outFile.WriteMessage(msg); err != nil {
 			return errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
 		}
-		if err := cfg.copyAndWriteAttachments(outFile, messageID.ID, attDir); err != nil {
+		if err := cfg.handleAttachments(outFile, messageID.ID, attDir); err != nil {
 			return errors.Wrapf(err, "chat file %q - message %d", outFile.Name(), messageID.ID)
 		}
 		msgCount += 1
@@ -282,64 +282,89 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	return nil
 }
 
-func (cfg *configuration) copyAndWriteAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
+func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
 	msgPaths, ok := cfg.AttachmentPaths[msgID]
 	if !ok {
 		return nil
 	}
 	for _, att := range msgPaths {
 		attPath, mimeType, transferName := att.Filename, att.MIMEType, att.TransferName
-		if attPath == "" {
+		err := validateAttachmentPath(cfg.OS, attPath)
+		if _, ok := err.(errorMissingAttachment); ok {
+			// Attachment is missing. Just reference it, and skip copying/embedding.
 			cfg.Counts.attachmentsMissing += 1
-			log.Printf("WARN: chat file %q - message %d - %s attachment %q (ID %d) has no local filename", outFile.Name(), msgID, mimeType, transferName, att.ID)
+			log.Printf("WARN: chat file %q - message %d - %s attachment %q (ID %d) - %s", outFile.Name(), msgID, mimeType, transferName, att.ID, err)
 			if err := outFile.ReferenceAttachment(transferName); err != nil {
 				return errors.Wrapf(err, "reference attachment %q", transferName)
 			}
 			cfg.Counts.attachments[mimeType] += 1
 			continue
+		} else if err != nil {
+			return err
 		}
-		if ok, err := cfg.OS.FileExist(attPath); err != nil {
-			return errors.Wrapf(err, "check existence of file %q - POSSIBLE FIX: %s", attPath, _readmeURL)
-		} else if !ok {
-			cfg.Counts.attachmentsMissing += 1
-			log.Printf("WARN: chat file %q - message %d - attachment %q does not exist locally", outFile.Name(), msgID, attPath)
-			if err := outFile.ReferenceAttachment(transferName); err != nil {
-				return errors.Wrapf(err, "reference attachment %q", transferName)
-			}
-			cfg.Counts.attachments[mimeType] += 1
-			continue
+		if err := cfg.copyAttachment(attPath, attDir); err != nil {
+			return err
 		}
-		if cfg.Options.CopyAttachments {
-			unique := true
-			if cfg.Options.PreservePaths {
-				unique = false
-				attDir = filepath.Join(cfg.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
-				if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
-					return errors.Wrapf(err, "create directory %q", attDir)
-				}
-			}
-			if err := cfg.OS.CopyFile(attPath, attDir, unique); err != nil {
-				return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
-			}
+		if err := cfg.writeAttachment(outFile, att); err != nil {
+			return err
 		}
-		if cfg.Options.OutputPDF {
-			if jpgPath, err := cfg.OS.HEIC2JPG(attPath); err != nil {
-				cfg.Counts.conversionsFailed += 1
-				log.Printf("WARN: chat file %q - convert HEIC file %q to JPG: %s", outFile.Name(), attPath, err)
-			} else if jpgPath != attPath {
-				cfg.Counts.conversions += 1
-				attPath, mimeType = jpgPath, "image/jpeg"
-			}
-		}
-		embedded, err := outFile.WriteAttachment(attPath)
-		if err != nil {
-			return errors.Wrapf(err, "include attachment %q", attPath)
-		}
-		if embedded {
-			cfg.Counts.attachmentsEmbedded[mimeType] += 1
-		}
-		cfg.Counts.attachments[mimeType] += 1
 	}
+	return nil
+}
+
+type errorMissingAttachment struct{ err error }
+
+func (e errorMissingAttachment) Error() string { return e.err.Error() }
+
+func validateAttachmentPath(s opsys.OS, attPath string) error {
+	if attPath == "" {
+		return errorMissingAttachment{err: errors.New("attachment has no local filename")}
+	}
+	if ok, err := s.FileExist(attPath); err != nil {
+		return errors.Wrapf(err, "check existence of file %q - POSSIBLE FIX: %s", attPath, _readmeURL)
+	} else if !ok {
+		return errorMissingAttachment{err: errors.New("attachment does not exist locally")}
+	}
+	return nil
+}
+
+func (cfg configuration) copyAttachment(attPath, attDir string) error {
+	if !cfg.Options.CopyAttachments {
+		return nil
+	}
+	unique := true
+	if cfg.Options.PreservePaths {
+		unique = false
+		attDir = filepath.Join(cfg.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
+		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
+			return errors.Wrapf(err, "create directory %q", attDir)
+		}
+	}
+	if err := cfg.OS.CopyFile(attPath, attDir, unique); err != nil {
+		return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
+	}
+	return nil
+}
+
+func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
+	attPath, mimeType := att.Filename, att.MIMEType
+	if cfg.Options.OutputPDF {
+		if jpgPath, err := cfg.OS.HEIC2JPG(attPath); err != nil {
+			cfg.Counts.conversionsFailed += 1
+			log.Printf("WARN: chat file %q - convert HEIC file %q to JPG: %s", outFile.Name(), attPath, err)
+		} else if jpgPath != attPath {
+			cfg.Counts.conversions += 1
+			attPath, mimeType = jpgPath, "image/jpeg"
+		}
+	}
+	embedded, err := outFile.WriteAttachment(attPath)
+	if err != nil {
+		return errors.Wrapf(err, "include attachment %q", attPath)
+	}
+	if embedded {
+		cfg.Counts.attachmentsEmbedded[mimeType] += 1
+	}
+	cfg.Counts.attachments[mimeType] += 1
 	return nil
 }
 
