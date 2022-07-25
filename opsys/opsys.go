@@ -90,7 +90,7 @@ func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand fu
 }
 
 func (s opSys) FileAccess(fp string) error {
-	f, err := s.Open(fp)
+	f, err := s.Fs.Open(fp)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (s opSys) GetMacOSVersion() (*semver.Version, error) {
 }
 
 func (s opSys) GetContactMap(contactsFilePath string) (map[string]*vcard.Card, error) {
-	f, err := s.Open(contactsFilePath)
+	f, err := s.Fs.Open(contactsFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -191,12 +191,12 @@ func (s opSys) CopyFile(src, dstDir string, unique bool) error {
 		log.Printf("WARN: copy %q to %q - %q already exists; using %q instead", src, dstDir, filepath.Base(src), filepath.Base(dst))
 	}
 
-	fin, err := s.Open(src)
+	fin, err := s.Fs.Open(src)
 	if err != nil {
 		return err
 	}
 	defer fin.Close()
-	fout, err := s.Create(dst)
+	fout, err := s.Fs.Create(dst)
 	if err != nil {
 		return errors.Wrapf(err, "create destination file %q", dst)
 	}
@@ -222,7 +222,7 @@ func (s *opSys) RmTempDir() error {
 	if s.tempDir == "" {
 		return nil
 	}
-	if err := s.RemoveAll(s.tempDir); err != nil {
+	if err := s.Fs.RemoveAll(s.tempDir); err != nil {
 		log.Printf("ERROR: failed to remove temporary directory %q: %s\n", s.tempDir, err)
 		return errors.Wrapf(err, "remove temporary directory %q", s.tempDir)
 	}

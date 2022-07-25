@@ -209,13 +209,14 @@ func TestPDFFile(t *testing.T) {
 			assert.NilError(t, of.Close())
 
 			// Check HTML
-			pdf := of.(*wkhtmltopdfFile)
+			pdf := of.(*pdfFile)
 			assert.Equal(t, pdf.html, tt.wantHTML)
 
 			// Write/stage after closing
 			assert.Error(t, of.WriteMessage("test message after closing\n"), _errFileClosed.Error())
 			_, err = of.WriteAttachment("attachment")
 			assert.Error(t, err, _errFileClosed.Error())
+			assert.Error(t, of.ReferenceAttachment("tennisballs.jpeg"), _errFileClosed.Error())
 			_, err = of.Stage()
 			assert.Error(t, err, _errFileClosed.Error())
 		})

@@ -3,3 +3,4 @@ coverage:
     patch: off
 ignore:
   - "opsys/heic2jpg.go"
+  - "opsys/pdf_generator.go"
