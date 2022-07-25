@@ -1,22 +1,19 @@
 COVERAGE_FILE=coverage.out
 BAGOUP_VERSION?=$(shell git describe --tags | sed 's/^v//g')
-ZIPFILE="bagoup-$(BAGOUP_VERSION)-$(shell uname -s)-$(shell uname -m).zip"
+OS=$(shell uname -s)
+HW=$(shell uname -m)
+ZIPFILE="bagoup-$(BAGOUP_VERSION)-$(OS)-$(HW).zip"
 
 SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_*.go')
 TEMPLATES=$(shell find . -type f -name '*.tmpl')
-
-ARCH=$(shell uname -s)/$(shell uname -m)
-LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(ARCH)"'
+LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
 build: bagoup
 
 bagoup: $(SRC) $(TEMPLATES) download
 	go build $(LDFLAGS) -o $@ .
 
-.PHONY: deps download generate test zip clean codecov
-
-from-archive:
-	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make bagoup
+.PHONY: deps download from-archive generate test zip clean codecov
 
 deps:
 	go get -u -v ./...
@@ -25,6 +22,9 @@ deps:
 
 download:
 	go mod download
+
+from-archive:
+	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make bagoup
 
 generate: clean
 	go get -u github.com/golang/mock/mockgen
