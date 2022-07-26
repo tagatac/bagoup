@@ -23,6 +23,10 @@ deps:
 download:
 	go mod download
 
+example: example-exports/examplegen.go download
+	rm -vrf example-exports/messages-export*
+	cd example-exports && go run examplegen.go
+
 from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make bagoup
 

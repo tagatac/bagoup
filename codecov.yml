@@ -5,3 +5,4 @@ ignore:
   - main.go
   - opsys/heic2jpg.go
   - opsys/pdf_generator.go
+  - example-exports/examplegen.go

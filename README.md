@@ -5,7 +5,8 @@ implemented in Go, inspired by
 [Baskup](http://peterkaminski09.github.io/baskup/). It exports all of the
 conversations saved in Messages to readable, searchable text or PDF files.
 
-## Example Export
+## Example Exports
+### Plaintext
 ```
 $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 [2020-03-01 15:34:05] Me: Want to play tennis?
@@ -14,7 +15,8 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 [2020-03-01 15:35:23] Novak: Possibly next month. I'll let you know
 [2020-03-01 15:35:50] Me: 👍
 ```
-
+### PDF (--pdf option)
+![Example PDF Export](example-exports/example-pdf-screenshot.png)
 ## Dependencies
 - [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for exports to plaintext)
 ```
@@ -88,9 +90,9 @@ Application Options:
 Help Options:
   -h, --help              Show this help message
 ```
-All conversations will be exported as text files to the specified export path.
-See https://github.com/tagatac/bagoup/tree/main/example-export for an example
-export directory structure.
+All conversations will be exported as text or PDF files to the specified export
+path. See https://github.com/tagatac/bagoup/tree/main/example-export for
+an example export directory structure for each option.
 
 ## Author
 Copyright (C) 2020-2022  [David Tagatac](mailto:david@tagatac.net)  
