@@ -91,7 +91,7 @@ Help Options:
   -h, --help              Show this help message
 ```
 All conversations will be exported as text or PDF files to the specified export
-path. See https://github.com/tagatac/bagoup/tree/main/example-export for
+path. See [example-exports](example-exports) for
 an example export directory structure for each option.
 
 ## Author
