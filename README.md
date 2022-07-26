@@ -37,7 +37,7 @@ for more details. Additionally, attachments can be located in various protected
 places on your filesystem.
 
 To to backup your messages, you have two options. If you wish to export to PDFs
-with images (`--pdf`), or to copy attachments (`--copy-attachments`), you must use
+with images (`--pdf` flag), or to copy attachments (`--copy-attachments` flag), you must use
 the first option.
 ### Option 1 (required for attachments): Give your terminal emulator full disk access
 From [osxdaily.com](https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/):
@@ -94,6 +94,16 @@ Help Options:
 All conversations will be exported as text (default) or PDF files (`--pdf` flag) to the specified export
 path. See [example-exports](example-exports) for
 an example export directory structure for each option.
+
+## Performance
+### Plaintext
+Export to plaintext is fast. For example, on a 2015 MacBook, exporting
+**105,400 messages** from 711 chats to 642 files, as well as copying
+**7,399 attachments**, took **1m36s**.
+### PDF
+Export to PDF is significantly slower, bottlenecked by PDF creation with
+`wkhtmltopdf`. Exporting the same data from above on the same MacBook took
+**2h7m47s**, nearly 80x slower than the export to plaintext.
 
 ## Author
 Copyright (C) 2020-2022  [David Tagatac](mailto:david@tagatac.net)  
