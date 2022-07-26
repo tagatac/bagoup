@@ -271,6 +271,7 @@ func TestBagoup(t *testing.T) {
 				Options: tt.opts,
 				OS:      osMock,
 				ChatDB:  dbMock,
+				logDir:  "messages-export/.bagoup",
 			}
 			err := cfg.bagoup()
 			if tt.wantErr != "" {

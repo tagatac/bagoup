@@ -23,11 +23,10 @@ func (cfg configuration) bagoup() error {
 		return err
 	}
 
-	logDir := filepath.Join(cfg.Options.ExportPath, ".bagoup")
-	if err := cfg.OS.MkdirAll(logDir, os.ModePerm); err != nil {
+	if err := cfg.OS.MkdirAll(cfg.logDir, os.ModePerm); err != nil {
 		return errors.Wrap(err, "make log directory")
 	}
-	logFile, err := cfg.OS.Create(filepath.Join(logDir, "out.log"))
+	logFile, err := cfg.OS.Create(filepath.Join(cfg.logDir, "out.log"))
 	if err != nil {
 		return errors.Wrap(err, "create log file")
 	}

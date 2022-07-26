@@ -19,9 +19,11 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -57,6 +59,7 @@ type (
 		Options options
 		opsys.OS
 		chatdb.ChatDB
+		logDir          string
 		MacOSVersion    *semver.Version
 		HandleMap       map[int]string
 		AttachmentPaths map[int][]chatdb.Attachment
@@ -95,18 +98,32 @@ func main() {
 	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
 	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
 	db, err := sql.Open("sqlite3", opts.DBPath)
-	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
+	logFatalOnErr(errors.Wrapf(err, "open DB file %q", dbPath))
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
+	logDir := filepath.Join(opts.ExportPath, ".bagoup")
 	cfg := configuration{
+		Options:   opts,
 		OS:        s,
 		ChatDB:    cdb,
-		Options:   opts,
+		logDir:    logDir,
 		Counts:    counts{attachments: map[string]int{}, attachmentsEmbedded: map[string]int{}},
 		StartTime: startTime,
 	}
 	logFatalOnErr(cfg.bagoup())
+	logFatalOnErr(errors.Wrapf(db.Close(), "close DB file %q", dbPath))
+	dbf, err := os.Open(dbPath)
+	logFatalOnErr(errors.Wrapf(err, "open DB file %q for copying", dbPath))
+	defer dbf.Close()
+	dbfNewPath := filepath.Join(logDir, filepath.Base(dbPath))
+	dbfNew, err := os.Create(dbfNewPath)
+	logFatalOnErr(errors.Wrapf(err, "create file %q to copy chat DB into", dbfNewPath))
+	defer dbfNew.Close()
+	_, err = io.Copy(dbfNew, dbf)
+	logFatalOnErr(errors.Wrapf(err, "copy DB file from %q to %q", dbPath, dbfNewPath))
+	logFatalOnErr(errors.Wrapf(dbf.Close(), "close DB file %q after copying", dbPath))
+	logFatalOnErr(errors.Wrapf(dbfNew.Close(), "close DB copy %q", dbfNewPath))
 }
 
 func logFatalOnErr(err error) {
