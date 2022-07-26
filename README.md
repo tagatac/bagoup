@@ -6,7 +6,7 @@ implemented in Go, inspired by
 conversations saved in Messages to readable, searchable text or PDF files.
 
 ## Example Exports
-### Plaintext
+### Plaintext (default)
 ```
 $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 [2020-03-01 15:34:05] Me: Want to play tennis?
@@ -16,7 +16,7 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 [2020-03-01 15:35:23] Novak: Possibly next month. I'll let you know
 [2020-03-01 15:35:50] Me: 👍
 ```
-### PDF (--pdf option)
+### PDF (--pdf flag)
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
 ## Dependencies
 - [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for exports to plaintext)
@@ -91,7 +91,7 @@ Application Options:
 Help Options:
   -h, --help              Show this help message
 ```
-All conversations will be exported as text or PDF files to the specified export
+All conversations will be exported as text (default) or PDF files (`--pdf` flag) to the specified export
 path. See [example-exports](example-exports) for
 an example export directory structure for each option.
 
