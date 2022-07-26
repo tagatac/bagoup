@@ -31,8 +31,8 @@ func getAttachmentPaths(cfg *configuration) error {
 	if err != nil {
 		return errors.Wrap(err, "get attachment paths")
 	}
-	cfg.AttachmentPaths = attPaths
-	if cfg.Options.OutputPDF || cfg.Options.CopyAttachments {
+	cfg.attachmentPaths = attPaths
+	if cfg.opts.OutputPDF || cfg.opts.CopyAttachments {
 		for _, msgPaths := range attPaths {
 			if len(msgPaths) == 0 {
 				continue
@@ -50,7 +50,7 @@ func getAttachmentPaths(cfg *configuration) error {
 }
 
 func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) error {
-	mergeChats := !cfg.Options.SeparateChats
+	mergeChats := !cfg.opts.SeparateChats
 	var guids []string
 	var entityMessageIDs []chatdb.DatedMessageID
 	for _, chat := range entityChats.Chats {
@@ -66,7 +66,7 @@ func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) erro
 				return err
 			}
 		}
-		cfg.Counts.chats += 1
+		cfg.counts.chats += 1
 	}
 	if mergeChats {
 		if err := cfg.writeFile(entityChats.Name, guids, entityMessageIDs); err != nil {

@@ -18,7 +18,7 @@ import (
 )
 
 func (cfg configuration) bagoup() error {
-	opts := cfg.Options
+	opts := cfg.opts
 	if err := validatePaths(cfg.OS, opts); err != nil {
 		return err
 	}
@@ -34,11 +34,11 @@ func (cfg configuration) bagoup() error {
 	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
 
 	if opts.MacOSVersion != nil {
-		cfg.MacOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
+		cfg.macOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
 		if err != nil {
 			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
 		}
-	} else if cfg.MacOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
+	} else if cfg.macOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
 		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
 	}
 
@@ -50,18 +50,18 @@ func (cfg configuration) bagoup() error {
 		}
 	}
 
-	if err := cfg.ChatDB.Init(cfg.MacOSVersion); err != nil {
-		return errors.Wrapf(err, "initialize the database for reading on Mac OS version %s", cfg.MacOSVersion.String())
+	if err := cfg.ChatDB.Init(cfg.macOSVersion); err != nil {
+		return errors.Wrapf(err, "initialize the database for reading on Mac OS version %s", cfg.macOSVersion.String())
 	}
 
-	cfg.HandleMap, err = cfg.ChatDB.GetHandleMap(contactMap)
+	cfg.handleMap, err = cfg.ChatDB.GetHandleMap(contactMap)
 	if err != nil {
 		return errors.Wrap(err, "get handle map")
 	}
 
 	defer cfg.OS.RmTempDir()
 	err = cfg.exportChats(contactMap)
-	printResults(opts.ExportPath, cfg.Counts, time.Since(cfg.StartTime))
+	printResults(opts.ExportPath, cfg.counts, time.Since(cfg.startTime))
 	if err != nil {
 		return errors.Wrap(err, "export chats")
 	}
@@ -81,26 +81,16 @@ func validatePaths(s opsys.OS, opts options) error {
 }
 
 func printResults(exportPath string, c counts, duration time.Duration) {
-	var attachmentsString string
-	for mimeType, count := range c.attachments {
-		attachmentsString += fmt.Sprintf("\n\t%s: %d", mimeType, count)
-	}
-	if attachmentsString == "" {
-		attachmentsString = "0"
-	}
-	var attachmentsEmbeddedString string
-	for mimeType, count := range c.attachmentsEmbedded {
-		attachmentsEmbeddedString += fmt.Sprintf("\n\t%s: %d", mimeType, count)
-	}
-	if attachmentsEmbeddedString == "" {
-		attachmentsEmbeddedString = "0"
-	}
+	attCpString := makeAttachmentsString(c.attachmentsCopied)
+	attString := makeAttachmentsString(c.attachments)
+	attEmbdString := makeAttachmentsString(c.attachmentsEmbedded)
 	log.Printf(`%sBAGOUP RESULTS:
 bagoup version: %s
 Export folder: %q
 Export files written: %d
 Chats exported: %d
 Messages exported: %d
+Attachments copied: %s
 Attachments referenced or embedded: %s
 Attachments embedded: %s
 Attachments missing (see warnings above): %d
@@ -113,12 +103,23 @@ Time elapsed: %s%s`,
 		c.files,
 		c.chats,
 		c.messages,
-		attachmentsString,
-		attachmentsEmbeddedString,
+		attCpString,
+		attString,
+		attEmbdString,
 		c.attachmentsMissing,
 		c.conversions,
 		c.conversionsFailed,
 		duration.String(),
 		"\x1b[0m",
 	)
+}
+
+func makeAttachmentsString(attCounts map[string]int) (attString string) {
+	attCount := 0
+	for mimeType, count := range attCounts {
+		attCount += count
+		attString += fmt.Sprintf("\n\t%s: %d", mimeType, count)
+	}
+	attString = fmt.Sprintf("%d%s", attCount, attString)
+	return
 }

@@ -16,19 +16,19 @@ import (
 )
 
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
-	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
+	chatDirPath := filepath.Join(cfg.opts.ExportPath, entityName)
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
 	filename := strings.Join(guids, ";;;")
 	chatPath := filepath.Join(chatDirPath, filename)
-	outFile, err := cfg.OS.NewOutFile(chatPath, cfg.Options.OutputPDF, cfg.Options.IncludePPA)
+	outFile, err := cfg.OS.NewOutFile(chatPath, cfg.opts.OutputPDF, cfg.opts.IncludePPA)
 	if err != nil {
 		return errors.Wrapf(err, "open/create file %q", chatPath)
 	}
 	defer outFile.Close()
 	attDir := filepath.Join(chatDirPath, "attachments")
-	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
+	if cfg.opts.CopyAttachments && !cfg.opts.PreservePaths {
 		if err := cfg.OS.Mkdir(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
@@ -37,7 +37,7 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	msgCount := 0
 	for _, messageID := range messageIDs {
-		msg, err := cfg.ChatDB.GetMessage(messageID.ID, cfg.HandleMap)
+		msg, err := cfg.ChatDB.GetMessage(messageID.ID, cfg.handleMap)
 		if err != nil {
 			return errors.Wrapf(err, "get message with ID %d", messageID.ID)
 		}
@@ -61,13 +61,13 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	if err := outFile.Close(); err != nil {
 		return errors.Wrapf(err, "write/close chat file %q", outFile.Name())
 	}
-	cfg.Counts.files += 1
-	cfg.Counts.messages += msgCount
+	cfg.counts.files += 1
+	cfg.counts.messages += msgCount
 	return nil
 }
 
 func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
-	msgPaths, ok := cfg.AttachmentPaths[msgID]
+	msgPaths, ok := cfg.attachmentPaths[msgID]
 	if !ok {
 		return nil
 	}
@@ -76,17 +76,17 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 		err := validateAttachmentPath(cfg.OS, attPath)
 		if _, ok := err.(errorMissingAttachment); ok {
 			// Attachment is missing. Just reference it, and skip copying/embedding.
-			cfg.Counts.attachmentsMissing += 1
+			cfg.counts.attachmentsMissing += 1
 			log.Printf("WARN: chat file %q - message %d - %s attachment %q (ID %d) - %s", outFile.Name(), msgID, mimeType, transferName, att.ID, err)
 			if err := outFile.ReferenceAttachment(transferName); err != nil {
 				return errors.Wrapf(err, "reference attachment %q", transferName)
 			}
-			cfg.Counts.attachments[mimeType] += 1
+			cfg.counts.attachments[mimeType] += 1
 			continue
 		} else if err != nil {
 			return err
 		}
-		if err := cfg.copyAttachment(attPath, attDir); err != nil {
+		if err := cfg.copyAttachment(att, attDir); err != nil {
 			return err
 		}
 		if err := cfg.writeAttachment(outFile, att); err != nil {
@@ -112,14 +112,15 @@ func validateAttachmentPath(s opsys.OS, attPath string) error {
 	return nil
 }
 
-func (cfg configuration) copyAttachment(attPath, attDir string) error {
-	if !cfg.Options.CopyAttachments {
+func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) error {
+	if !cfg.opts.CopyAttachments {
 		return nil
 	}
+	attPath, mimeType := att.Filename, att.MIMEType
 	unique := true
-	if cfg.Options.PreservePaths {
+	if cfg.opts.PreservePaths {
 		unique = false
-		attDir = filepath.Join(cfg.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
+		attDir = filepath.Join(cfg.opts.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
@@ -127,17 +128,18 @@ func (cfg configuration) copyAttachment(attPath, attDir string) error {
 	if err := cfg.OS.CopyFile(attPath, attDir, unique); err != nil {
 		return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
 	}
+	cfg.counts.attachmentsCopied[mimeType] += 1
 	return nil
 }
 
 func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
 	attPath, mimeType := att.Filename, att.MIMEType
-	if cfg.Options.OutputPDF {
+	if cfg.opts.OutputPDF {
 		if jpgPath, err := cfg.OS.HEIC2JPG(attPath); err != nil {
-			cfg.Counts.conversionsFailed += 1
+			cfg.counts.conversionsFailed += 1
 			log.Printf("WARN: chat file %q - convert HEIC file %q to JPG: %s", outFile.Name(), attPath, err)
 		} else if jpgPath != attPath {
-			cfg.Counts.conversions += 1
+			cfg.counts.conversions += 1
 			attPath, mimeType = jpgPath, "image/jpeg"
 		}
 	}
@@ -146,8 +148,8 @@ func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Atta
 		return errors.Wrapf(err, "include attachment %q", attPath)
 	}
 	if embedded {
-		cfg.Counts.attachmentsEmbedded[mimeType] += 1
+		cfg.counts.attachmentsEmbedded[mimeType] += 1
 	}
-	cfg.Counts.attachments[mimeType] += 1
+	cfg.counts.attachments[mimeType] += 1
 	return nil
 }

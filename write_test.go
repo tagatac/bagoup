@@ -460,10 +460,11 @@ func TestWriteFile(t *testing.T) {
 
 			cnts := counts{
 				attachments:         map[string]int{},
+				attachmentsCopied:   map[string]int{},
 				attachmentsEmbedded: map[string]int{},
 			}
 			cfg := configuration{
-				Options: options{
+				opts: options{
 					ExportPath:      "messages-export",
 					OutputPDF:       tt.pdf,
 					CopyAttachments: tt.copyAttachments,
@@ -471,15 +472,15 @@ func TestWriteFile(t *testing.T) {
 				},
 				OS:           osMock,
 				ChatDB:       dbMock,
-				MacOSVersion: semver.MustParse("12.4"),
-				AttachmentPaths: map[int][]chatdb.Attachment{
+				macOSVersion: semver.MustParse("12.4"),
+				attachmentPaths: map[int][]chatdb.Attachment{
 					2: {
 						chatdb.Attachment{Filename: "attachment1.heic", MIMEType: "image/heic", TransferName: "att1transfer.heic"},
 						chatdb.Attachment{Filename: "attachment2.jpeg", MIMEType: "image/jpeg", TransferName: "att2transfer.jpeg"},
 						chatdb.Attachment{Filename: "", MIMEType: "image/png", TransferName: "att3transfer.png"},
 					},
 				},
-				Counts: cnts,
+				counts: cnts,
 			}
 			err := cfg.writeFile(
 				"friend",
@@ -494,11 +495,11 @@ func TestWriteFile(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, 2, cfg.Counts.messages)
-			assert.Equal(t, tt.wantJPGs, cfg.Counts.attachments["image/jpeg"])
-			assert.Equal(t, tt.wantEmbedded, cfg.Counts.attachmentsEmbedded["image/jpeg"])
-			assert.Equal(t, tt.wantConv, cfg.Counts.conversions)
-			assert.Equal(t, tt.wantConvFail, cfg.Counts.conversionsFailed)
+			assert.Equal(t, 2, cfg.counts.messages)
+			assert.Equal(t, tt.wantJPGs, cfg.counts.attachments["image/jpeg"])
+			assert.Equal(t, tt.wantEmbedded, cfg.counts.attachmentsEmbedded["image/jpeg"])
+			assert.Equal(t, tt.wantConv, cfg.counts.conversions)
+			assert.Equal(t, tt.wantConvFail, cfg.counts.conversionsFailed)
 		})
 	}
 }

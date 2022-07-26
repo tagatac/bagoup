@@ -56,21 +56,22 @@ type (
 		PrintVersion    bool    `short:"v" long:"version" description:"Show the version of bagoup"`
 	}
 	configuration struct {
-		Options options
+		opts options
 		opsys.OS
 		chatdb.ChatDB
 		logDir          string
-		MacOSVersion    *semver.Version
-		HandleMap       map[int]string
-		AttachmentPaths map[int][]chatdb.Attachment
-		Counts          counts
-		StartTime       time.Time
+		macOSVersion    *semver.Version
+		handleMap       map[int]string
+		attachmentPaths map[int][]chatdb.Attachment
+		counts          counts
+		startTime       time.Time
 	}
 	counts struct {
 		files               int
 		chats               int
 		messages            int
 		attachments         map[string]int
+		attachmentsCopied   map[string]int
 		attachmentsEmbedded map[string]int
 		attachmentsMissing  int
 		conversions         int
@@ -104,12 +105,16 @@ func main() {
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
 	cfg := configuration{
-		Options:   opts,
-		OS:        s,
-		ChatDB:    cdb,
-		logDir:    logDir,
-		Counts:    counts{attachments: map[string]int{}, attachmentsEmbedded: map[string]int{}},
-		StartTime: startTime,
+		opts:   opts,
+		OS:     s,
+		ChatDB: cdb,
+		logDir: logDir,
+		counts: counts{
+			attachments:         map[string]int{},
+			attachmentsCopied:   map[string]int{},
+			attachmentsEmbedded: map[string]int{},
+		},
+		startTime: startTime,
 	}
 	logFatalOnErr(cfg.bagoup())
 	logFatalOnErr(errors.Wrapf(db.Close(), "close DB file %q", dbPath))

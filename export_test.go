@@ -307,7 +307,7 @@ func TestExportChats(t *testing.T) {
 				attachmentsEmbedded: map[string]int{},
 			}
 			cfg := configuration{
-				Options: options{
+				opts: options{
 					ExportPath:      "messages-export",
 					SeparateChats:   tt.separateChats,
 					OutputPDF:       tt.pdf,
@@ -315,7 +315,7 @@ func TestExportChats(t *testing.T) {
 				},
 				OS:     osMock,
 				ChatDB: dbMock,
-				Counts: cnts,
+				counts: cnts,
 			}
 			err := cfg.exportChats(nil)
 			if tt.wantErr != "" {
