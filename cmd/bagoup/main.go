@@ -33,6 +33,7 @@ import (
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/internal/bagoup"
 	"github.com/tagatac/bagoup/opsys"
+	"github.com/tagatac/bagoup/opsys/scall"
 	"github.com/tagatac/bagoup/pathtools"
 )
 
@@ -57,7 +58,7 @@ func main() {
 	logFatalOnErr(errors.Wrap(err, "replace tilde"))
 	opts.DBPath = dbPath
 
-	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
+	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command, scall.NewSyscall())
 	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	logFatalOnErr(errors.Wrapf(err, "open DB file %q", dbPath))

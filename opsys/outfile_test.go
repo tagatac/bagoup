@@ -18,8 +18,7 @@ func TestTxtFile(t *testing.T) {
 	rwFS := afero.NewMemMapFs()
 
 	// Create OutFile in read/write filesystem
-	rwOS, err := NewOS(rwFS, nil, nil)
-	assert.NilError(t, err)
+	rwOS := &opSys{Fs: rwFS}
 	rwFile, err := rwOS.Create("testfile.txt")
 	assert.NilError(t, err)
 	defer rwFile.Close()
@@ -27,8 +26,7 @@ func TestTxtFile(t *testing.T) {
 	assert.NilError(t, err)
 
 	// Create OutFile in read-only filesystem
-	roOS, err := NewOS(afero.NewReadOnlyFs(rwFS), nil, nil)
-	assert.NilError(t, err)
+	roOS := &opSys{Fs: afero.NewReadOnlyFs(rwFS)}
 	roFile, err := roOS.Open("testfile.txt")
 	assert.NilError(t, err)
 	roOF := &txtFile{File: roFile}

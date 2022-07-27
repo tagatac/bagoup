@@ -21,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/opsys/pdfgen"
+	"github.com/tagatac/bagoup/opsys/scall"
 	"github.com/tagatac/goheif/heic2jpg"
 )
 
@@ -65,8 +66,9 @@ type (
 	opSys struct {
 		afero.Fs
 		heic2jpg.Converter
-		osStat             func(string) (os.FileInfo, error)
-		execCommand        func(string, ...string) *exec.Cmd
+		osStat      func(string) (os.FileInfo, error)
+		execCommand func(string, ...string) *exec.Cmd
+		scall.Syscall
 		tempDir            string
 		openFilesLimitHard uint64
 		openFilesLimitSoft int
@@ -74,9 +76,9 @@ type (
 )
 
 // NewOS returns an OS from a given filesystem, os Stat, and exec Command.
-func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand func(string, ...string) *exec.Cmd) (OS, error) {
+func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand func(string, ...string) *exec.Cmd, sc scall.Syscall) (OS, error) {
 	var openFilesLimit syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &openFilesLimit); err != nil {
+	if err := sc.Getrlimit(syscall.RLIMIT_NOFILE, &openFilesLimit); err != nil {
 		return nil, errors.Wrap(err, "check file count limit")
 	}
 	return &opSys{
@@ -84,6 +86,7 @@ func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand fu
 		Converter:          heic2jpg.NewConverter(),
 		osStat:             osStat,
 		execCommand:        execCommand,
+		Syscall:            sc,
 		openFilesLimitHard: openFilesLimit.Max,
 		openFilesLimitSoft: int(openFilesLimit.Cur),
 	}, nil
@@ -242,7 +245,7 @@ func (s *opSys) SetOpenFilesLimit(n int) error {
 		Cur: uint64(n),
 		Max: s.openFilesLimitHard,
 	}
-	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &numFilesLimit); err != nil {
+	if err := s.Syscall.Setrlimit(syscall.RLIMIT_NOFILE, &numFilesLimit); err != nil {
 		return err
 	}
 	s.openFilesLimitSoft = n

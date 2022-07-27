@@ -6,15 +6,19 @@ package opsys
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
+	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
+	"github.com/tagatac/bagoup/opsys/scall/mock_scall"
 	"gotest.tools/v3/assert"
 )
 
@@ -54,9 +58,8 @@ func TestFileAccess(t *testing.T) {
 			if tt.setupFS != nil {
 				tt.setupFS(fs)
 			}
-			s, err := NewOS(fs, nil, nil)
-			assert.NilError(t, err)
-			err = s.FileAccess("testfile")
+			s := &opSys{Fs: fs}
+			err := s.FileAccess("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
@@ -93,8 +96,7 @@ func TestFileExist(t *testing.T) {
 			osStat := func(string) (os.FileInfo, error) {
 				return nil, tt.err
 			}
-			s, err := NewOS(nil, osStat, nil)
-			assert.NilError(t, err)
+			s := &opSys{osStat: osStat}
 			exist, err := s.FileExist("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -133,8 +135,7 @@ func TestGetMacOSVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			s, err := NewOS(nil, nil, genFakeExecCommand(tt.swVersOutput, tt.swVersErr))
-			assert.NilError(t, err)
+			s := &opSys{execCommand: genFakeExecCommand(tt.swVersOutput, tt.swVersErr)}
 			v, err := s.GetMacOSVersion()
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -305,8 +306,7 @@ END:VCARD
 			if tt.setupFs != nil {
 				tt.setupFs(fs)
 			}
-			s, err := NewOS(fs, nil, nil)
-			assert.NilError(t, err)
+			s := &opSys{Fs: fs}
 			contactMap, err := s.GetContactMap("contacts.vcf")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -436,9 +436,8 @@ func TestCopyFile(t *testing.T) {
 					return nil, errors.New("this is a stat error")
 				}
 			}
-			s, err := NewOS(fs, stat, nil)
-			assert.NilError(t, err)
-			err = s.CopyFile("testfile.txt", "destinationdir", tt.unique)
+			s := &opSys{Fs: fs, osStat: stat}
+			err := s.CopyFile("testfile.txt", "destinationdir", tt.unique)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
@@ -546,12 +545,89 @@ func TestRmTempDir(t *testing.T) {
 	}
 }
 
-// TODO: Test this better with a fake syscall.
 func TestOpenFilesLimit(t *testing.T) {
-	s, err := NewOS(afero.NewMemMapFs(), nil, nil)
-	assert.NilError(t, err)
-	err = s.SetOpenFilesLimit(256)
-	assert.NilError(t, err)
-	assert.Equal(t, s.GetOpenFilesLimit(), 256)
-	assert.Error(t, s.SetOpenFilesLimit(-1), "invalid argument")
+	tests := []struct {
+		msg        string
+		setupMock  func(*mock_scall.MockSyscall)
+		wantNewErr string
+		wantErr    string
+	}{
+		{
+			msg: "happy",
+			setupMock: func(scMock *mock_scall.MockSyscall) {
+				gomock.InOrder(
+					scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
+						lim.Cur = 256
+						lim.Max = uint64(math.MaxInt64)
+					}),
+					scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
+						assert.Equal(t, uint64(512), lim.Cur)
+						assert.Equal(t, uint64(math.MaxInt64), lim.Max)
+					}),
+				)
+			},
+		},
+		{
+			msg: "error checking limits",
+			setupMock: func(scMock *mock_scall.MockSyscall) {
+				scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).DoAndReturn(func(_ int, lim *syscall.Rlimit) error {
+					lim.Cur = 256
+					lim.Max = uint64(math.MaxInt64)
+					return errors.New("this is a syscall error")
+				})
+			},
+			wantNewErr: "check file count limit: this is a syscall error",
+		},
+		{
+			msg: "new limit too high",
+			setupMock: func(scMock *mock_scall.MockSyscall) {
+				scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
+					lim.Cur = 256
+					lim.Max = 500
+				})
+			},
+			wantErr: "512 exceeds the open fd hard limit of 500 - this can be increased with `sudo ulimit -Hn 512`",
+		},
+		{
+			msg: "error setting limit",
+			setupMock: func(scMock *mock_scall.MockSyscall) {
+				gomock.InOrder(
+					scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
+						lim.Cur = 256
+						lim.Max = uint64(math.MaxInt64)
+					}),
+					scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).DoAndReturn(func(_ int, lim *syscall.Rlimit) error {
+						assert.Equal(t, uint64(512), lim.Cur)
+						assert.Equal(t, uint64(math.MaxInt64), lim.Max)
+						return errors.New("this is a syscall error")
+					}),
+				)
+			},
+			wantErr: "this is a syscall error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			scMock := mock_scall.NewMockSyscall(ctrl)
+			tt.setupMock(scMock)
+
+			s, err := NewOS(nil, nil, nil, scMock)
+			if tt.wantNewErr != "" {
+				assert.Error(t, err, tt.wantNewErr)
+				return
+			}
+			assert.NilError(t, err)
+			assert.Equal(t, 256, s.GetOpenFilesLimit())
+			err = s.SetOpenFilesLimit(512)
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, 512, s.GetOpenFilesLimit())
+			assert.NilError(t, err)
+		})
+	}
 }
