@@ -14,6 +14,7 @@ import (
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/tagatac/bagoup/opsys/pdfgen"
 	"golang.org/x/net/html"
 )
 
@@ -63,40 +64,12 @@ type (
 	}
 )
 
-func (s opSys) NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, error) {
-	title := filepath.Base(filePath)
-	if isPDF {
-		filePath = fmt.Sprintf("%s.pdf", filePath)
-		chatFile, err := s.Fs.Create(filePath)
-		if err != nil {
-			return nil, errors.Wrapf(err, "create file %q", filePath)
-		}
-		pdfg, err := NewPDFGenerator(chatFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "create PDF generator")
-		}
-		embeddableImageTypes := _embeddableImageTypes
-		if includePPA {
-			embeddableImageTypes = append(embeddableImageTypes, ".pluginpayloadattachment")
-		}
-		thisFile := pdfFile{
-			File:         chatFile,
-			PDFGenerator: pdfg,
-			contents: htmlFileData{
-				Title: title,
-				Lines: []htmlFileLine{},
-			},
-			embeddableImageTypes: embeddableImageTypes,
-		}
-		return &thisFile, nil
-	}
-	filePath = fmt.Sprintf("%s.txt", filePath)
-	chatFile, err := s.Fs.Create(filePath)
-	return &txtFile{File: chatFile}, errors.Wrapf(err, "create file %q", filePath)
-}
-
 type txtFile struct {
 	afero.File
+}
+
+func (opSys) NewTxtOutFile(chatFile afero.File) OutFile {
+	return txtFile{File: chatFile}
 }
 
 func (f txtFile) WriteMessage(msg string) error {
@@ -119,10 +92,11 @@ func (f txtFile) Stage() (int, error) {
 type (
 	pdfFile struct {
 		afero.File
-		PDFGenerator
+		pdfgen.PDFGenerator
 		contents             htmlFileData
 		closed               bool
 		embeddableImageTypes []string
+		templatePath         string
 		html                 template.HTML
 	}
 
@@ -134,6 +108,26 @@ type (
 		Element template.HTML
 	}
 )
+
+func (opSys) NewPDFOutFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile {
+	chatFilename := chatFile.Name()
+	title := strings.TrimSuffix(filepath.Base(chatFilename), filepath.Ext(chatFilename))
+	embeddableImageTypes := _embeddableImageTypes
+	if includePPA {
+		embeddableImageTypes = append(embeddableImageTypes, ".pluginpayloadattachment")
+	}
+	thisFile := pdfFile{
+		File:         chatFile,
+		PDFGenerator: pdfg,
+		contents: htmlFileData{
+			Title: title,
+			Lines: []htmlFileLine{},
+		},
+		embeddableImageTypes: embeddableImageTypes,
+		templatePath:         "templates/outfile_html.tmpl",
+	}
+	return &thisFile
+}
 
 func (f *pdfFile) WriteMessage(msg string) error {
 	if f.closed {
@@ -181,7 +175,7 @@ func (f *pdfFile) Stage() (int, error) {
 	if f.closed {
 		return 0, _errFileClosed
 	}
-	tmpl, err := template.ParseFS(_embedFS, "templates/outfile_html.tmpl")
+	tmpl, err := template.ParseFS(_embedFS, f.templatePath)
 	if err != nil {
 		return 0, errors.Wrap(err, "parse HTML template")
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/opsys"
+	"github.com/tagatac/bagoup/opsys/pdfgen"
 )
 
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
@@ -22,9 +23,25 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	}
 	filename := strings.Join(guids, ";;;")
 	chatPath := filepath.Join(chatDirPath, filename)
-	outFile, err := cfg.OS.NewOutFile(chatPath, cfg.opts.OutputPDF, cfg.opts.IncludePPA)
-	if err != nil {
-		return errors.Wrapf(err, "open/create file %q", chatPath)
+	var outFile opsys.OutFile
+	if cfg.opts.OutputPDF {
+		chatPath += ".pdf"
+		chatFile, err := cfg.OS.Create(chatPath)
+		if err != nil {
+			return errors.Wrapf(err, "create file %q", chatPath)
+		}
+		pdfg, err := pdfgen.NewPDFGenerator(chatFile)
+		if err != nil {
+			return errors.Wrap(err, "create PDF generator")
+		}
+		outFile = cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.opts.IncludePPA)
+	} else {
+		chatPath += ".txt"
+		chatFile, err := cfg.OS.Create(chatPath)
+		if err != nil {
+			return errors.Wrapf(err, "create file %q", chatPath)
+		}
+		outFile = cfg.OS.NewTxtOutFile(chatFile)
 	}
 	defer outFile.Close()
 	attDir := filepath.Join(chatDirPath, "attachments")

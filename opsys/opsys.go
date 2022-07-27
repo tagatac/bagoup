@@ -20,6 +20,7 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/tagatac/bagoup/opsys/pdfgen"
 	"github.com/tagatac/goheif/heic2jpg"
 )
 
@@ -57,9 +58,8 @@ type (
 		// HEIC image, returning the path to the JPEG image. Otherwise the src
 		// path is returned.
 		HEIC2JPG(src string) (string, error)
-		// NewOutfile opens and returns a new Outfile with the given path and
-		// format (text or PDF).
-		NewOutFile(filePath string, isPDF, includePPA bool) (OutFile, error)
+		NewTxtOutFile(afero.File) OutFile
+		NewPDFOutFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile
 	}
 
 	opSys struct {
