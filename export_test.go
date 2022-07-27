@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/opsys/mock_opsys"
@@ -16,6 +17,9 @@ import (
 )
 
 func TestExportChats(t *testing.T) {
+	chatFile, err := afero.NewMemMapFs().Create("testfile")
+	assert.NilError(t, err)
+
 	tests := []struct {
 		msg             string
 		separateChats   bool
@@ -58,18 +62,16 @@ func TestExportChats(t *testing.T) {
 					dbMock.EXPECT().GetMessageIDs(1),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().Create("messages-export/testdisplayname/testguid;;;testguid2.txt"),
-					osMock.EXPECT().NewTxtOutFile(nil).Return(ofMocks[0]),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid;;;testguid2.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 					dbMock.EXPECT().GetMessageIDs(3),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
-					osMock.EXPECT().Create("messages-export/testdisplayname2/testguid3.txt"),
-					osMock.EXPECT().NewTxtOutFile(nil).Return(ofMocks[1]),
-					ofMocks[1].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname2/testguid3.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[1]),
+					ofMocks[1].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[1].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -98,18 +100,16 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt"),
-					osMock.EXPECT().NewTxtOutFile(nil).Return(ofMocks[0]),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().Create("messages-export/testdisplayname/testguid2.txt"),
-					osMock.EXPECT().NewTxtOutFile(nil).Return(ofMocks[1]),
-					ofMocks[1].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid2.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[1]),
+					ofMocks[1].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[1].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -135,11 +135,10 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.pdf"),
-					osMock.EXPECT().NewPDFOutFile(nil, gomock.Any(), false).Return(ofMocks[0]),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.pdf").Return(chatFile, nil),
+					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -165,11 +164,10 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.pdf"),
-					osMock.EXPECT().NewPDFOutFile(nil, gomock.Any(), false).Return(ofMocks[0]),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.pdf").Return(chatFile, nil),
+					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -195,12 +193,11 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt"),
-					osMock.EXPECT().NewTxtOutFile(nil).Return(ofMocks[0]),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
 					osMock.EXPECT().Mkdir("messages-export/testdisplayname/attachments", os.ModePerm),
-					ofMocks[0].EXPECT().Stage(),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -324,7 +321,7 @@ func TestExportChats(t *testing.T) {
 				ChatDB: dbMock,
 				counts: cnts,
 			}
-			err := cfg.exportChats(nil)
+			err = cfg.exportChats(nil)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return

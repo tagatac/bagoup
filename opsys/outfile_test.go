@@ -22,6 +22,7 @@ func TestTxtFile(t *testing.T) {
 	assert.NilError(t, err)
 	rwFile, err := rwOS.Create("testfile.txt")
 	assert.NilError(t, err)
+	defer rwFile.Close()
 	rwOF := opSys{}.NewTxtOutFile(rwFile)
 	assert.NilError(t, err)
 
@@ -48,20 +49,14 @@ func TestTxtFile(t *testing.T) {
 	assert.Equal(t, false, embedded)
 
 	// Stage (no-op) and close the text file
-	imgCount, err := rwOF.Stage()
+	imgCount, err := rwOF.Flush()
 	assert.NilError(t, err)
 	assert.Equal(t, imgCount, 0)
-	assert.NilError(t, rwOF.Close())
-	assert.NilError(t, rwOF.Close())
 
 	// Check file contents
 	contents, err := afero.ReadFile(rwFS, "testfile.txt")
 	assert.NilError(t, err)
 	assert.Equal(t, string(contents), "test message\n<attached: tennisballs.jpeg>\n")
-
-	// Write after closing
-	assert.Error(t, rwOF.WriteMessage("test message after closing\n"), "File is closed")
-	assert.Error(t, rwOF.WriteMessage("attachment"), "File is closed")
 }
 
 func TestPDFFile(t *testing.T) {
@@ -72,8 +67,7 @@ func TestPDFFile(t *testing.T) {
 		setupMock    func(*mock_pdfgen.MockPDFGenerator)
 		wantHTML     template.HTML
 		wantImgCount int
-		wantStageErr string
-		wantCloseErr string
+		wantErr      string
 	}{
 		{
 			msg: "happy",
@@ -183,12 +177,12 @@ func TestPDFFile(t *testing.T) {
 		{
 			msg:          "bad template path",
 			templatePath: "invalid template path",
-			wantStageErr: "parse HTML template: template: pattern matches no files: `invalid template path`",
+			wantErr:      "parse HTML template: template: pattern matches no files: `invalid template path`",
 		},
 		{
 			msg:          "invalid tamplate",
 			templatePath: "testdata/outfile_html_invalid.tmpl",
-			wantStageErr: `execute HTML template: template: outfile_html_invalid.tmpl:1:2: executing "outfile_html_invalid.tmpl" at <.InvalidReference>: can't evaluate field InvalidReference in type opsys.htmlFileData`,
+			wantErr:      `execute HTML template: template: outfile_html_invalid.tmpl:1:2: executing "outfile_html_invalid.tmpl" at <.InvalidReference>: can't evaluate field InvalidReference in type opsys.htmlFileData`,
 		},
 		{
 			msg: "PDF creation error",
@@ -198,50 +192,7 @@ func TestPDFFile(t *testing.T) {
 					pMock.EXPECT().Create().Return(errors.New("this is a PDF creation error")),
 				)
 			},
-			wantHTML: template.HTML(
-				`
-
-<!doctype html>
-<html>
-    <head>
-        <title>testfile</title>
-        <meta charset="utf-8">
-
-        <style>
-            body {
-                word-wrap: break-word;
-            }
-            img {
-                max-width: 875px;
-                max-height: 1300px;
-            }
-        </style>
-
-        
-        <style>
-            img.emoji {
-                height: 1em;
-                width: 1em;
-                margin: 0 .05em 0 .1em;
-                vertical-align: -0.1em;
-            }
-        </style>
-        <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
-        <script>window.onload = function () { twemoji.parse(document.body); }</script>
-
-    </head>
-    <body>
-        test message<br/>
-        <img src="tennisballs.jpeg" alt="tennisballs.jpeg"/><br/>
-        <em>&lt;attached: video.mov&gt;</em><br/>
-        <em>&lt;attached: signallogo.pluginPayloadAttachment&gt;</em><br/>
-        
-    </body>
-</html>
-`,
-			),
-			wantImgCount: 1,
-			wantCloseErr: "write out PDF: this is a PDF creation error",
+			wantErr: "write out PDF: this is a PDF creation error",
 		},
 	}
 
@@ -281,37 +232,14 @@ func TestPDFFile(t *testing.T) {
 			assert.Equal(t, tt.includePPA, embedded)
 
 			// Stage the PDF
-			imgCount, err := of.Stage()
-			if tt.wantStageErr != "" {
-				assert.Error(t, err, tt.wantStageErr)
+			imgCount, err := of.Flush()
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
 			assert.Equal(t, tt.wantImgCount, imgCount)
 			assert.Equal(t, pdf.html, tt.wantHTML)
-
-			// Write and close the PDF
-			err = of.Close()
-			if tt.wantCloseErr != "" {
-				assert.ErrorContains(t, err, tt.wantCloseErr)
-				assert.NilError(t, of.Close())
-				return
-			}
-			assert.NilError(t, err)
-			assert.NilError(t, of.Close())
-
-			// Write/stage after closing
-			assert.Error(t, of.WriteMessage("test message after closing\n"), _errFileClosed.Error())
-			_, err = of.WriteAttachment("attachment")
-			assert.Error(t, err, _errFileClosed.Error())
-			assert.Error(t, of.ReferenceAttachment("tennisballs.jpeg"), _errFileClosed.Error())
-			_, err = of.Stage()
-			assert.Error(t, err, _errFileClosed.Error())
-
-			// Stage with invalid template
-			ofInvalid := &pdfFile{templatePath: "testdata/outfile_html_invalid.tmpl"}
-			_, err = ofInvalid.Stage()
-			assert.Error(t, err, `execute HTML template: template: outfile_html_invalid.tmpl:1:2: executing "outfile_html_invalid.tmpl" at <.InvalidReference>: can't evaluate field InvalidReference in type opsys.htmlFileData`)
 		})
 	}
 }

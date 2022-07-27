@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/opsys"
+	"github.com/tagatac/bagoup/opsys/pdfgen"
 )
 
 type parameters struct {
@@ -35,20 +36,36 @@ func main() {
 		{isPDF: false, exportPath: "messages-export"},
 		{isPDF: true, exportPath: "messages-export-pdf"},
 	}
+	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
+	if err != nil {
+		log.Panic(errors.Wrap(err, "instantiate OS"))
+	}
 	for _, params := range runs {
-		s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command)
-		if err != nil {
-			log.Panic(errors.Wrap(err, "instantiate OS"))
-		}
 		chatPath := filepath.Join(params.exportPath, "Novak Djokovic")
 		if err := s.MkdirAll(chatPath, os.ModePerm); err != nil {
 			log.Panic(errors.Wrap(err, "create export directory"))
 		}
-		of, err := s.NewOutFile(filepath.Join(chatPath, "iMessage;-;+3815555555555"), params.isPDF, false)
-		if err != nil {
-			log.Panic(errors.Wrap(err, "create outfile"))
+		chatFilePrefix := filepath.Join(chatPath, "iMessage;-;+3815555555555")
+		var of opsys.OutFile
+		if params.isPDF {
+			chatFile, err := s.Create(chatFilePrefix + ".pdf")
+			if err != nil {
+				log.Panic(errors.Wrap(err, "create PDF chat file"))
+			}
+			defer chatFile.Close()
+			pdfg, err := pdfgen.NewPDFGenerator(chatFile)
+			if err != nil {
+				log.Panic(errors.Wrap(err, "create PDF generator"))
+			}
+			of = s.NewPDFOutFile(chatFile, pdfg, false)
+		} else {
+			chatFile, err := s.Create(chatFilePrefix + ".txt")
+			if err != nil {
+				log.Panic(errors.Wrap(err, "create text chat file"))
+			}
+			defer chatFile.Close()
+			of = s.NewTxtOutFile(chatFile)
 		}
-		defer of.Close()
 		if err := of.WriteMessage(firstMsg); err != nil {
 			log.Panic(errors.Wrapf(err, "write message %q", firstMsg))
 		}
@@ -60,11 +77,8 @@ func main() {
 				log.Panic(errors.Wrapf(err, "write message %q", msg))
 			}
 		}
-		if _, err := of.Stage(); err != nil {
+		if _, err := of.Flush(); err != nil {
 			log.Panic(errors.Wrap(err, "stage outfile"))
-		}
-		if err := of.Close(); err != nil {
-			log.Panic(errors.Wrap(err, "close outfile"))
 		}
 	}
 }

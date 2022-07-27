@@ -38,7 +38,6 @@ var _embeddableImageTypes []string = []string{
 	".tiff",
 	".webp",
 }
-var _errFileClosed error = errors.New("file already closed")
 
 //go:generate mockgen -destination=mock_opsys/mock_outfile.go github.com/tagatac/bagoup/opsys OutFile
 
@@ -56,11 +55,9 @@ type (
 		WriteAttachment(attPath string) (bool, error)
 		// ReferenceAttachment adds a reference to the given filename in the Outfile.
 		ReferenceAttachment(filename string) error
-		// Stage prepares an OutFile for writing and closing, and returns the
-		// number of images to be embedded in the OutFile.
-		Stage() (int, error)
-		// Close closes the OutFile, writing it to disk. Writes
-		Close() error
+		// Flush flushes the contents of an OutFile to disk, and returns the
+		// number of images embedded in the OutFile.
+		Flush() (int, error)
 	}
 )
 
@@ -85,7 +82,7 @@ func (f txtFile) ReferenceAttachment(filename string) error {
 	return f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filename))
 }
 
-func (f txtFile) Stage() (int, error) {
+func (f txtFile) Flush() (int, error) {
 	return 0, nil
 }
 
@@ -94,7 +91,6 @@ type (
 		afero.File
 		pdfgen.PDFGenerator
 		contents             htmlFileData
-		closed               bool
 		embeddableImageTypes []string
 		templatePath         string
 		html                 template.HTML
@@ -130,18 +126,12 @@ func (opSys) NewPDFOutFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includ
 }
 
 func (f *pdfFile) WriteMessage(msg string) error {
-	if f.closed {
-		return _errFileClosed
-	}
 	htmlMsg := template.HTML(strings.ReplaceAll(html.EscapeString(msg), "\n", "<br/>"))
 	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: htmlMsg})
 	return nil
 }
 
 func (f *pdfFile) WriteAttachment(attPath string) (bool, error) {
-	if f.closed {
-		return false, _errFileClosed
-	}
 	embedded := false
 	var att template.HTML
 	ext := strings.ToLower(filepath.Ext(attPath))
@@ -163,18 +153,12 @@ func (f *pdfFile) WriteAttachment(attPath string) (bool, error) {
 }
 
 func (f *pdfFile) ReferenceAttachment(filename string) error {
-	if f.closed {
-		return _errFileClosed
-	}
 	att := template.HTML(fmt.Sprintf("<em>&lt;attached: %s&gt;</em><br/>", filename))
 	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: att})
 	return nil
 }
 
-func (f *pdfFile) Stage() (int, error) {
-	if f.closed {
-		return 0, _errFileClosed
-	}
+func (f *pdfFile) Flush() (int, error) {
 	tmpl, err := template.ParseFS(_embedFS, f.templatePath)
 	if err != nil {
 		return 0, errors.Wrap(err, "parse HTML template")
@@ -187,17 +171,8 @@ func (f *pdfFile) Stage() (int, error) {
 	page := wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
 	page.EnableLocalFileAccess.Set(true)
 	f.PDFGenerator.AddPage(page)
-	return strings.Count(string(f.html), "<img"), nil
-}
-
-func (f *pdfFile) Close() error {
-	if f.closed {
-		return nil
-	}
-	defer f.File.Close()
-	f.closed = true
 	if err := f.PDFGenerator.Create(); err != nil {
-		return errors.Wrap(err, "write out PDF")
+		return 0, errors.Wrap(err, "write out PDF")
 	}
-	return errors.Wrap(f.File.Close(), "close PDF")
+	return strings.Count(string(f.html), "<img"), nil
 }
