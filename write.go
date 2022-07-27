@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/opsys"
+	"github.com/tagatac/bagoup/opsys/pdfgen"
 )
 
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
@@ -22,18 +23,38 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	}
 	filename := strings.Join(guids, ";;;")
 	chatPath := filepath.Join(chatDirPath, filename)
-	outFile, err := cfg.OS.NewOutFile(chatPath, cfg.opts.OutputPDF, cfg.opts.IncludePPA)
-	if err != nil {
-		return errors.Wrapf(err, "open/create file %q", chatPath)
+	var outFile opsys.OutFile
+	if cfg.opts.OutputPDF {
+		chatPath += ".pdf"
+		chatFile, err := cfg.OS.Create(chatPath)
+		if err != nil {
+			return errors.Wrapf(err, "create file %q", chatPath)
+		}
+		defer chatFile.Close()
+		pdfg, err := pdfgen.NewPDFGenerator(chatFile)
+		if err != nil {
+			return errors.Wrap(err, "create PDF generator")
+		}
+		outFile = cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.opts.IncludePPA)
+	} else {
+		chatPath += ".txt"
+		chatFile, err := cfg.OS.Create(chatPath)
+		if err != nil {
+			return errors.Wrapf(err, "create file %q", chatPath)
+		}
+		defer chatFile.Close()
+		outFile = cfg.OS.NewTxtOutFile(chatFile)
 	}
-	defer outFile.Close()
 	attDir := filepath.Join(chatDirPath, "attachments")
 	if cfg.opts.CopyAttachments && !cfg.opts.PreservePaths {
 		if err := cfg.OS.Mkdir(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
 	}
+	return cfg.handleFileContents(outFile, messageIDs, attDir)
+}
 
+func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs []chatdb.DatedMessageID, attDir string) error {
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	msgCount := 0
 	for _, messageID := range messageIDs {
@@ -49,17 +70,14 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 		}
 		msgCount += 1
 	}
-	imgCount, err := outFile.Stage()
+	imgCount, err := outFile.Flush()
 	if err != nil {
-		return errors.Wrapf(err, "stage chat file %q for writing/closing", outFile.Name())
+		return errors.Wrapf(err, "flush chat file %q to disk", outFile.Name())
 	}
 	if openFilesLimit := cfg.OS.GetOpenFilesLimit(); imgCount*2 > openFilesLimit {
 		if err := cfg.OS.SetOpenFilesLimit(imgCount * 2); err != nil {
 			return errors.Wrapf(err, "chat file %q - increase the open file limit from %d to %d to support %d embedded images", outFile.Name(), openFilesLimit, imgCount*2, imgCount)
 		}
-	}
-	if err := outFile.Close(); err != nil {
-		return errors.Wrapf(err, "write/close chat file %q", outFile.Name())
 	}
 	cfg.counts.files += 1
 	cfg.counts.messages += msgCount

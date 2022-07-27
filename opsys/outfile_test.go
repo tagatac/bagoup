@@ -7,7 +7,10 @@ import (
 	"html/template"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/tagatac/bagoup/opsys/pdfgen/mock_pdfgen"
 	"gotest.tools/v3/assert"
 )
 
@@ -17,14 +20,15 @@ func TestTxtFile(t *testing.T) {
 	// Create OutFile in read/write filesystem
 	rwOS, err := NewOS(rwFS, nil, nil)
 	assert.NilError(t, err)
-	rwOF, err := rwOS.NewOutFile("testfile", false, false)
+	rwFile, err := rwOS.Create("testfile.txt")
+	assert.NilError(t, err)
+	defer rwFile.Close()
+	rwOF := opSys{}.NewTxtOutFile(rwFile)
 	assert.NilError(t, err)
 
 	// Create OutFile in read-only filesystem
 	roOS, err := NewOS(afero.NewReadOnlyFs(rwFS), nil, nil)
 	assert.NilError(t, err)
-	_, err = roOS.NewOutFile("testfile", false, false)
-	assert.Error(t, err, `create file "testfile.txt": operation not permitted`)
 	roFile, err := roOS.Open("testfile.txt")
 	assert.NilError(t, err)
 	roOF := &txtFile{File: roFile}
@@ -45,33 +49,34 @@ func TestTxtFile(t *testing.T) {
 	assert.Equal(t, false, embedded)
 
 	// Stage (no-op) and close the text file
-	imgCount, err := rwOF.Stage()
+	imgCount, err := rwOF.Flush()
 	assert.NilError(t, err)
 	assert.Equal(t, imgCount, 0)
-	assert.NilError(t, rwOF.Close())
-	assert.NilError(t, rwOF.Close())
 
 	// Check file contents
 	contents, err := afero.ReadFile(rwFS, "testfile.txt")
 	assert.NilError(t, err)
 	assert.Equal(t, string(contents), "test message\n<attached: tennisballs.jpeg>\n")
-
-	// Write after closing
-	assert.Error(t, rwOF.WriteMessage("test message after closing\n"), "File is closed")
-	assert.Error(t, rwOF.WriteMessage("attachment"), "File is closed")
 }
 
-// TODO: Add a test that this wraps long URLs properly.
 func TestPDFFile(t *testing.T) {
 	tests := []struct {
 		msg          string
 		includePPA   bool
+		templatePath string
+		setupMock    func(*mock_pdfgen.MockPDFGenerator)
 		wantHTML     template.HTML
 		wantImgCount int
 		wantErr      string
 	}{
 		{
 			msg: "happy",
+			setupMock: func(pMock *mock_pdfgen.MockPDFGenerator) {
+				gomock.InOrder(
+					pMock.EXPECT().AddPage(gomock.Any()),
+					pMock.EXPECT().Create(),
+				)
+			},
 			wantHTML: template.HTML(
 				`
 
@@ -119,6 +124,12 @@ func TestPDFFile(t *testing.T) {
 		{
 			msg:        "include plugin payload attachments",
 			includePPA: true,
+			setupMock: func(pMock *mock_pdfgen.MockPDFGenerator) {
+				gomock.InOrder(
+					pMock.EXPECT().AddPage(gomock.Any()),
+					pMock.EXPECT().Create(),
+				)
+			},
 			wantHTML: template.HTML(
 				`
 
@@ -162,23 +173,46 @@ func TestPDFFile(t *testing.T) {
 `,
 			),
 			wantImgCount: 2,
-			wantErr:      "write out PDF: Loading page",
+		},
+		{
+			msg:          "bad template path",
+			templatePath: "invalid template path",
+			wantErr:      "parse HTML template: template: pattern matches no files: `invalid template path`",
+		},
+		{
+			msg:          "invalid tamplate",
+			templatePath: "testdata/outfile_html_invalid.tmpl",
+			wantErr:      `execute HTML template: template: outfile_html_invalid.tmpl:1:2: executing "outfile_html_invalid.tmpl" at <.InvalidReference>: can't evaluate field InvalidReference in type opsys.htmlFileData`,
+		},
+		{
+			msg: "PDF creation error",
+			setupMock: func(pMock *mock_pdfgen.MockPDFGenerator) {
+				gomock.InOrder(
+					pMock.EXPECT().AddPage(gomock.Any()),
+					pMock.EXPECT().Create().Return(errors.New("this is a PDF creation error")),
+				)
+			},
+			wantErr: "write out PDF: this is a PDF creation error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			// Create OutFile in read/write filesystem
-			rwOS, err := NewOS(afero.NewMemMapFs(), nil, nil)
+			// Create outfile
+			chatFile, err := afero.NewMemMapFs().Create("testfile.pdf")
 			assert.NilError(t, err)
-			of, err := rwOS.NewOutFile("testfile", true, tt.includePPA)
-			assert.NilError(t, err)
-
-			// Create OutFile in read-only filesystem
-			roOS, err := NewOS(afero.NewReadOnlyFs(afero.NewMemMapFs()), nil, nil)
-			assert.NilError(t, err)
-			_, err = roOS.NewOutFile("testfile", true, tt.includePPA)
-			assert.Error(t, err, `create file "testfile.pdf": operation not permitted`)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			pMock := mock_pdfgen.NewMockPDFGenerator(ctrl)
+			if tt.setupMock != nil {
+				tt.setupMock(pMock)
+			}
+			of := opSys{}.NewPDFOutFile(chatFile, pMock, tt.includePPA)
+			pdf, ok := of.(*pdfFile)
+			assert.Equal(t, true, ok)
+			if tt.templatePath != "" {
+				pdf.templatePath = tt.templatePath
+			}
 
 			// Get name
 			assert.Equal(t, of.Name(), "testfile.pdf")
@@ -197,27 +231,15 @@ func TestPDFFile(t *testing.T) {
 			assert.NilError(t, err)
 			assert.Equal(t, tt.includePPA, embedded)
 
-			// Stage, write, and close the PDF
-			imgCount, err := of.Stage()
+			// Stage the PDF
+			imgCount, err := of.Flush()
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
 			assert.NilError(t, err)
 			assert.Equal(t, tt.wantImgCount, imgCount)
-			if tt.wantErr != "" {
-				assert.ErrorContains(t, of.Close(), tt.wantErr)
-			}
-			assert.NilError(t, of.Close())
-			assert.NilError(t, of.Close())
-
-			// Check HTML
-			pdf := of.(*pdfFile)
 			assert.Equal(t, pdf.html, tt.wantHTML)
-
-			// Write/stage after closing
-			assert.Error(t, of.WriteMessage("test message after closing\n"), _errFileClosed.Error())
-			_, err = of.WriteAttachment("attachment")
-			assert.Error(t, err, _errFileClosed.Error())
-			assert.Error(t, of.ReferenceAttachment("tennisballs.jpeg"), _errFileClosed.Error())
-			_, err = of.Stage()
-			assert.Error(t, err, _errFileClosed.Error())
 		})
 	}
 }

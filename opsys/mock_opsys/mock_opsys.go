@@ -14,6 +14,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	afero "github.com/spf13/afero"
 	opsys "github.com/tagatac/bagoup/opsys"
+	pdfgen "github.com/tagatac/bagoup/opsys/pdfgen"
 )
 
 // MockOS is a mock of OS interface.
@@ -240,19 +241,32 @@ func (mr *MockOSMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockOS)(nil).Name))
 }
 
-// NewOutFile mocks base method.
-func (m *MockOS) NewOutFile(arg0 string, arg1, arg2 bool) (opsys.OutFile, error) {
+// NewPDFOutFile mocks base method.
+func (m *MockOS) NewPDFOutFile(arg0 afero.File, arg1 pdfgen.PDFGenerator, arg2 bool) opsys.OutFile {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewOutFile", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "NewPDFOutFile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(opsys.OutFile)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
-// NewOutFile indicates an expected call of NewOutFile.
-func (mr *MockOSMockRecorder) NewOutFile(arg0, arg1, arg2 interface{}) *gomock.Call {
+// NewPDFOutFile indicates an expected call of NewPDFOutFile.
+func (mr *MockOSMockRecorder) NewPDFOutFile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOutFile", reflect.TypeOf((*MockOS)(nil).NewOutFile), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewPDFOutFile", reflect.TypeOf((*MockOS)(nil).NewPDFOutFile), arg0, arg1, arg2)
+}
+
+// NewTxtOutFile mocks base method.
+func (m *MockOS) NewTxtOutFile(arg0 afero.File) opsys.OutFile {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewTxtOutFile", arg0)
+	ret0, _ := ret[0].(opsys.OutFile)
+	return ret0
+}
+
+// NewTxtOutFile indicates an expected call of NewTxtOutFile.
+func (mr *MockOSMockRecorder) NewTxtOutFile(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTxtOutFile", reflect.TypeOf((*MockOS)(nil).NewTxtOutFile), arg0)
 }
 
 // Open mocks base method.

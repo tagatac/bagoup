@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/opsys/mock_opsys"
@@ -16,6 +17,9 @@ import (
 )
 
 func TestExportChats(t *testing.T) {
+	chatFile, err := afero.NewMemMapFs().Create("testfile")
+	assert.NilError(t, err)
+
 	tests := []struct {
 		msg             string
 		separateChats   bool
@@ -29,7 +33,7 @@ func TestExportChats(t *testing.T) {
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
-						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
@@ -58,16 +62,16 @@ func TestExportChats(t *testing.T) {
 					dbMock.EXPECT().GetMessageIDs(1),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid;;;testguid2", false, false).Return(ofMocks[0], nil),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid;;;testguid2.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 					dbMock.EXPECT().GetMessageIDs(3),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
-					osMock.EXPECT().NewOutFile("messages-export/testdisplayname2/testguid3", false, false).Return(ofMocks[1], nil),
-					ofMocks[1].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname2/testguid3.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[1]),
+					ofMocks[1].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[1].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -77,7 +81,7 @@ func TestExportChats(t *testing.T) {
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
-						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
@@ -96,16 +100,16 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid", false, false).Return(ofMocks[0], nil),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid2", false, false).Return(ofMocks[1], nil),
-					ofMocks[1].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid2.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[1]),
+					ofMocks[1].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[1].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -115,8 +119,7 @@ func TestExportChats(t *testing.T) {
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
-						50:  {chatdb.Attachment{Filename: ""}},
-						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					osMock.EXPECT().FileAccess("attachmentpath"),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
@@ -132,10 +135,10 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid", true, false).Return(ofMocks[0], nil),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.pdf").Return(chatFile, nil),
+					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -146,6 +149,7 @@ func TestExportChats(t *testing.T) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
 						100: {},
+						200: {{}},
 					}, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
@@ -160,10 +164,10 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid", true, false).Return(ofMocks[0], nil),
-					ofMocks[0].EXPECT().Stage(),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.pdf").Return(chatFile, nil),
+					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMocks[0]),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -173,7 +177,7 @@ func TestExportChats(t *testing.T) {
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
-						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					osMock.EXPECT().FileAccess("attachmentpath"),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
@@ -189,11 +193,11 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-					osMock.EXPECT().NewOutFile("messages-export/testdisplayname/testguid", false, false).Return(ofMocks[0], nil),
+					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt").Return(chatFile, nil),
+					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
 					osMock.EXPECT().Mkdir("messages-export/testdisplayname/attachments", os.ModePerm),
-					ofMocks[0].EXPECT().Stage(),
+					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
-					ofMocks[0].EXPECT().Close().Times(2),
 				)
 			},
 		},
@@ -210,7 +214,7 @@ func TestExportChats(t *testing.T) {
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
-						100: {chatdb.Attachment{Filename: "attachmentpath"}},
+						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					osMock.EXPECT().FileAccess("attachmentpath").Return(errors.New("this is a permissions error")),
 				)
@@ -317,7 +321,7 @@ func TestExportChats(t *testing.T) {
 				ChatDB: dbMock,
 				counts: cnts,
 			}
-			err := cfg.exportChats(nil)
+			err = cfg.exportChats(nil)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return

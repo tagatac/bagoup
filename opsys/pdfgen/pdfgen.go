@@ -1,7 +1,7 @@
 // Copyright (C) 2022  David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
-package opsys
+package pdfgen
 
 import (
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-//go:generate mockgen -destination=mock_opsys/mock_pdf_generator.go github.com/tagatac/bagoup/opsys PDFGenerator
+//go:generate mockgen -destination=mock_pdfgen/mock_pdfgen.go github.com/tagatac/bagoup/opsys/pdfgen PDFGenerator
 
 type (
 	// PDFGenerator is a thin wrapper for the wkhtmltopdf.PDFGenerator struct.

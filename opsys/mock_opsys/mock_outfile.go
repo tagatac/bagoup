@@ -33,18 +33,19 @@ func (m *MockOutFile) EXPECT() *MockOutFileMockRecorder {
 	return m.recorder
 }
 
-// Close mocks base method.
-func (m *MockOutFile) Close() error {
+// Flush mocks base method.
+func (m *MockOutFile) Flush() (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close")
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "Flush")
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// Close indicates an expected call of Close.
-func (mr *MockOutFileMockRecorder) Close() *gomock.Call {
+// Flush indicates an expected call of Flush.
+func (mr *MockOutFileMockRecorder) Flush() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockOutFile)(nil).Close))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockOutFile)(nil).Flush))
 }
 
 // Name mocks base method.
@@ -73,21 +74,6 @@ func (m *MockOutFile) ReferenceAttachment(arg0 string) error {
 func (mr *MockOutFileMockRecorder) ReferenceAttachment(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReferenceAttachment", reflect.TypeOf((*MockOutFile)(nil).ReferenceAttachment), arg0)
-}
-
-// Stage mocks base method.
-func (m *MockOutFile) Stage() (int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Stage")
-	ret0, _ := ret[0].(int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Stage indicates an expected call of Stage.
-func (mr *MockOutFileMockRecorder) Stage() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stage", reflect.TypeOf((*MockOutFile)(nil).Stage))
 }
 
 // WriteAttachment mocks base method.
