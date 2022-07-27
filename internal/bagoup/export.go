@@ -1,7 +1,7 @@
 // Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
-package main
+package bagoup
 
 import (
 	"github.com/emersion/go-vcard"
@@ -32,7 +32,7 @@ func getAttachmentPaths(cfg *configuration) error {
 		return errors.Wrap(err, "get attachment paths")
 	}
 	cfg.attachmentPaths = attPaths
-	if cfg.opts.OutputPDF || cfg.opts.CopyAttachments {
+	if cfg.Options.OutputPDF || cfg.Options.CopyAttachments {
 		for _, msgPaths := range attPaths {
 			if len(msgPaths) == 0 {
 				continue
@@ -50,7 +50,7 @@ func getAttachmentPaths(cfg *configuration) error {
 }
 
 func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) error {
-	mergeChats := !cfg.opts.SeparateChats
+	mergeChats := !cfg.Options.SeparateChats
 	var guids []string
 	var entityMessageIDs []chatdb.DatedMessageID
 	for _, chat := range entityChats.Chats {

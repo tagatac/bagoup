@@ -1,7 +1,7 @@
 // Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
-package main
+package bagoup
 
 import (
 	"os"
@@ -464,7 +464,7 @@ func TestWriteFile(t *testing.T) {
 				attachmentsEmbedded: map[string]int{},
 			}
 			cfg := configuration{
-				opts: options{
+				Options: Options{
 					ExportPath:      "messages-export",
 					OutputPDF:       tt.pdf,
 					CopyAttachments: tt.copyAttachments,

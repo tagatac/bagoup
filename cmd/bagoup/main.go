@@ -26,62 +26,23 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/jessevdk/go-flags"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
+	"github.com/tagatac/bagoup/internal/bagoup"
 	"github.com/tagatac/bagoup/opsys"
 	"github.com/tagatac/bagoup/pathtools"
 )
 
 const _license = "Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>\nSee the source for usage terms."
-const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access"
 
 var _version string
 
-type (
-	options struct {
-		DBPath          string  `short:"i" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
-		ExportPath      string  `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"messages-export"`
-		MacOSVersion    *string `short:"m" long:"mac-os-version" description:"Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
-		ContactsPath    *string `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
-		SelfHandle      string  `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
-		SeparateChats   bool    `long:"separate-chats" description:"Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file"`
-		OutputPDF       bool    `short:"p" long:"pdf" description:"Export text and images to PDF files (requires full disk access)"`
-		IncludePPA      bool    `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
-		CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
-		PreservePaths   bool    `short:"r" long:"preserve-paths" description:"When copying attachments, preserve the full path instead of co-locating them with the chats which included them"`
-		PrintVersion    bool    `short:"v" long:"version" description:"Show the version of bagoup"`
-	}
-	configuration struct {
-		opts options
-		opsys.OS
-		chatdb.ChatDB
-		logDir          string
-		macOSVersion    *semver.Version
-		handleMap       map[int]string
-		attachmentPaths map[int][]chatdb.Attachment
-		counts          counts
-		startTime       time.Time
-	}
-	counts struct {
-		files               int
-		chats               int
-		messages            int
-		attachments         map[string]int
-		attachmentsCopied   map[string]int
-		attachmentsEmbedded map[string]int
-		attachmentsMissing  int
-		conversions         int
-		conversionsFailed   int
-	}
-)
-
 func main() {
 	startTime := time.Now()
-	var opts options
+	var opts bagoup.Options
 	_, err := flags.Parse(&opts)
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
 		os.Exit(0)
@@ -104,19 +65,8 @@ func main() {
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
-	cfg := configuration{
-		opts:   opts,
-		OS:     s,
-		ChatDB: cdb,
-		logDir: logDir,
-		counts: counts{
-			attachments:         map[string]int{},
-			attachmentsCopied:   map[string]int{},
-			attachmentsEmbedded: map[string]int{},
-		},
-		startTime: startTime,
-	}
-	logFatalOnErr(cfg.bagoup())
+	cfg := bagoup.NewConfiguration(opts, s, cdb, logDir, startTime, _version)
+	logFatalOnErr(cfg.Run())
 	logFatalOnErr(errors.Wrapf(db.Close(), "close DB file %q", dbPath))
 	dbf, err := os.Open(dbPath)
 	logFatalOnErr(errors.Wrapf(err, "open DB file %q for copying", dbPath))

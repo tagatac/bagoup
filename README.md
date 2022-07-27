@@ -1,4 +1,4 @@
-# bagoup [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][card-img]][card]
+# bagoup [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][card-img]][card] [![Release][release-img]][release]
 
 bagoup *(pronounced BAAGoop)* is an export utility for Mac OS Messages,
 implemented in Go, inspired by
@@ -115,3 +115,5 @@ See main.go for usage terms.
 [cov]: https://codecov.io/gh/tagatac/bagoup
 [card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup
 [card]: https://goreportcard.com/report/github.com/tagatac/bagoup
+[release-img]: https://img.shields.io/github/release/tagatac/bagoup.svg
+[release]: https://github.com/tagatac/bagoup/releases/latest

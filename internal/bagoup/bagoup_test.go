@@ -1,12 +1,13 @@
 // Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
-package main
+package bagoup
 
 import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestBagoup(t *testing.T) {
-	defaultOpts := options{
+	defaultOpts := Options{
 		DBPath:     "~/Library/Messages/chat.db",
 		ExportPath: "messages-export",
 		SelfHandle: "Me",
@@ -29,7 +30,7 @@ func TestBagoup(t *testing.T) {
 
 	tests := []struct {
 		msg        string
-		opts       options
+		opts       Options
 		setupMocks func(*mock_opsys.MockOS, *mock_chatdb.MockChatDB)
 		wantErr    string
 	}{
@@ -125,7 +126,7 @@ func TestBagoup(t *testing.T) {
 		},
 		{
 			msg: "chat.db version specified",
-			opts: options{
+			opts: Options{
 				DBPath:       "~/Library/Messages/chat.db",
 				ExportPath:   "messages-export",
 				MacOSVersion: &tenDotTwelve,
@@ -147,7 +148,7 @@ func TestBagoup(t *testing.T) {
 		},
 		{
 			msg: "invalid chat.db version specified",
-			opts: options{
+			opts: Options{
 				DBPath:       "~/Library/Messages/chat.db",
 				ExportPath:   "messages-export",
 				MacOSVersion: &tenDotTenDotTenDotTen,
@@ -165,7 +166,7 @@ func TestBagoup(t *testing.T) {
 		},
 		{
 			msg: "contacts file specified",
-			opts: options{
+			opts: Options{
 				DBPath:       "~/Library/Messages/chat.db",
 				ExportPath:   "messages-export",
 				ContactsPath: &contactsPath,
@@ -189,7 +190,7 @@ func TestBagoup(t *testing.T) {
 		},
 		{
 			msg: "error getting contact map",
-			opts: options{
+			opts: Options{
 				DBPath:       "~/Library/Messages/chat.db",
 				ExportPath:   "messages-export",
 				ContactsPath: &contactsPath,
@@ -267,13 +268,16 @@ func TestBagoup(t *testing.T) {
 			dbMock := mock_chatdb.NewMockChatDB(ctrl)
 			tt.setupMocks(osMock, dbMock)
 
-			cfg := configuration{
-				opts:   tt.opts,
-				OS:     osMock,
-				ChatDB: dbMock,
-				logDir: "messages-export/.bagoup",
-			}
-			err := cfg.bagoup()
+			cfg := NewConfiguration(
+				tt.opts,
+				osMock,
+				dbMock,
+				"messages-export/.bagoup",
+				time.Now(),
+				"",
+			)
+			cfg.(*configuration).counts.attachments["image/jpeg"] = 1
+			err := cfg.Run()
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return

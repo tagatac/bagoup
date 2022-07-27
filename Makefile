@@ -11,7 +11,7 @@ LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 build: bagoup
 
 bagoup: $(SRC) $(TEMPLATES) download
-	go build $(LDFLAGS) -o $@ .
+	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
 
 .PHONY: deps download from-archive generate test zip clean codecov
 

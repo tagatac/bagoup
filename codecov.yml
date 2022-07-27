@@ -2,7 +2,7 @@ coverage:
   status:
     patch: off
 ignore:
-  - main.go
+  - cmd/bagoup/main.go
+  - example-exports/examplegen.go
   - opsys/heic2jpg.go
   - opsys/pdfgen/pdfgen.go
-  - example-exports/examplegen.go

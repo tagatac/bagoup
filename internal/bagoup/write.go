@@ -1,7 +1,7 @@
 // Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
 // See main.go for usage terms.
 
-package main
+package bagoup
 
 import (
 	"log"
@@ -17,14 +17,14 @@ import (
 )
 
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
-	chatDirPath := filepath.Join(cfg.opts.ExportPath, entityName)
+	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
 	filename := strings.Join(guids, ";;;")
 	chatPath := filepath.Join(chatDirPath, filename)
 	var outFile opsys.OutFile
-	if cfg.opts.OutputPDF {
+	if cfg.Options.OutputPDF {
 		chatPath += ".pdf"
 		chatFile, err := cfg.OS.Create(chatPath)
 		if err != nil {
@@ -35,7 +35,7 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 		if err != nil {
 			return errors.Wrap(err, "create PDF generator")
 		}
-		outFile = cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.opts.IncludePPA)
+		outFile = cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.Options.IncludePPA)
 	} else {
 		chatPath += ".txt"
 		chatFile, err := cfg.OS.Create(chatPath)
@@ -46,7 +46,7 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 		outFile = cfg.OS.NewTxtOutFile(chatFile)
 	}
 	attDir := filepath.Join(chatDirPath, "attachments")
-	if cfg.opts.CopyAttachments && !cfg.opts.PreservePaths {
+	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
 		if err := cfg.OS.Mkdir(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
@@ -131,14 +131,14 @@ func validateAttachmentPath(s opsys.OS, attPath string) error {
 }
 
 func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) error {
-	if !cfg.opts.CopyAttachments {
+	if !cfg.Options.CopyAttachments {
 		return nil
 	}
 	attPath, mimeType := att.Filename, att.MIMEType
 	unique := true
-	if cfg.opts.PreservePaths {
+	if cfg.Options.PreservePaths {
 		unique = false
-		attDir = filepath.Join(cfg.opts.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
+		attDir = filepath.Join(cfg.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
@@ -152,7 +152,7 @@ func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) e
 
 func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
 	attPath, mimeType := att.Filename, att.MIMEType
-	if cfg.opts.OutputPDF {
+	if cfg.Options.OutputPDF {
 		if jpgPath, err := cfg.OS.HEIC2JPG(attPath); err != nil {
 			cfg.counts.conversionsFailed += 1
 			log.Printf("WARN: chat file %q - convert HEIC file %q to JPG: %s", outFile.Name(), attPath, err)
