@@ -1,0 +1,71 @@
+# 1 "pdf.h"
+# 1 "<built-in>" 1
+# 1 "<built-in>" 3
+# 370 "<built-in>" 3
+# 1 "<command line>" 1
+# 1 "<built-in>" 2
+# 1 "pdf.h" 2
+# 28 "pdf.h"
+# 1 "/usr/local/include/wkhtmltox/dllbegin.inc" 1
+# 29 "pdf.h" 2
+
+
+struct wkhtmltopdf_global_settings;
+typedef struct wkhtmltopdf_global_settings wkhtmltopdf_global_settings;
+
+struct wkhtmltopdf_object_settings;
+typedef struct wkhtmltopdf_object_settings wkhtmltopdf_object_settings;
+
+struct wkhtmltopdf_converter;
+typedef struct wkhtmltopdf_converter wkhtmltopdf_converter;
+
+typedef void (*wkhtmltopdf_str_callback)(wkhtmltopdf_converter * converter, const char * str);
+typedef void (*wkhtmltopdf_int_callback)(wkhtmltopdf_converter * converter, const int val);
+typedef void (*wkhtmltopdf_void_callback)(wkhtmltopdf_converter * converter);
+
+__attribute__ ((visibility("default"))) int wkhtmltopdf_init(int use_graphics);
+__attribute__ ((visibility("default"))) int wkhtmltopdf_deinit();
+__attribute__ ((visibility("default"))) int wkhtmltopdf_extended_qt();
+__attribute__ ((visibility("default"))) const char * wkhtmltopdf_version();
+
+__attribute__ ((visibility("default"))) wkhtmltopdf_global_settings * wkhtmltopdf_create_global_settings();
+__attribute__ ((visibility("default"))) void wkhtmltopdf_destroy_global_settings(wkhtmltopdf_global_settings *);
+
+__attribute__ ((visibility("default"))) wkhtmltopdf_object_settings * wkhtmltopdf_create_object_settings();
+__attribute__ ((visibility("default"))) void wkhtmltopdf_destroy_object_settings(wkhtmltopdf_object_settings *);
+
+__attribute__ ((visibility("default"))) int wkhtmltopdf_set_global_setting(wkhtmltopdf_global_settings * settings, const char * name, const char * value);
+__attribute__ ((visibility("default"))) int wkhtmltopdf_get_global_setting(wkhtmltopdf_global_settings * settings, const char * name, char * value, int vs);
+__attribute__ ((visibility("default"))) int wkhtmltopdf_set_object_setting(wkhtmltopdf_object_settings * settings, const char * name, const char * value);
+__attribute__ ((visibility("default"))) int wkhtmltopdf_get_object_setting(wkhtmltopdf_object_settings * settings, const char * name, char * value, int vs);
+
+
+__attribute__ ((visibility("default"))) wkhtmltopdf_converter * wkhtmltopdf_create_converter(wkhtmltopdf_global_settings * settings);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_destroy_converter(wkhtmltopdf_converter * converter);
+
+__attribute__ ((visibility("default"))) void wkhtmltopdf_set_debug_callback(wkhtmltopdf_converter * converter, wkhtmltopdf_str_callback cb);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_set_info_callback(wkhtmltopdf_converter * converter, wkhtmltopdf_str_callback cb);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_set_warning_callback(wkhtmltopdf_converter * converter, wkhtmltopdf_str_callback cb);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_set_error_callback(wkhtmltopdf_converter * converter, wkhtmltopdf_str_callback cb);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_set_phase_changed_callback(wkhtmltopdf_converter * converter, wkhtmltopdf_void_callback cb);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_set_progress_changed_callback(wkhtmltopdf_converter * converter, wkhtmltopdf_int_callback cb);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_set_finished_callback(wkhtmltopdf_converter * converter, wkhtmltopdf_int_callback cb);
+
+
+__attribute__ ((visibility("default"))) int wkhtmltopdf_convert(wkhtmltopdf_converter * converter);
+__attribute__ ((visibility("default"))) void wkhtmltopdf_add_object(
+ wkhtmltopdf_converter * converter, wkhtmltopdf_object_settings * setting, const char * data);
+
+__attribute__ ((visibility("default"))) int wkhtmltopdf_current_phase(wkhtmltopdf_converter * converter);
+__attribute__ ((visibility("default"))) int wkhtmltopdf_phase_count(wkhtmltopdf_converter * converter);
+__attribute__ ((visibility("default"))) const char * wkhtmltopdf_phase_description(wkhtmltopdf_converter * converter, int phase);
+__attribute__ ((visibility("default"))) const char * wkhtmltopdf_progress_string(wkhtmltopdf_converter * converter);
+__attribute__ ((visibility("default"))) int wkhtmltopdf_http_error_code(wkhtmltopdf_converter * converter);
+__attribute__ ((visibility("default"))) long wkhtmltopdf_get_output(wkhtmltopdf_converter * converter, const unsigned char **);
+
+
+
+
+# 1 "/usr/local/include/wkhtmltox/dllend.inc" 1
+# 88 "pdf.h" 2
+
