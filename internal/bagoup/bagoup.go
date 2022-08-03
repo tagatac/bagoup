@@ -101,7 +101,9 @@ func (cfg configuration) Run() error {
 		return errors.Wrap(err, "create log file")
 	}
 	defer logFile.Close()
-	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
+	w := log.Writer()
+	log.SetOutput(io.MultiWriter(logFile, w))
+	defer log.SetOutput(w)
 
 	if opts.MacOSVersion != nil {
 		cfg.macOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
