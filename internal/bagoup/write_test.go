@@ -483,7 +483,7 @@ func TestWriteFile(t *testing.T) {
 				counts: cnts,
 			}
 			err := cfg.writeFile(
-				"friend",
+				"friend. ",
 				[]string{"iMessage;-;friend@gmail.com", "iMessage;-;friend@hotmail.com"},
 				[]chatdb.DatedMessageID{
 					{ID: 2, Date: 2},

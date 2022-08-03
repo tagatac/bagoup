@@ -17,7 +17,7 @@ import (
 )
 
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
-	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
+	chatDirPath := strings.TrimRight(filepath.Join(cfg.Options.ExportPath, entityName), ". ")
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
