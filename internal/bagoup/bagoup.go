@@ -36,6 +36,7 @@ type (
 		IncludePPA      bool    `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
 		CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
 		PreservePaths   bool    `short:"r" long:"preserve-paths" description:"When copying attachments, preserve the full path instead of co-locating them with the chats which included them"`
+		AttachmentsPath string  `short:"t" long:"attachments-path" description:"Root path to the attachments (useful for re-running bagoup on an export with the --preserve-paths flag)" default:"/"`
 		PrintVersion    bool    `short:"v" long:"version" description:"Show the version of bagoup"`
 	}
 	configuration struct {
