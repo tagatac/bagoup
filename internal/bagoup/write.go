@@ -47,7 +47,7 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	}
 	attDir := filepath.Join(chatDirPath, "attachments")
 	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
-		if err := cfg.OS.Mkdir(attDir, os.ModePerm); err != nil {
+		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
 	}

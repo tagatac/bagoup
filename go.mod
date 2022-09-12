@@ -13,13 +13,13 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.9.2
 	github.com/tagatac/goheif v0.0.0-20220718191458-b9a6c0ca0832
-	golang.org/x/net v0.0.0-20220726230323-06994584191e
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591
 	gotest.tools/v3 v3.0.2
 )
 
 require (
 	github.com/google/go-cmp v0.5.4 // indirect
-	golang.org/x/sys v0.0.0-20220727055044-e65921a090b8 // indirect
+	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 )
