@@ -502,4 +502,25 @@ func TestWriteFile(t *testing.T) {
 			assert.Equal(t, tt.wantConvFail, cfg.counts.conversionsFailed)
 		})
 	}
+
+	t.Run("long email address", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		osMock := mock_opsys.NewMockOS(ctrl)
+		ofMock := mock_opsys.NewMockOutFile(ctrl)
+		gomock.InOrder(
+			osMock.EXPECT().MkdirAll("friend", os.ModePerm),
+			osMock.EXPECT().Create("friend/iMessage;-;heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress@gmail.c.txt").Return(chatFile, nil),
+			osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMock),
+			ofMock.EXPECT().Flush(),
+			osMock.EXPECT().GetOpenFilesLimit().Return(256),
+		)
+
+		cfg := configuration{OS: osMock}
+		cfg.writeFile(
+			"friend",
+			[]string{"iMessage;-;heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress@gmail.com"},
+			nil,
+		)
+	})
 }
