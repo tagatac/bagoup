@@ -16,12 +16,17 @@ import (
 	"github.com/tagatac/bagoup/opsys/pdfgen"
 )
 
+const _filenamePrefixMaxLength = 251
+
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
 	chatDirPath := strings.TrimRight(filepath.Join(cfg.Options.ExportPath, entityName), ". ")
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
 	filename := strings.Join(guids, ";;;")
+	if len(filename) > _filenamePrefixMaxLength {
+		filename = filename[:_filenamePrefixMaxLength-1]
+	}
 	chatPath := filepath.Join(chatDirPath, filename)
 	var outFile opsys.OutFile
 	if cfg.Options.OutputPDF {
