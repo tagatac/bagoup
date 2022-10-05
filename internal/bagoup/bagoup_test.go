@@ -6,6 +6,7 @@ package bagoup
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -38,7 +39,29 @@ func TestBagoup(t *testing.T) {
 			msg:  "default options",
 			opts: defaultOpts,
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
-
+				gomock.InOrder(
+					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
+					osMock.EXPECT().FileExist("messages-export"),
+					osMock.EXPECT().MkdirAll("messages-export/.bagoup", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/.bagoup/out.log").Return(devnull, nil),
+					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
+					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().GetHandleMap(nil),
+					dbMock.EXPECT().GetAttachmentPaths(),
+					dbMock.EXPECT().GetChats(nil),
+					osMock.EXPECT().RmTempDir().Times(2),
+				)
+			},
+		},
+		{
+			msg: "relative attachments path",
+			opts: Options{
+				DBPath:          "~/Library/Messages/chat.db",
+				ExportPath:      "messages-export",
+				SelfHandle:      "Me",
+				AttachmentsPath: "testrelativepath",
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB) {
 				gomock.InOrder(
 					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
 					osMock.EXPECT().FileExist("messages-export"),
@@ -277,12 +300,16 @@ func TestBagoup(t *testing.T) {
 				"",
 			)
 			cfg.(*configuration).counts.attachments["image/jpeg"] = 1
+			attPathIn := tt.opts.AttachmentsPath
 			err := cfg.Run()
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
+			wd, err := os.Getwd()
+			assert.NilError(t, err)
+			assert.Equal(t, cfg.(*configuration).Options.AttachmentsPath, filepath.Join(wd, attPathIn))
 		})
 	}
 }

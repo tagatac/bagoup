@@ -88,9 +88,8 @@ func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, logDir string
 	}
 }
 
-func (cfg configuration) Run() error {
-	opts := cfg.Options
-	if err := validatePaths(cfg.OS, opts); err != nil {
+func (cfg *configuration) Run() error {
+	if err := cfg.validatePaths(); err != nil {
 		return err
 	}
 
@@ -106,20 +105,20 @@ func (cfg configuration) Run() error {
 	log.SetOutput(io.MultiWriter(logFile, w))
 	defer log.SetOutput(w)
 
-	if opts.MacOSVersion != nil {
-		cfg.macOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
+	if cfg.Options.MacOSVersion != nil {
+		cfg.macOSVersion, err = semver.NewVersion(*cfg.Options.MacOSVersion)
 		if err != nil {
-			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
+			return errors.Wrapf(err, "parse Mac OS version %q", *cfg.Options.MacOSVersion)
 		}
 	} else if cfg.macOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
 		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
 	}
 
 	var contactMap map[string]*vcard.Card
-	if opts.ContactsPath != nil {
-		contactMap, err = cfg.OS.GetContactMap(*opts.ContactsPath)
+	if cfg.Options.ContactsPath != nil {
+		contactMap, err = cfg.OS.GetContactMap(*cfg.Options.ContactsPath)
 		if err != nil {
-			return errors.Wrapf(err, "get contacts from vcard file %q", *opts.ContactsPath)
+			return errors.Wrapf(err, "get contacts from vcard file %q", *cfg.Options.ContactsPath)
 		}
 	}
 
@@ -134,22 +133,28 @@ func (cfg configuration) Run() error {
 
 	defer cfg.OS.RmTempDir()
 	err = cfg.exportChats(contactMap)
-	printResults(cfg.version, opts.ExportPath, cfg.counts, time.Since(cfg.startTime))
+	printResults(cfg.version, cfg.Options.ExportPath, cfg.counts, time.Since(cfg.startTime))
 	if err != nil {
 		return errors.Wrap(err, "export chats")
 	}
 	return cfg.OS.RmTempDir()
 }
 
-func validatePaths(s opsys.OS, opts Options) error {
-	if err := s.FileAccess(opts.DBPath); err != nil {
-		return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
+func (cfg *configuration) validatePaths() error {
+	if err := cfg.OS.FileAccess(cfg.Options.DBPath); err != nil {
+		return errors.Wrapf(err, "test DB file %q - FIX: %s", cfg.Options.DBPath, _readmeURL)
 	}
-	if exist, err := s.FileExist(opts.ExportPath); exist {
-		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", opts.ExportPath)
+	if exist, err := cfg.OS.FileExist(cfg.Options.ExportPath); exist {
+		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", cfg.Options.ExportPath)
 	} else if err != nil {
-		return errors.Wrapf(err, "check export path %q", opts.ExportPath)
+		return errors.Wrapf(err, "check export path %q", cfg.Options.ExportPath)
 	}
+	var err error
+	var attPathAbs string
+	if attPathAbs, err = filepath.Abs(cfg.Options.AttachmentsPath); err != nil {
+		return errors.Wrapf(err, "convert attachments path %q to an absolute path", cfg.Options.AttachmentsPath)
+	}
+	cfg.Options.AttachmentsPath = attPathAbs
 	return nil
 }
 
