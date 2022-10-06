@@ -6,7 +6,6 @@
 package pathtools
 
 import (
-	"log"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -14,25 +13,41 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ReplaceTilde takes a filepath and replaces a leading tilde with the current
-// user's home directory.
-func ReplaceTilde(filePath string) (string, error) {
-	if strings.HasPrefix(filePath, "~") {
-		usr, err := user.Current()
-		if err != nil {
-			return "", errors.Wrap(err, "get current user")
-		}
-		filePath = filepath.Join(usr.HomeDir, filePath[1:])
+type (
+	PathTools interface {
+		// GetHomeDir returns the home directory of the running user (or the user
+		// who originally ran bagop, in the case of a re-run).
+		GetHomeDir() string
+		// ReplaceTilde takes a filepath and replaces a leading tilde with the
+		// current user's home directory.
+		ReplaceTilde(filePath string) string
 	}
-	return filePath, nil
+
+	ptools struct {
+		homeDir string
+	}
+)
+
+func NewPathTools() (PathTools, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return nil, errors.Wrap(err, "get current user")
+	}
+	return ptools{homeDir: usr.HomeDir}, nil
 }
 
-// MustReplaceTilde does the same thing as ReplaceTilde, except that it panics
-// if there is an error. Useful for testing.
-func MustReplaceTilde(filePath string) string {
-	filePath, err := ReplaceTilde(filePath)
-	if err != nil {
-		log.Fatal(err)
+func NewPathToolsWithHomeDir(homeDir string) (PathTools, error) {
+	if homeDir == "" {
+		return nil, errors.New("re-run not possible: missing the home directory from the previous run - FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually bagoup-attachments)")
+	}
+	return ptools{homeDir: homeDir}, nil
+}
+
+func (pt ptools) GetHomeDir() string { return pt.homeDir }
+
+func (pt ptools) ReplaceTilde(filePath string) string {
+	if strings.HasPrefix(filePath, "~") {
+		filePath = filepath.Join(pt.GetHomeDir(), filePath[1:])
 	}
 	return filePath
 }

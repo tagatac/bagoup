@@ -16,8 +16,15 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/opsys"
+	"github.com/tagatac/bagoup/pathtools"
+)
+
+const (
+	PreservedPathDir                = "bagoup-attachments"
+	PreservedPathTildeExpansionFile = ".tildeexpansion"
 )
 
 const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access"
@@ -43,6 +50,7 @@ type (
 		Options
 		opsys.OS
 		chatdb.ChatDB
+		pathtools.PathTools
 		logDir          string
 		macOSVersion    *semver.Version
 		handleMap       map[int]string
@@ -72,12 +80,24 @@ type (
 )
 
 // NewConfiguration returns an intitialized bagoup configuration.
-func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, logDir string, startTime time.Time, version string) Configuration {
+func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, ptools pathtools.PathTools, logDir string, startTime time.Time, version string) (Configuration, error) {
+	if opts.AttachmentsPath != "/" {
+		tef := filepath.Join(opts.AttachmentsPath, PreservedPathDir, PreservedPathTildeExpansionFile)
+		homeDir, err := afero.ReadFile(s, tef)
+		if err != nil {
+			return nil, errors.Wrapf(err, "read tilde expansion file %q", tef)
+		}
+		ptools, err = pathtools.NewPathToolsWithHomeDir(string(homeDir))
+		if err != nil {
+			return nil, errors.Wrap(err, "create pathtools")
+		}
+	}
 	return &configuration{
-		Options: opts,
-		OS:      s,
-		ChatDB:  cdb,
-		logDir:  logDir,
+		Options:   opts,
+		OS:        s,
+		ChatDB:    cdb,
+		PathTools: ptools,
+		logDir:    logDir,
 		counts: counts{
 			attachments:         map[string]int{},
 			attachmentsCopied:   map[string]int{},
@@ -85,7 +105,7 @@ func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, logDir string
 		},
 		startTime: startTime,
 		version:   version,
-	}
+	}, nil
 }
 
 func (cfg *configuration) Run() error {
@@ -136,6 +156,9 @@ func (cfg *configuration) Run() error {
 	printResults(cfg.version, cfg.Options.ExportPath, cfg.counts, time.Since(cfg.startTime))
 	if err != nil {
 		return errors.Wrap(err, "export chats")
+	}
+	if err = cfg.writeTildeExpansionFile(); err != nil {
+		return errors.Wrap(err, "write out tilde expansion file")
 	}
 	return cfg.OS.RmTempDir()
 }
@@ -200,4 +223,20 @@ func makeAttachmentsString(attCounts map[string]int) (attString string) {
 	}
 	attString = fmt.Sprintf("%d%s", attCount, attString)
 	return
+}
+
+func (cfg configuration) writeTildeExpansionFile() error {
+	if !cfg.Options.PreservePaths {
+		return nil
+	}
+	homeDir := cfg.PathTools.GetHomeDir()
+	f, err := cfg.OS.Create(filepath.Join(cfg.Options.ExportPath, PreservedPathDir, PreservedPathTildeExpansionFile))
+	if err != nil {
+		return errors.Wrap(err, "create tildeexpension file")
+	}
+	defer f.Close()
+	if _, err = f.WriteString(homeDir); err != nil {
+		return errors.Wrap(err, "write out tildeexpansion file")
+	}
+	return nil
 }

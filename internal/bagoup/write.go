@@ -144,7 +144,7 @@ func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) e
 	unique := true
 	if cfg.Options.PreservePaths {
 		unique = false
-		attDir = filepath.Join(cfg.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
+		attDir = filepath.Join(cfg.Options.ExportPath, PreservedPathDir, filepath.Dir(attPath))
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}

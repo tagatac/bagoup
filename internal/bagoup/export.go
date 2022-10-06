@@ -29,7 +29,7 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 }
 
 func getAttachmentPaths(cfg *configuration) error {
-	attPaths, err := cfg.ChatDB.GetAttachmentPaths()
+	attPaths, err := cfg.ChatDB.GetAttachmentPaths(cfg.PathTools)
 	if err != nil {
 		return errors.Wrap(err, "get attachment paths")
 	}
