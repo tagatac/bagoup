@@ -16,7 +16,6 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/opsys"
 	"github.com/tagatac/bagoup/pathtools"
@@ -82,15 +81,12 @@ type (
 // NewConfiguration returns an intitialized bagoup configuration.
 func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, ptools pathtools.PathTools, logDir string, startTime time.Time, version string) (Configuration, error) {
 	if opts.AttachmentsPath != "/" {
-		tef := filepath.Join(opts.AttachmentsPath, PreservedPathDir, PreservedPathTildeExpansionFile)
-		homeDir, err := afero.ReadFile(s, tef)
+		tef := filepath.Join(opts.AttachmentsPath, PreservedPathTildeExpansionFile)
+		homeDir, err := s.ReadFile(tef)
 		if err != nil {
-			return nil, errors.Wrapf(err, "read tilde expansion file %q", tef)
+			return nil, errors.Wrapf(err, "read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually bagoup-attachments)", tef)
 		}
-		ptools, err = pathtools.NewPathToolsWithHomeDir(string(homeDir))
-		if err != nil {
-			return nil, errors.Wrap(err, "create pathtools")
-		}
+		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
 	}
 	return &configuration{
 		Options:   opts,

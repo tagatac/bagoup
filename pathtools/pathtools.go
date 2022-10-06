@@ -13,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate mockgen -destination=mock_pathtools/mock_pathtools.go github.com/tagatac/bagoup/pathtools PathTools
+
 type (
 	PathTools interface {
 		// GetHomeDir returns the home directory of the running user (or the user
@@ -36,11 +38,8 @@ func NewPathTools() (PathTools, error) {
 	return ptools{homeDir: usr.HomeDir}, nil
 }
 
-func NewPathToolsWithHomeDir(homeDir string) (PathTools, error) {
-	if homeDir == "" {
-		return nil, errors.New("re-run not possible: missing the home directory from the previous run - FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually bagoup-attachments)")
-	}
-	return ptools{homeDir: homeDir}, nil
+func NewPathToolsWithHomeDir(homeDir string) PathTools {
+	return ptools{homeDir: homeDir}
 }
 
 func (pt ptools) GetHomeDir() string { return pt.homeDir }
