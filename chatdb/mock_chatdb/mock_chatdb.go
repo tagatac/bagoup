@@ -11,6 +11,7 @@ import (
 	vcard "github.com/emersion/go-vcard"
 	gomock "github.com/golang/mock/gomock"
 	chatdb "github.com/tagatac/bagoup/chatdb"
+	pathtools "github.com/tagatac/bagoup/pathtools"
 )
 
 // MockChatDB is a mock of ChatDB interface.
@@ -37,18 +38,18 @@ func (m *MockChatDB) EXPECT() *MockChatDBMockRecorder {
 }
 
 // GetAttachmentPaths mocks base method.
-func (m *MockChatDB) GetAttachmentPaths() (map[int][]chatdb.Attachment, error) {
+func (m *MockChatDB) GetAttachmentPaths(arg0 pathtools.PathTools) (map[int][]chatdb.Attachment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAttachmentPaths")
+	ret := m.ctrl.Call(m, "GetAttachmentPaths", arg0)
 	ret0, _ := ret[0].(map[int][]chatdb.Attachment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAttachmentPaths indicates an expected call of GetAttachmentPaths.
-func (mr *MockChatDBMockRecorder) GetAttachmentPaths() *gomock.Call {
+func (mr *MockChatDBMockRecorder) GetAttachmentPaths(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttachmentPaths", reflect.TypeOf((*MockChatDB)(nil).GetAttachmentPaths))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttachmentPaths", reflect.TypeOf((*MockChatDB)(nil).GetAttachmentPaths), arg0)
 }
 
 // GetChats mocks base method.

@@ -299,6 +299,21 @@ func (mr *MockOSMockRecorder) OpenFile(arg0, arg1, arg2 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenFile", reflect.TypeOf((*MockOS)(nil).OpenFile), arg0, arg1, arg2)
 }
 
+// ReadFile mocks base method.
+func (m *MockOS) ReadFile(arg0 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadFile", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadFile indicates an expected call of ReadFile.
+func (mr *MockOSMockRecorder) ReadFile(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockOS)(nil).ReadFile), arg0)
+}
+
 // Remove mocks base method.
 func (m *MockOS) Remove(arg0 string) error {
 	m.ctrl.T.Helper()

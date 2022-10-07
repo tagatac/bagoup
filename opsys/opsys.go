@@ -42,6 +42,8 @@ type (
 		// addresses specified in those cards, from the vcard file at the given
 		// path.
 		GetContactMap(path string) (map[string]*vcard.Card, error)
+		// ReadFile is a thin wrapper on the afero ReadFile utility.
+		ReadFile(fp string) (string, error)
 		// CopyFile copies the src file to the dstDir directory. If the file is
 		// designated as unique and it already exists in the destination directory,
 		// a numbered suffix will be added to the copied file name.
@@ -169,6 +171,11 @@ func sanitizePhone(dirty string) string {
 		},
 		dirty,
 	)
+}
+
+func (s opSys) ReadFile(fp string) (string, error) {
+	contents, err := afero.ReadFile(s.Fs, fp)
+	return string(contents), err
 }
 
 func (s opSys) CopyFile(src, dstDir string, unique bool) error {

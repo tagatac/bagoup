@@ -54,31 +54,32 @@ func main() {
 		return
 	}
 
-	dbPath, err := pathtools.ReplaceTilde(opts.DBPath)
-	logFatalOnErr(errors.Wrap(err, "replace tilde"))
-	opts.DBPath = dbPath
+	ptools, err := pathtools.NewPathTools()
+	logFatalOnErr(errors.Wrap(err, "create pathtools"))
+	opts.DBPath = ptools.ReplaceTilde(opts.DBPath)
 
 	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command, scall.NewSyscall())
 	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
 	db, err := sql.Open("sqlite3", opts.DBPath)
-	logFatalOnErr(errors.Wrapf(err, "open DB file %q", dbPath))
+	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
-	cfg := bagoup.NewConfiguration(opts, s, cdb, logDir, startTime, _version)
+	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, logDir, startTime, _version)
+	logFatalOnErr(errors.Wrap(err, "create bagoup configuration"))
 	logFatalOnErr(cfg.Run())
-	logFatalOnErr(errors.Wrapf(db.Close(), "close DB file %q", dbPath))
-	dbf, err := os.Open(dbPath)
-	logFatalOnErr(errors.Wrapf(err, "open DB file %q for copying", dbPath))
+	logFatalOnErr(errors.Wrapf(db.Close(), "close DB file %q", opts.DBPath))
+	dbf, err := os.Open(opts.DBPath)
+	logFatalOnErr(errors.Wrapf(err, "open DB file %q for copying", opts.DBPath))
 	defer dbf.Close()
-	dbfNewPath := filepath.Join(logDir, filepath.Base(dbPath))
+	dbfNewPath := filepath.Join(logDir, filepath.Base(opts.DBPath))
 	dbfNew, err := os.Create(dbfNewPath)
 	logFatalOnErr(errors.Wrapf(err, "create file %q to copy chat DB into", dbfNewPath))
 	defer dbfNew.Close()
 	_, err = io.Copy(dbfNew, dbf)
-	logFatalOnErr(errors.Wrapf(err, "copy DB file from %q to %q", dbPath, dbfNewPath))
-	logFatalOnErr(errors.Wrapf(dbf.Close(), "close DB file %q after copying", dbPath))
+	logFatalOnErr(errors.Wrapf(err, "copy DB file from %q to %q", opts.DBPath, dbfNewPath))
+	logFatalOnErr(errors.Wrapf(dbf.Close(), "close DB file %q after copying", opts.DBPath))
 	logFatalOnErr(errors.Wrapf(dbfNew.Close(), "close DB copy %q", dbfNewPath))
 }
 

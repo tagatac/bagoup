@@ -32,7 +32,7 @@ func TestExportChats(t *testing.T) {
 			msg: "two chats for one display name, one for another",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
@@ -80,7 +80,7 @@ func TestExportChats(t *testing.T) {
 			separateChats: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
@@ -118,7 +118,7 @@ func TestExportChats(t *testing.T) {
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					osMock.EXPECT().FileAccess("attachmentpath"),
@@ -147,7 +147,7 @@ func TestExportChats(t *testing.T) {
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {},
 						200: {{}},
 					}, nil),
@@ -176,7 +176,7 @@ func TestExportChats(t *testing.T) {
 			copyAttachments: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					osMock.EXPECT().FileAccess("attachmentpath"),
@@ -204,7 +204,7 @@ func TestExportChats(t *testing.T) {
 		{
 			msg: "error getting attachment paths",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, _ *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
-				dbMock.EXPECT().GetAttachmentPaths().Return(nil, errors.New("this is a DB error"))
+				dbMock.EXPECT().GetAttachmentPaths(nil).Return(nil, errors.New("this is a DB error"))
 			},
 			wantErr: "get attachment paths: this is a DB error",
 		},
@@ -213,7 +213,7 @@ func TestExportChats(t *testing.T) {
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths().Return(map[int][]chatdb.Attachment{
+					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
 					}, nil),
 					osMock.EXPECT().FileAccess("attachmentpath").Return(errors.New("this is a permissions error")),
@@ -225,7 +225,7 @@ func TestExportChats(t *testing.T) {
 			msg: "GetMessageIDs error",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, _ *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths(),
+					dbMock.EXPECT().GetAttachmentPaths(nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -246,7 +246,7 @@ func TestExportChats(t *testing.T) {
 			msg: "writeFile error",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths(),
+					dbMock.EXPECT().GetAttachmentPaths(nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",
@@ -269,7 +269,7 @@ func TestExportChats(t *testing.T) {
 			separateChats: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, _ []*mock_opsys.MockOutFile) {
 				gomock.InOrder(
-					dbMock.EXPECT().GetAttachmentPaths(),
+					dbMock.EXPECT().GetAttachmentPaths(nil),
 					dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
 						{
 							Name: "testdisplayname",

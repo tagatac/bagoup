@@ -343,6 +343,24 @@ func TestSanitizePhone(t *testing.T) {
 	}
 }
 
+func TestReadFile(t *testing.T) {
+	t.Run("successful read", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		data := []byte("test file contents\n")
+		assert.NilError(t, afero.WriteFile(fs, "testfile", data, os.ModePerm))
+		testOS := opSys{Fs: fs}
+		contents, err := testOS.ReadFile("testfile")
+		assert.NilError(t, err)
+		assert.Equal(t, contents, string(data))
+	})
+
+	t.Run("read failure", func(t *testing.T) {
+		testOS := opSys{Fs: afero.NewMemMapFs()}
+		_, err := testOS.ReadFile("nonexistentfile")
+		assert.Error(t, err, "open nonexistentfile: file does not exist")
+	})
+}
+
 func TestCopyFile(t *testing.T) {
 	textBytes, err := _embedFS.ReadFile("testdata/text.txt")
 	assert.NilError(t, err)

@@ -96,7 +96,7 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 	}
 	for _, att := range msgPaths {
 		attPath, mimeType, transferName := att.Filename, att.MIMEType, att.TransferName
-		err := validateAttachmentPath(cfg.OS, attPath)
+		err := cfg.validateAttachmentPath(attPath)
 		if _, ok := err.(errorMissingAttachment); ok {
 			// Attachment is missing. Just reference it, and skip copying/embedding.
 			cfg.counts.attachmentsMissing += 1
@@ -123,11 +123,12 @@ type errorMissingAttachment struct{ err error }
 
 func (e errorMissingAttachment) Error() string { return e.err.Error() }
 
-func validateAttachmentPath(s opsys.OS, attPath string) error {
+func (cfg configuration) validateAttachmentPath(attPath string) error {
 	if attPath == "" {
 		return errorMissingAttachment{err: errors.New("attachment has no local filename")}
 	}
-	if ok, err := s.FileExist(attPath); err != nil {
+	attPath = filepath.Join(cfg.Options.AttachmentsPath, attPath)
+	if ok, err := cfg.OS.FileExist(attPath); err != nil {
 		return errors.Wrapf(err, "check existence of file %q - POSSIBLE FIX: %s", attPath, _readmeURL)
 	} else if !ok {
 		return errorMissingAttachment{err: errors.New("attachment does not exist locally")}
@@ -143,11 +144,12 @@ func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) e
 	unique := true
 	if cfg.Options.PreservePaths {
 		unique = false
-		attDir = filepath.Join(cfg.Options.ExportPath, "bagoup-attachments", filepath.Dir(attPath))
+		attDir = filepath.Join(cfg.Options.ExportPath, PreservedPathDir, filepath.Dir(attPath))
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
 	}
+	attPath = filepath.Join(cfg.Options.AttachmentsPath, attPath)
 	if err := cfg.OS.CopyFile(attPath, attDir, unique); err != nil {
 		return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
 	}
@@ -156,7 +158,7 @@ func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) e
 }
 
 func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
-	attPath, mimeType := att.Filename, att.MIMEType
+	attPath, mimeType := filepath.Join(cfg.Options.AttachmentsPath, att.Filename), att.MIMEType
 	if cfg.Options.OutputPDF {
 		if jpgPath, err := cfg.OS.HEIC2JPG(attPath); err != nil {
 			cfg.counts.conversionsFailed += 1

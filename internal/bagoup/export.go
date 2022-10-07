@@ -4,6 +4,8 @@
 package bagoup
 
 import (
+	"path/filepath"
+
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/chatdb"
@@ -27,7 +29,7 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 }
 
 func getAttachmentPaths(cfg *configuration) error {
-	attPaths, err := cfg.ChatDB.GetAttachmentPaths()
+	attPaths, err := cfg.ChatDB.GetAttachmentPaths(cfg.PathTools)
 	if err != nil {
 		return errors.Wrap(err, "get attachment paths")
 	}
@@ -40,7 +42,8 @@ func getAttachmentPaths(cfg *configuration) error {
 			if msgPaths[0].Filename == "" {
 				continue
 			}
-			if err := cfg.OS.FileAccess(msgPaths[0].Filename); err != nil {
+			attPath := filepath.Join(cfg.Options.AttachmentsPath, msgPaths[0].Filename)
+			if err := cfg.OS.FileAccess(attPath); err != nil {
 				return errors.Wrapf(err, "access to attachments - FIX: %s", _readmeURL)
 			}
 			break

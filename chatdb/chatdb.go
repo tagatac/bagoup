@@ -52,7 +52,7 @@ type (
 		GetMessage(messageID int, handleMap map[int]string) (string, error)
 		// GetImagePaths returns a list of attachment filepaths associated with
 		// each message ID.
-		GetAttachmentPaths() (map[int][]Attachment, error)
+		GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error)
 	}
 
 	// EntityChats represents all of the chats with a given entity (associated
@@ -307,7 +307,7 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, er
 	return fmt.Sprintf("[%s] %s: %s\n", date, handle, text.String), nil
 }
 
-func (d *chatDB) GetAttachmentPaths() (map[int][]Attachment, error) {
+func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error) {
 	attachmentJoins, err := d.DB.Query("SELECT message_id, attachment_id FROM message_attachment_join")
 	if err != nil {
 		return nil, errors.Wrapf(err, "scan message_attachment_join table")
@@ -320,7 +320,7 @@ func (d *chatDB) GetAttachmentPaths() (map[int][]Attachment, error) {
 		if err := attachmentJoins.Scan(&msgID, &attID); err != nil {
 			return atts, errors.Wrap(err, "read data from message_attachment_join table")
 		}
-		att, err := d.getAttachmentPath(attID)
+		att, err := d.getAttachmentPath(attID, ptools)
 		if err != nil {
 			return atts, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
 		}
@@ -329,7 +329,7 @@ func (d *chatDB) GetAttachmentPaths() (map[int][]Attachment, error) {
 	return atts, nil
 }
 
-func (d *chatDB) getAttachmentPath(attachmentID int) (Attachment, error) {
+func (d *chatDB) getAttachmentPath(attachmentID int, ptools pathtools.PathTools) (Attachment, error) {
 	attachments, err := d.DB.Query(fmt.Sprintf("SELECT filename, mime_type, transfer_name FROM attachment WHERE ROWID=%d", attachmentID))
 	if err != nil {
 		return Attachment{}, errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
@@ -344,10 +344,7 @@ func (d *chatDB) getAttachmentPath(attachmentID int) (Attachment, error) {
 		return Attachment{}, fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)
 	}
 	filename := filenameOrNull.String
-	filename, err = pathtools.ReplaceTilde(filename)
-	if err != nil {
-		return Attachment{}, errors.Wrap(err, "replace tilde")
-	}
+	filename = ptools.ReplaceTilde(filename)
 	if strings.HasPrefix(filename, "/var") {
 		filename = filepath.Join(filepath.Dir(filename), "0", filepath.Base(filename))
 	}

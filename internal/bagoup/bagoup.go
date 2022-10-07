@@ -18,6 +18,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/chatdb"
 	"github.com/tagatac/bagoup/opsys"
+	"github.com/tagatac/bagoup/pathtools"
+)
+
+const (
+	PreservedPathDir                = "bagoup-attachments"
+	PreservedPathTildeExpansionFile = ".tildeexpansion"
 )
 
 const _readmeURL = "https://github.com/tagatac/bagoup/blob/master/README.md#protected-file-access"
@@ -36,12 +42,14 @@ type (
 		IncludePPA      bool    `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
 		CopyAttachments bool    `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
 		PreservePaths   bool    `short:"r" long:"preserve-paths" description:"When copying attachments, preserve the full path instead of co-locating them with the chats which included them"`
+		AttachmentsPath string  `short:"t" long:"attachments-path" description:"Root path to the attachments (useful for re-running bagoup on an export with the --preserve-paths flag)" default:"/"`
 		PrintVersion    bool    `short:"v" long:"version" description:"Show the version of bagoup"`
 	}
 	configuration struct {
 		Options
 		opsys.OS
 		chatdb.ChatDB
+		pathtools.PathTools
 		logDir          string
 		macOSVersion    *semver.Version
 		handleMap       map[int]string
@@ -71,12 +79,21 @@ type (
 )
 
 // NewConfiguration returns an intitialized bagoup configuration.
-func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, logDir string, startTime time.Time, version string) Configuration {
+func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, ptools pathtools.PathTools, logDir string, startTime time.Time, version string) (Configuration, error) {
+	if opts.AttachmentsPath != "/" {
+		tef := filepath.Join(opts.AttachmentsPath, PreservedPathTildeExpansionFile)
+		homeDir, err := s.ReadFile(tef)
+		if err != nil {
+			return nil, errors.Wrapf(err, "read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually %q)", tef, PreservedPathDir)
+		}
+		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
+	}
 	return &configuration{
-		Options: opts,
-		OS:      s,
-		ChatDB:  cdb,
-		logDir:  logDir,
+		Options:   opts,
+		OS:        s,
+		ChatDB:    cdb,
+		PathTools: ptools,
+		logDir:    logDir,
 		counts: counts{
 			attachments:         map[string]int{},
 			attachmentsCopied:   map[string]int{},
@@ -84,12 +101,11 @@ func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, logDir string
 		},
 		startTime: startTime,
 		version:   version,
-	}
+	}, nil
 }
 
-func (cfg configuration) Run() error {
-	opts := cfg.Options
-	if err := validatePaths(cfg.OS, opts); err != nil {
+func (cfg *configuration) Run() error {
+	if err := cfg.validatePaths(); err != nil {
 		return err
 	}
 
@@ -105,20 +121,20 @@ func (cfg configuration) Run() error {
 	log.SetOutput(io.MultiWriter(logFile, w))
 	defer log.SetOutput(w)
 
-	if opts.MacOSVersion != nil {
-		cfg.macOSVersion, err = semver.NewVersion(*opts.MacOSVersion)
+	if cfg.Options.MacOSVersion != nil {
+		cfg.macOSVersion, err = semver.NewVersion(*cfg.Options.MacOSVersion)
 		if err != nil {
-			return errors.Wrapf(err, "parse Mac OS version %q", *opts.MacOSVersion)
+			return errors.Wrapf(err, "parse Mac OS version %q", *cfg.Options.MacOSVersion)
 		}
 	} else if cfg.macOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
 		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
 	}
 
 	var contactMap map[string]*vcard.Card
-	if opts.ContactsPath != nil {
-		contactMap, err = cfg.OS.GetContactMap(*opts.ContactsPath)
+	if cfg.Options.ContactsPath != nil {
+		contactMap, err = cfg.OS.GetContactMap(*cfg.Options.ContactsPath)
 		if err != nil {
-			return errors.Wrapf(err, "get contacts from vcard file %q", *opts.ContactsPath)
+			return errors.Wrapf(err, "get contacts from vcard file %q", *cfg.Options.ContactsPath)
 		}
 	}
 
@@ -133,22 +149,31 @@ func (cfg configuration) Run() error {
 
 	defer cfg.OS.RmTempDir()
 	err = cfg.exportChats(contactMap)
-	printResults(cfg.version, opts.ExportPath, cfg.counts, time.Since(cfg.startTime))
+	printResults(cfg.version, cfg.Options.ExportPath, cfg.counts, time.Since(cfg.startTime))
 	if err != nil {
 		return errors.Wrap(err, "export chats")
+	}
+	if err = cfg.writeTildeExpansionFile(); err != nil {
+		return errors.Wrap(err, "write out tilde expansion file")
 	}
 	return cfg.OS.RmTempDir()
 }
 
-func validatePaths(s opsys.OS, opts Options) error {
-	if err := s.FileAccess(opts.DBPath); err != nil {
-		return errors.Wrapf(err, "test DB file %q - FIX: %s", opts.DBPath, _readmeURL)
+func (cfg *configuration) validatePaths() error {
+	if err := cfg.OS.FileAccess(cfg.Options.DBPath); err != nil {
+		return errors.Wrapf(err, "test DB file %q - FIX: %s", cfg.Options.DBPath, _readmeURL)
 	}
-	if exist, err := s.FileExist(opts.ExportPath); exist {
-		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", opts.ExportPath)
+	if exist, err := cfg.OS.FileExist(cfg.Options.ExportPath); exist {
+		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", cfg.Options.ExportPath)
 	} else if err != nil {
-		return errors.Wrapf(err, "check export path %q", opts.ExportPath)
+		return errors.Wrapf(err, "check export path %q", cfg.Options.ExportPath)
 	}
+	var err error
+	var attPathAbs string
+	if attPathAbs, err = filepath.Abs(cfg.Options.AttachmentsPath); err != nil {
+		return errors.Wrapf(err, "convert attachments path %q to an absolute path", cfg.Options.AttachmentsPath)
+	}
+	cfg.Options.AttachmentsPath = attPathAbs
 	return nil
 }
 
@@ -194,4 +219,23 @@ func makeAttachmentsString(attCounts map[string]int) (attString string) {
 	}
 	attString = fmt.Sprintf("%d%s", attCount, attString)
 	return
+}
+
+// The tilde expansion file saves the home directory in the case that we have
+// copied attachments with preserved paths. This file is used to know how to
+// expand the tilde when it is used in the chat DB.
+func (cfg configuration) writeTildeExpansionFile() error {
+	if !cfg.Options.PreservePaths {
+		return nil
+	}
+	homeDir := cfg.PathTools.GetHomeDir()
+	f, err := cfg.OS.Create(filepath.Join(cfg.Options.ExportPath, PreservedPathDir, PreservedPathTildeExpansionFile))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err = f.WriteString(homeDir); err != nil {
+		return err
+	}
+	return nil
 }
