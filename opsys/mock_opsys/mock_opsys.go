@@ -83,11 +83,12 @@ func (mr *MockOSMockRecorder) Chtimes(arg0, arg1, arg2 interface{}) *gomock.Call
 }
 
 // CopyFile mocks base method.
-func (m *MockOS) CopyFile(arg0, arg1 string, arg2 bool) error {
+func (m *MockOS) CopyFile(arg0, arg1 string, arg2 bool) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CopyFile", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CopyFile indicates an expected call of CopyFile.

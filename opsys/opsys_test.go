@@ -368,14 +368,15 @@ func TestCopyFile(t *testing.T) {
 	assert.NilError(t, err)
 
 	tests := []struct {
-		msg       string
-		setupFS   func(afero.Fs)
-		roFS      bool
-		statErr   bool
-		unique    bool
-		wantFile  string
-		wantBytes []byte
-		wantErr   string
+		msg         string
+		setupFS     func(afero.Fs)
+		roFS        bool
+		statErr     bool
+		unique      bool
+		wantDstPath string
+		wantFile    string
+		wantBytes   []byte
+		wantErr     string
 	}{
 		{
 			msg: "text file",
@@ -383,8 +384,9 @@ func TestCopyFile(t *testing.T) {
 				assert.NilError(t, afero.WriteFile(fs, "testfile.txt", textBytes, os.ModePerm))
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 			},
-			wantFile:  "destinationdir/testfile.txt",
-			wantBytes: textBytes,
+			wantDstPath: "destinationdir/testfile.txt",
+			wantFile:    "destinationdir/testfile.txt",
+			wantBytes:   textBytes,
 		},
 		{
 			msg: "jpeg file",
@@ -392,8 +394,9 @@ func TestCopyFile(t *testing.T) {
 				assert.NilError(t, afero.WriteFile(fs, "testfile.txt", jpegBytes, os.ModePerm))
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 			},
-			wantFile:  "destinationdir/testfile.txt",
-			wantBytes: jpegBytes,
+			wantDstPath: "destinationdir/testfile.txt",
+			wantFile:    "destinationdir/testfile.txt",
+			wantBytes:   jpegBytes,
 		},
 		{
 			msg: "two files already exist - unique wanted",
@@ -407,17 +410,19 @@ func TestCopyFile(t *testing.T) {
 				assert.NilError(t, err)
 				f.Close()
 			},
-			unique:    true,
-			wantFile:  "destinationdir/testfile-2.txt",
-			wantBytes: textBytes,
+			unique:      true,
+			wantDstPath: "destinationdir/testfile-2.txt",
+			wantFile:    "destinationdir/testfile-2.txt",
+			wantBytes:   textBytes,
 		},
 		{
 			msg: "file already exists - unique not wanted",
 			setupFS: func(fs afero.Fs) {
 				assert.NilError(t, afero.WriteFile(fs, "destinationdir/testfile.txt", textBytes, os.ModePerm))
 			},
-			wantFile:  "destinationdir/testfile.txt",
-			wantBytes: textBytes,
+			wantDstPath: "destinationdir/testfile.txt",
+			wantFile:    "destinationdir/testfile.txt",
+			wantBytes:   textBytes,
 		},
 		{
 			msg: "folder disguised as a file",
@@ -425,8 +430,9 @@ func TestCopyFile(t *testing.T) {
 				assert.NilError(t, afero.WriteFile(fs, "testfile.txt/realfile.txt", textBytes, os.ModePerm))
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 			},
-			wantFile:  "destinationdir/testfile.txt/realfile.txt",
-			wantBytes: textBytes,
+			wantDstPath: "destinationdir/testfile.txt",
+			wantFile:    "destinationdir/testfile.txt/realfile.txt",
+			wantBytes:   textBytes,
 		},
 		{
 			msg:     "error checking for duplicate files",
@@ -473,12 +479,13 @@ func TestCopyFile(t *testing.T) {
 				}
 			}
 			s := &opSys{Fs: fs, osStat: stat}
-			err := s.CopyFile("testfile.txt", "destinationdir", tt.unique)
+			dstPath, err := s.CopyFile("testfile.txt", "destinationdir", tt.unique)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
+			assert.Equal(t, dstPath, tt.wantDstPath)
 			newBytes, err := afero.ReadFile(fs, tt.wantFile)
 			assert.NilError(t, err)
 			assert.DeepEqual(t, newBytes, tt.wantBytes)

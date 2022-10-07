@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.9.2
 	github.com/tagatac/goheif v0.0.0-20220718191458-b9a6c0ca0832
-	github.com/tagatac/gorecurcopy v0.0.0-20221007192808-664ce00798c8
+	github.com/tagatac/gorecurcopy v1.0.1
 	golang.org/x/net v0.0.0-20221004154528-8021a29435af
 	gotest.tools/v3 v3.0.2
 )

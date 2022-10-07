@@ -109,7 +109,7 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 		} else if err != nil {
 			return err
 		}
-		if err := cfg.copyAttachment(att, attDir); err != nil {
+		if err := cfg.copyAttachment(&att, attDir); err != nil {
 			return err
 		}
 		if err := cfg.writeAttachment(outFile, att); err != nil {
@@ -136,7 +136,7 @@ func (cfg configuration) validateAttachmentPath(attPath string) error {
 	return nil
 }
 
-func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) error {
+func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string) error {
 	if !cfg.Options.CopyAttachments {
 		return nil
 	}
@@ -150,9 +150,11 @@ func (cfg *configuration) copyAttachment(att chatdb.Attachment, attDir string) e
 		}
 	}
 	attPath = filepath.Join(cfg.Options.AttachmentsPath, attPath)
-	if err := cfg.OS.CopyFile(attPath, attDir, unique); err != nil {
+	dstPath, err := cfg.OS.CopyFile(attPath, attDir, unique)
+	if err != nil {
 		return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
 	}
+	att.Filename = dstPath
 	cfg.counts.attachmentsCopied[mimeType] += 1
 	return nil
 }

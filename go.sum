@@ -156,8 +156,8 @@ github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5Cc
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/tagatac/goheif v0.0.0-20220718191458-b9a6c0ca0832 h1:W1OPONbNsVuVz3iHzV/e1aOoSMdgQ7VjAJ8QxiGV/2Y=
 github.com/tagatac/goheif v0.0.0-20220718191458-b9a6c0ca0832/go.mod h1:PVOC3ZKQW7Z2vqmIL6BNxoH/dZ+qIKRjLVcaZZMPB58=
-github.com/tagatac/gorecurcopy v0.0.0-20221007192808-664ce00798c8 h1:NgRvACMVJQfnfG9cfgMRoZn3iSDbT/RG3cBo6UHfV2c=
-github.com/tagatac/gorecurcopy v0.0.0-20221007192808-664ce00798c8/go.mod h1:VDqfQZOif6FlcR/MfxTOqsd3O+K4BI1PSGZUMb66b/E=
+github.com/tagatac/gorecurcopy v1.0.1 h1:wvcj485SG5yYKClvGcrags/S1NGPo+749gzCGM9GpXM=
+github.com/tagatac/gorecurcopy v1.0.1/go.mod h1:VDqfQZOif6FlcR/MfxTOqsd3O+K4BI1PSGZUMb66b/E=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

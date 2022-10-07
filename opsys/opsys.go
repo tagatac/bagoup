@@ -47,8 +47,9 @@ type (
 		ReadFile(fp string) (string, error)
 		// CopyFile copies the src file to the dstDir directory. If the file is
 		// designated as unique and it already exists in the destination directory,
-		// a numbered suffix will be added to the copied file name.
-		CopyFile(src, dstDir string, unique bool) error
+		// a numbered suffix will be added to the copied file name. The path of the
+		// copied file is returned.
+		CopyFile(src, dstDir string, unique bool) (string, error)
 		// RmTempDir removes the temporary directory used by this package for
 		// staging converted images for inclusion in PDF files.
 		RmTempDir() error
@@ -179,7 +180,7 @@ func (s opSys) ReadFile(fp string) (string, error) {
 	return string(contents), err
 }
 
-func (s opSys) CopyFile(src, dstDir string, unique bool) error {
+func (s opSys) CopyFile(src, dstDir string, unique bool) (string, error) {
 	dstPrefix := filepath.Join(dstDir, strings.TrimSuffix(filepath.Base(src), filepath.Ext(src)))
 	dstExt := filepath.Ext(src)
 	dst := dstPrefix + dstExt
@@ -188,12 +189,12 @@ func (s opSys) CopyFile(src, dstDir string, unique bool) error {
 	suffixInserted := false
 	for i := 1; ; i += 1 {
 		if exist, err := s.FileExist(dst); err != nil {
-			return err
+			return "", err
 		} else if !exist {
 			break
 		} else if !unique {
 			// The file is not unique, so there is no need to copy it again.
-			return nil
+			return dst, nil
 		}
 		suffixInserted = true
 		dst = fmt.Sprintf("%s-%d%s", dstPrefix, i, dstExt)
@@ -205,13 +206,13 @@ func (s opSys) CopyFile(src, dstDir string, unique bool) error {
 	copier := gorecurcopy.NewCopierWithFs(s.Fs)
 	fileInfo, err := s.Fs.Stat(src)
 	if err != nil {
-		return err
+		return "", err
 	}
 	switch fileInfo.Mode() & os.ModeType {
 	case os.ModeDir:
-		return copier.CopyDirectory(src, dst)
+		return dst, copier.CopyDirectory(src, dst)
 	default:
-		return copier.Copy(src, dst)
+		return dst, copier.Copy(src, dst)
 	}
 }
 
