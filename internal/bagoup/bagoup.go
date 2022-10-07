@@ -84,7 +84,7 @@ func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, ptools pathto
 		tef := filepath.Join(opts.AttachmentsPath, PreservedPathTildeExpansionFile)
 		homeDir, err := s.ReadFile(tef)
 		if err != nil {
-			return nil, errors.Wrapf(err, "read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually bagoup-attachments)", tef)
+			return nil, errors.Wrapf(err, "read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually %q)", tef, PreservedPathDir)
 		}
 		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
 	}
@@ -221,6 +221,9 @@ func makeAttachmentsString(attCounts map[string]int) (attString string) {
 	return
 }
 
+// The tilde expansion file saves the home directory in the case that we have
+// copied attachments with preserved paths. This file is used to know how to
+// expand the tilde when it is used in the chat DB.
 func (cfg configuration) writeTildeExpansionFile() error {
 	if !cfg.Options.PreservePaths {
 		return nil
@@ -228,11 +231,11 @@ func (cfg configuration) writeTildeExpansionFile() error {
 	homeDir := cfg.PathTools.GetHomeDir()
 	f, err := cfg.OS.Create(filepath.Join(cfg.Options.ExportPath, PreservedPathDir, PreservedPathTildeExpansionFile))
 	if err != nil {
-		return errors.Wrap(err, "create tildeexpension file")
+		return err
 	}
 	defer f.Close()
 	if _, err = f.WriteString(homeDir); err != nil {
-		return errors.Wrap(err, "write out tildeexpansion file")
+		return err
 	}
 	return nil
 }

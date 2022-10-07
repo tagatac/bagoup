@@ -525,6 +525,8 @@ func TestGetMessage(t *testing.T) {
 }
 
 func TestGetAttachmentPaths(t *testing.T) {
+	ptools, err := pathtools.NewPathTools()
+	assert.NilError(t, err)
 	tests := []struct {
 		msg          string
 		setupMock    func(sqlmock.Sqlmock)
@@ -559,7 +561,7 @@ func TestGetAttachmentPaths(t *testing.T) {
 					},
 					{
 						ID:           2,
-						Filename:     pathtools.MustReplaceTilde("~/attachment2.heic"),
+						Filename:     ptools.ReplaceTilde("~/attachment2.heic"),
 						MIMEType:     "image/heic",
 						TransferName: "attachment2.heic",
 					},
@@ -598,7 +600,7 @@ func TestGetAttachmentPaths(t *testing.T) {
 					},
 					{
 						ID:           2,
-						Filename:     pathtools.MustReplaceTilde("~/attachment2.heic"),
+						Filename:     ptools.ReplaceTilde("~/attachment2.heic"),
 						MIMEType:     "application/octet-stream",
 						TransferName: "attachment2.heic",
 					},
@@ -680,7 +682,7 @@ func TestGetAttachmentPaths(t *testing.T) {
 			tt.setupMock(sMock)
 			cdb := &chatDB{DB: db}
 
-			attPaths, err := cdb.GetAttachmentPaths()
+			attPaths, err := cdb.GetAttachmentPaths(ptools)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
