@@ -1,6 +1,11 @@
 coverage:
   status:
-    patch: off
+    project:
+      default:
+        threshold: 0.2%
+    patch:
+      default:
+        threshold: 2%
 ignore:
   - cmd/bagoup/main.go
   - example-exports/examplegen.go
