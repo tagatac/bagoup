@@ -9,10 +9,11 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20220507122617-d4056df0ec4a
 	github.com/golang/mock v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.9.2
 	github.com/tagatac/goheif v0.0.0-20220718191458-b9a6c0ca0832
+	github.com/tagatac/gorecurcopy v0.0.0-20221007192808-664ce00798c8
 	golang.org/x/net v0.0.0-20221004154528-8021a29435af
 	gotest.tools/v3 v3.0.2
 )

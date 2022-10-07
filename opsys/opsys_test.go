@@ -420,6 +420,15 @@ func TestCopyFile(t *testing.T) {
 			wantBytes: textBytes,
 		},
 		{
+			msg: "folder disguised as a file",
+			setupFS: func(fs afero.Fs) {
+				assert.NilError(t, afero.WriteFile(fs, "testfile.txt/realfile.txt", textBytes, os.ModePerm))
+				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
+			},
+			wantFile:  "destinationdir/testfile.txt/realfile.txt",
+			wantBytes: textBytes,
+		},
+		{
 			msg:     "error checking for duplicate files",
 			statErr: true,
 			wantErr: `check existence of file "destinationdir/testfile.txt": this is a stat error`,
@@ -435,7 +444,16 @@ func TestCopyFile(t *testing.T) {
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 			},
 			roFS:    true,
-			wantErr: `create destination file "destinationdir/testfile.txt": operation not permitted`,
+			wantErr: "operation not permitted",
+		},
+		{
+			msg: "copy directory - read only filesystem",
+			setupFS: func(fs afero.Fs) {
+				assert.NilError(t, afero.WriteFile(fs, "testfile.txt/realfile.txt", textBytes, os.ModePerm))
+				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
+			},
+			roFS:    true,
+			wantErr: "operation not permitted",
 		},
 	}
 

@@ -23,6 +23,7 @@ import (
 	"github.com/tagatac/bagoup/opsys/pdfgen"
 	"github.com/tagatac/bagoup/opsys/scall"
 	"github.com/tagatac/goheif/heic2jpg"
+	"github.com/tagatac/gorecurcopy"
 )
 
 //go:generate mockgen -destination=mock_opsys/mock_opsys.go github.com/tagatac/bagoup/opsys OS
@@ -201,19 +202,17 @@ func (s opSys) CopyFile(src, dstDir string, unique bool) error {
 		log.Printf("WARN: copy %q to %q - %q already exists; using %q instead", src, dstDir, filepath.Base(src), filepath.Base(dst))
 	}
 
-	fin, err := s.Fs.Open(src)
+	copier := gorecurcopy.NewCopierWithFs(s.Fs)
+	fileInfo, err := s.Fs.Stat(src)
 	if err != nil {
 		return err
 	}
-	defer fin.Close()
-	fout, err := s.Fs.Create(dst)
-	if err != nil {
-		return errors.Wrapf(err, "create destination file %q", dst)
+	switch fileInfo.Mode() & os.ModeType {
+	case os.ModeDir:
+		return copier.CopyDirectory(src, dst)
+	default:
+		return copier.Copy(src, dst)
 	}
-	defer fout.Close()
-
-	_, err = io.Copy(fout, fin)
-	return err
 }
 
 func (s *opSys) getTempDir() (string, error) {
