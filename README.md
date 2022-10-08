@@ -87,6 +87,8 @@ Application Options:
       --include-ppa       Include plugin payload attachments (e.g. link previews) in generated PDFs
   -a, --copy-attachments  Copy attachments to the same folder as the chat which included them (requires full disk access)
   -r, --preserve-paths    When copying attachments, preserve the full path instead of co-locating them with the chats which included them
+  -t, --attachments-path= Root path to the attachments (useful for re-running bagoup on an export created with the --copy-attachments and --preserve-paths flags) (default: /)
+  -v, --version           Show the version of bagoup
 
 Help Options:
   -h, --help              Show this help message
