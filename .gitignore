@@ -1,8 +1,5 @@
 .DS_Store
 .vscode/
-/backup/
 bagoup
 bagoup-*-*-*.zip
-chat.db
-contacts.vcf
 coverage.out
