@@ -10,9 +10,13 @@
 package chatdb
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
+	"log"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -28,6 +32,10 @@ const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issu
 var _modernVersion = semver.MustParse("10.13")
 
 const _modernVersionDateDivisor = 1_000_000_000
+
+var _NSStringRE = regexp.MustCompile(`\n\ttype b'@': NS(Mutable)?String\((?:'|")(.*)(?:'|")\)\n\tgroup`)
+
+const _dependenciesURL = "https://github.com/tagatac/bagoup#dependencies"
 
 //go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/chatdb ChatDB
 
@@ -285,16 +293,16 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 
 func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, error) {
 	datetimeFormula := fmt.Sprintf("(date/%d) + STRFTIME('%%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'", d.dateDivisor)
-	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, DATETIME(%s) FROM message WHERE ROWID=%d", datetimeFormula, messageID))
+	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, attributedBody, DATETIME(%s) FROM message WHERE ROWID=%d", datetimeFormula, messageID))
 	if err != nil {
 		return "", errors.Wrapf(err, "query message table for ID %d", messageID)
 	}
 	defer messages.Close()
 	messages.Next()
 	var fromMe, handleID int
-	var text sql.NullString
+	var text, attributedBody sql.NullString
 	var date string
-	if err := messages.Scan(&fromMe, &handleID, &text, &date); err != nil {
+	if err := messages.Scan(&fromMe, &handleID, &text, &attributedBody, &date); err != nil {
 		return "", errors.Wrapf(err, "read data for message ID %d", messageID)
 	}
 	if messages.Next() {
@@ -304,7 +312,30 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, er
 	if fromMe == 1 {
 		handle = d.selfHandle
 	}
-	return fmt.Sprintf("[%s] %s: %s\n", date, handle, text.String), nil
+	var msg string
+	if text.Valid {
+		msg = text.String
+	} else if attributedBody.Valid {
+		msg, err = extractNSString(attributedBody.String)
+		if err != nil {
+			log.Printf("WARN: get plain text for message %d: %s", messageID, err)
+		}
+	}
+	return fmt.Sprintf("[%s] %s: %s\n", date, handle, msg), nil
+}
+
+func extractNSString(s string) (string, error) {
+	cmd := exec.Command("pytypedstream", "decode", "-")
+	cmd.Stdin = bytes.NewReader([]byte(s))
+	decodedBody, err := cmd.Output()
+	if err != nil {
+		return "", errors.Wrapf(err, "decode attributedBody - POSSIBLE FIX: Install python-typedstream (%s)", _dependenciesURL)
+	}
+	submatch := _NSStringRE.FindStringSubmatch(string(decodedBody))
+	if len(submatch) != 3 {
+		return "", fmt.Errorf("unable to extract message from decoded attributed body %q", decodedBody)
+	}
+	return submatch[2], nil
 }
 
 func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error) {
