@@ -80,7 +80,7 @@ type (
 )
 
 // NewOS returns an OS from a given filesystem, os Stat, and exec Command.
-func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand func(string, ...string) *exec.Cmd, sc scall.Syscall) (OS, error) {
+func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), sc scall.Syscall) (OS, error) {
 	var openFilesLimit syscall.Rlimit
 	if err := sc.Getrlimit(syscall.RLIMIT_NOFILE, &openFilesLimit); err != nil {
 		return nil, errors.Wrap(err, "check file count limit")
@@ -89,7 +89,7 @@ func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), execCommand fu
 		Fs:                 fs,
 		Converter:          heic2jpg.NewConverter(),
 		osStat:             osStat,
-		execCommand:        execCommand,
+		execCommand:        exec.Command,
 		Syscall:            sc,
 		openFilesLimitHard: openFilesLimit.Max,
 		openFilesLimitSoft: int(openFilesLimit.Cur),

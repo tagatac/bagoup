@@ -5,10 +5,8 @@ package opsys
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -18,6 +16,7 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
+	"github.com/tagatac/bagoup/exectest"
 	"github.com/tagatac/bagoup/opsys/scall/mock_scall"
 	"gotest.tools/v3/assert"
 )
@@ -135,7 +134,7 @@ func TestGetMacOSVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			s := &opSys{execCommand: genFakeExecCommand(tt.swVersOutput, tt.swVersErr)}
+			s := &opSys{execCommand: exectest.GenFakeExecCommand(tt.swVersOutput, tt.swVersErr)}
 			v, err := s.GetMacOSVersion()
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -147,33 +146,7 @@ func TestGetMacOSVersion(t *testing.T) {
 	}
 }
 
-// Adapted from https://npf.io/2015/06/testing-exec-command/.
-func genFakeExecCommand(output, err string) func(string, ...string) *exec.Cmd {
-	return func(name string, args ...string) *exec.Cmd {
-		cs := []string{"-test.run=TestRunExecCmd", "--", name}
-		cs = append(cs, args...)
-		cmd := exec.Command(os.Args[0], cs...)
-		cmd.Env = []string{
-			"BAGOUP_WANT_TEST_RUN_EXEC_CMD=1",
-			fmt.Sprintf("BAGOUP_TEST_RUN_EXEC_CMD_OUTPUT=%s", output),
-			fmt.Sprintf("BAGOUP_TEST_RUN_EXEC_CMD_ERROR=%s", err),
-		}
-		return cmd
-	}
-}
-
-func TestRunExecCmd(t *testing.T) {
-	if os.Getenv("BAGOUP_WANT_TEST_RUN_EXEC_CMD") != "1" {
-		return
-	}
-	fmt.Fprint(os.Stdout, os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_OUTPUT"))
-	err := os.Getenv("BAGOUP_TEST_RUN_EXEC_CMD_ERROR")
-	if err != "" {
-		fmt.Fprint(os.Stderr, err)
-		os.Exit(1)
-	}
-	os.Exit(0)
-}
+func TestRunExecCmd(t *testing.T) { exectest.RunExecCmd() }
 
 func TestGetContactMap(t *testing.T) {
 	tagCard := &vcard.Card{
@@ -657,7 +630,7 @@ func TestOpenFilesLimit(t *testing.T) {
 			scMock := mock_scall.NewMockSyscall(ctrl)
 			tt.setupMock(scMock)
 
-			s, err := NewOS(nil, nil, nil, scMock)
+			s, err := NewOS(nil, nil, scMock)
 			if tt.wantNewErr != "" {
 				assert.Error(t, err, tt.wantNewErr)
 				return
