@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -37,7 +36,7 @@ func main() {
 		{isPDF: false, exportPath: "messages-export"},
 		{isPDF: true, exportPath: "messages-export-pdf"},
 	}
-	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command, scall.NewSyscall())
+	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, scall.NewSyscall())
 	if err != nil {
 		log.Panic(errors.Wrap(err, "instantiate OS"))
 	}

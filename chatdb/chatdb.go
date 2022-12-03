@@ -96,6 +96,7 @@ type (
 		selfHandle     string
 		dateDivisor    int
 		cmJoinHasDates bool
+		execCommand    func(string, ...string) *exec.Cmd
 	}
 )
 
@@ -103,8 +104,9 @@ type (
 // on it before use.
 func NewChatDB(db *sql.DB, selfHandle string) ChatDB {
 	return &chatDB{
-		DB:         db,
-		selfHandle: selfHandle,
+		DB:          db,
+		selfHandle:  selfHandle,
+		execCommand: exec.Command,
 	}
 }
 
@@ -316,7 +318,7 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, er
 	if text.Valid {
 		msg = text.String
 	} else if attributedBody.Valid {
-		msg, err = extractNSString(attributedBody.String)
+		msg, err = d.extractNSString(attributedBody.String)
 		if err != nil {
 			log.Printf("WARN: get plain text for message %d: %s", messageID, err)
 		}
@@ -324,8 +326,8 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, er
 	return fmt.Sprintf("[%s] %s: %s\n", date, handle, msg), nil
 }
 
-func extractNSString(s string) (string, error) {
-	cmd := exec.Command("pytypedstream", "decode", "-")
+func (d *chatDB) extractNSString(s string) (string, error) {
+	cmd := d.execCommand("pytypedstream", "decode", "-")
 	cmd.Stdin = bytes.NewReader([]byte(s))
 	decodedBody, err := cmd.Output()
 	if err != nil {

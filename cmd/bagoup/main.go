@@ -22,7 +22,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -58,7 +57,7 @@ func main() {
 	logFatalOnErr(errors.Wrap(err, "create pathtools"))
 	opts.DBPath = ptools.ReplaceTilde(opts.DBPath)
 
-	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, exec.Command, scall.NewSyscall())
+	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, scall.NewSyscall())
 	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))

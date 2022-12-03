@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
+	"github.com/tagatac/bagoup/exectest"
 	"github.com/tagatac/bagoup/pathtools"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -450,14 +451,16 @@ func TestGetMessage(t *testing.T) {
 	tests := []struct {
 		msg         string
 		setupQuery  func(*sqlmock.ExpectedQuery)
+		ptsOutput   string
+		ptsErr      string
 		wantMessage string
 		wantErr     string
 	}{
 		{
 			msg: "message to me",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "date"}).
-					AddRow(0, 10, "message text", "2019-10-04 18:26:31")
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, 10, "message text", "", "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: message text\n",
@@ -465,11 +468,26 @@ func TestGetMessage(t *testing.T) {
 		{
 			msg: "message from me",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "date"}).
-					AddRow(1, 10, "message text", "2019-10-04 18:26:31")
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(1, 10, "message text", "", "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] Me: message text\n",
+		},
+		{
+			msg: "message encoded in attributedBody",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
+				query.WillReturnRows(rows)
+			},
+			ptsOutput: `type b'@': object of class NSMutableAttributedString v0, extends NSAttributedString v0, extends NSObject v0:
+	super object: <NSObject>
+	type b'@': NSMutableString('message text')
+	group:
+		type b'i': 1
+		type b'I': 28`,
+			wantMessage: "[2019-10-04 18:26:31] testhandle1: message text\n",
 		},
 		{
 			msg: "DB error",
@@ -481,8 +499,8 @@ func TestGetMessage(t *testing.T) {
 		{
 			msg: "row scan error",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "date"}).
-					AddRow(0, nil, "message text", "2019-10-04 18:26:31")
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, nil, "message text", "", "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
 			wantErr: `read data for message ID 42: sql: Scan error on column index 1, name "handle_id": converting NULL to int is unsupported`,
@@ -490,12 +508,32 @@ func TestGetMessage(t *testing.T) {
 		{
 			msg: "duplicate message ID",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "date"}).
-					AddRow(0, 10, "message text", "2019-10-04 18:26:31").
-					AddRow(1, 10, "response message text", "2019-10-04 18:26:54")
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, 10, "message text", "", "2019-10-04 18:26:31").
+					AddRow(1, 10, "response message text", "", "2019-10-04 18:26:54")
 				query.WillReturnRows(rows)
 			},
 			wantErr: "multiple messages with the same ID: 42 - message ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
+		},
+		{
+			msg: "error decoding attributedBody",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
+				query.WillReturnRows(rows)
+			},
+			ptsErr:      "this is a pytypedstream error",
+			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
+		},
+		{
+			msg: "decoded attributedBody doesn't match regexp",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
+				query.WillReturnRows(rows)
+			},
+			ptsOutput:   "this is a bad decoding",
+			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
 		},
 	}
 
@@ -504,13 +542,14 @@ func TestGetMessage(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
 			defer db.Close()
-			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, text, DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
+			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, text, attributedBody, DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
 			cdb := &chatDB{
 				DB:             db,
 				selfHandle:     "Me",
 				dateDivisor:    _modernVersionDateDivisor,
 				cmJoinHasDates: true,
+				execCommand:    exectest.GenFakeExecCommand(tt.ptsOutput, tt.ptsErr),
 			}
 
 			message, err := cdb.GetMessage(42, handleMap)
@@ -523,6 +562,8 @@ func TestGetMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestRunExecCmd(t *testing.T) { exectest.RunExecCmd() }
 
 func TestGetAttachmentPaths(t *testing.T) {
 	ptools, err := pathtools.NewPathTools()
