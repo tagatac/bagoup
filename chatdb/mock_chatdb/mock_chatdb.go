@@ -83,12 +83,13 @@ func (mr *MockChatDBMockRecorder) GetHandleMap(arg0 interface{}) *gomock.Call {
 }
 
 // GetMessage mocks base method.
-func (m *MockChatDB) GetMessage(arg0 int, arg1 map[int]string) (string, error) {
+func (m *MockChatDB) GetMessage(arg0 int, arg1 map[int]string) (string, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessage", arg0, arg1)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // GetMessage indicates an expected call of GetMessage.

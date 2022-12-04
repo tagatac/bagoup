@@ -454,6 +454,7 @@ func TestGetMessage(t *testing.T) {
 		ptsOutput   string
 		ptsErr      string
 		wantMessage string
+		wantValid   bool
 		wantErr     string
 	}{
 		{
@@ -464,6 +465,7 @@ func TestGetMessage(t *testing.T) {
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: message text\n",
+			wantValid:   true,
 		},
 		{
 			msg: "message from me",
@@ -473,6 +475,7 @@ func TestGetMessage(t *testing.T) {
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] Me: message text\n",
+			wantValid:   true,
 		},
 		{
 			msg: "message encoded in attributedBody",
@@ -488,6 +491,7 @@ func TestGetMessage(t *testing.T) {
 		type b'i': 1
 		type b'I': 28`,
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: message text\n",
+			wantValid:   true,
 		},
 		{
 			msg: "DB error",
@@ -552,12 +556,13 @@ func TestGetMessage(t *testing.T) {
 				execCommand:    exectest.GenFakeExecCommand(tt.ptsOutput, tt.ptsErr),
 			}
 
-			message, err := cdb.GetMessage(42, handleMap)
+			message, ok, err := cdb.GetMessage(42, handleMap)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
+			assert.Equal(t, tt.wantValid, ok)
 			assert.Equal(t, tt.wantMessage, message)
 		})
 	}

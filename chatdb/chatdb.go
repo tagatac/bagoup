@@ -56,8 +56,9 @@ type (
 		// given chat ID.
 		GetMessageIDs(chatID int) ([]DatedMessageID, error)
 		// GetMessage returns a message retrieved from the database formatted for
-		// writing to a chat file.
-		GetMessage(messageID int, handleMap map[int]string) (string, error)
+		// writing to a chat file, as well as flag indicating the validity of the
+		// text in the message.
+		GetMessage(messageID int, handleMap map[int]string) (string, bool, error)
 		// GetImagePaths returns a list of attachment filepaths associated with
 		// each message ID.
 		GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error)
@@ -293,11 +294,11 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 	return msgIDs, nil
 }
 
-func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, error) {
+func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bool, error) {
 	datetimeFormula := fmt.Sprintf("(date/%d) + STRFTIME('%%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'", d.dateDivisor)
 	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, attributedBody, DATETIME(%s) FROM message WHERE ROWID=%d", datetimeFormula, messageID))
 	if err != nil {
-		return "", errors.Wrapf(err, "query message table for ID %d", messageID)
+		return "", false, errors.Wrapf(err, "query message table for ID %d", messageID)
 	}
 	defer messages.Close()
 	messages.Next()
@@ -305,25 +306,30 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, er
 	var text, attributedBody sql.NullString
 	var date string
 	if err := messages.Scan(&fromMe, &handleID, &text, &attributedBody, &date); err != nil {
-		return "", errors.Wrapf(err, "read data for message ID %d", messageID)
+		return "", false, errors.Wrapf(err, "read data for message ID %d", messageID)
 	}
 	if messages.Next() {
-		return "", fmt.Errorf("multiple messages with the same ID: %d - message ID uniqueness assumption violated - %s", messageID, _githubIssueMsg)
+		return "", false, fmt.Errorf("multiple messages with the same ID: %d - message ID uniqueness assumption violated - %s", messageID, _githubIssueMsg)
 	}
 	handle := handleMap[handleID]
 	if fromMe == 1 {
 		handle = d.selfHandle
 	}
 	var msg string
+	valid := true
 	if text.Valid {
 		msg = text.String
 	} else if attributedBody.Valid {
 		msg, err = d.extractNSString(attributedBody.String)
 		if err != nil {
+			valid = false
 			log.Printf("WARN: get plain text for message %d: %s", messageID, err)
 		}
+	} else {
+		valid = false
+		log.Printf("WARN: no valid text or attributedBody for message %d", messageID)
 	}
-	return fmt.Sprintf("[%s] %s: %s\n", date, handle, msg), nil
+	return fmt.Sprintf("[%s] %s: %s\n", date, handle, msg), valid, nil
 }
 
 func (d *chatDB) extractNSString(s string) (string, error) {

@@ -62,6 +62,7 @@ type (
 		files               int
 		chats               int
 		messages            int
+		messagesInvalid     int
 		attachments         map[string]int
 		attachmentsCopied   map[string]int
 		attachmentsEmbedded map[string]int
@@ -186,7 +187,8 @@ bagoup version: %s
 Export folder: %q
 Export files written: %d
 Chats exported: %d
-Messages exported: %d
+Valid messages exported: %d
+Invalid messages exported (see warnings above): %d
 Attachments copied: %s
 Attachments referenced or embedded: %s
 Attachments embedded: %s
@@ -200,6 +202,7 @@ Time elapsed: %s%s`,
 		c.files,
 		c.chats,
 		c.messages,
+		c.messagesInvalid,
 		attCpString,
 		attString,
 		attEmbdString,

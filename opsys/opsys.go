@@ -187,7 +187,7 @@ func (s opSys) CopyFile(src, dstDir string, unique bool) (string, error) {
 
 	// Insert a number suffix in the filename in case it already exists.
 	suffixInserted := false
-	for i := 1; ; i += 1 {
+	for i := 1; ; i++ {
 		if exist, err := s.FileExist(dst); err != nil {
 			return "", err
 		} else if !exist {

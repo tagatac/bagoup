@@ -69,7 +69,7 @@ func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) erro
 				return err
 			}
 		}
-		cfg.counts.chats += 1
+		cfg.counts.chats++
 	}
 	if mergeChats {
 		if err := cfg.writeFile(entityChats.Name, guids, entityMessageIDs); err != nil {
