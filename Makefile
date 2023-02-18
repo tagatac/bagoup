@@ -31,7 +31,7 @@ from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make bagoup
 
 generate: clean
-	go get -u github.com/golang/mock/mockgen
+	go install github.com/golang/mock/mockgen@latest
 	go generate ./...
 	make deps
 
