@@ -114,11 +114,11 @@ Export to PDF is significantly slower, bottlenecked by PDF creation with
 **2h7m47s**, nearly 80x slower than the export to plaintext.
 
 ## Author
-Copyright (C) 2020-2022  [David Tagatac](mailto:david@tagatac.net)  
+Copyright (C) 2020-2023  [David Tagatac](mailto:david@tagatac.net)  
 See main.go for usage terms.
 
-[ci-img]: https://travis-ci.com/tagatac/bagoup.svg?branch=main
-[ci]: https://app.travis-ci.com/github/tagatac/bagoup
+[ci-img]: https://github.com/tagatac/bagoup/actions/workflows/makefile.yaml/badge.svg?branch=main
+[ci]: https://github.com/tagatac/bagoup/actions?query=branch%3Amain
 [cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/main/graph/badge.svg
 [cov]: https://codecov.io/gh/tagatac/bagoup
 [card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup
