@@ -12,9 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    # - name: Install Homebrew
-    #   run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
     - name: Install wkhtmltopdf
       run: brew install wkhtmltopdf
 
@@ -30,4 +27,6 @@ jobs:
       run: make test
 
     - name: Upload Code Coverage
-      run: make codecov
+      uses: codecov/codecov-action@v3
+      with:
+        fail_ci_if_error: true
