@@ -13,7 +13,7 @@ build: bagoup
 bagoup: $(SRC) $(TEMPLATES) download
 	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
 
-.PHONY: deps download from-archive generate test zip clean codecov
+.PHONY: deps download from-archive generate test zip clean
 
 deps:
 	go get -u -v ./...
@@ -46,13 +46,3 @@ clean:
 	rm -vrf bagoup \
 	$(COVERAGE_FILE) \
 	$(ZIPFILE)
-
-codecov:
-	curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import
-	curl -Os https://uploader.codecov.io/latest/linux/codecov
-	curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-	curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-	gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-	shasum -a 256 -c codecov.SHA256SUM
-	chmod +x codecov
-	./codecov
