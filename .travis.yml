@@ -1,9 +1,0 @@
-language: go
-go:
-  - 1.x
-before_install:
-  - sudo apt-get -y install wkhtmltopdf
-script:
-  - xvfb-run make test
-after_success:
-  - make codecov
