@@ -316,12 +316,12 @@ func TestGetMessageIDs(t *testing.T) {
 			setupMock: func(sMock sqlmock.Sqlmock) {
 				rows := sqlmock.NewRows([]string{"message_id", "message_date"}).
 					AddRow(192, 593720716622331392).
-					AddRow(168, 601412272470654464)
+					AddRow(168, 601412272)
 				sMock.ExpectQuery("SELECT message_id, message_date FROM chat_message_join WHERE chat_id=42").WillReturnRows(rows)
 			},
 			wantIDs: []DatedMessageID{
 				{192, 593720716622331392},
-				{168, 601412272470654464},
+				{168, 601412272000000000},
 			},
 		},
 		{

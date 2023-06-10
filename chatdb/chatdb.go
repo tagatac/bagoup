@@ -252,6 +252,11 @@ func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
 		if err := rows.Scan(&id, &date); err != nil {
 			return nil, errors.Wrapf(err, "read message ID for chat ID %d", chatID)
 		}
+		// We can't trust that all of the dates in the chat_message_join table have
+		// been converted (see https://github.com/tagatac/bagoup/issues/40).
+		if date < 1_000*_modernVersionDateDivisor {
+			date *= _modernVersionDateDivisor
+		}
 		msgIDs = append(msgIDs, DatedMessageID{id, date})
 	}
 	return msgIDs, nil
