@@ -5,22 +5,22 @@ go 1.19
 require (
 	github.com/DATA-DOG/go-sqlmock v1.4.1
 	github.com/Masterminds/semver v1.5.0
-	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.1
+	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.2
 	github.com/emersion/go-vcard v0.0.0-20230815062825-8fda7d206ec9
 	github.com/golang/mock v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/mattn/go-sqlite3 v1.14.18
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.10.0
 	github.com/tagatac/goheif v0.0.0-20220718191458-b9a6c0ca0832
 	github.com/tagatac/gorecurcopy v1.0.1
-	golang.org/x/net v0.17.0
+	golang.org/x/net v0.18.0
 	gotest.tools/v3 v3.0.2
 )
 
 require (
 	github.com/google/go-cmp v0.5.4 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
-	golang.org/x/tools v0.14.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/tools v0.15.0 // indirect
 )
