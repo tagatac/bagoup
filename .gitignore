@@ -1,5 +1,7 @@
 .DS_Store
 .vscode/
 bagoup
+typedstream-decode
+!cmd/*
 bagoup-*-*-*.zip
 coverage.out

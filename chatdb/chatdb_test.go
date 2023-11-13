@@ -478,19 +478,23 @@ func TestGetMessage(t *testing.T) {
 			wantValid:   true,
 		},
 		{
-			msg: "message encoded in attributedBody",
+			msg: "2FA code encoded in attributedBody",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
 					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
-			ptsOutput: `type b'@': object of class NSMutableAttributedString v0, extends NSAttributedString v0, extends NSObject v0:
-	super object: <NSObject>
-	type b'@': NSMutableString('message text')
-	group:
-		type b'i': 1
-		type b'I': 28`,
-			wantMessage: "[2019-10-04 18:26:31] testhandle1: message text\n",
+			ptsOutput: `Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: {
+    "__kIMMessagePartAttributeName" = 0;
+}555555{
+    "__kIMDataDetectedAttributeName" = {length = 553, bytes = 0x62706c69 73743030 d4010203 04050607 ... 00000000 00000193 };
+    "__kIMMessagePartAttributeName" = 0;
+    "__kIMOneTimeCodeAttributeName" =     {
+        code = 555555;
+        displayCode = 555555;
+    };
+}`,
+			wantMessage: "[2019-10-04 18:26:31] testhandle1: Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: 555555\n",
 			wantValid:   true,
 		},
 		{
@@ -526,17 +530,16 @@ func TestGetMessage(t *testing.T) {
 					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
-			ptsErr:      "this is a pytypedstream error",
+			ptsErr:      "this is a typedstream-decode error",
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
 		},
 		{
-			msg: "decoded attributedBody doesn't match regexp",
+			msg: "no valid text or attributedBody",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, nil, "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
-			ptsOutput:   "this is a bad decoding",
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
 		},
 	}
