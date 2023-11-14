@@ -15,10 +15,13 @@ jobs:
     - name: Install wkhtmltopdf
       run: brew install wkhtmltopdf
 
-    - name: Set up Go
+    - name: Set Up Go
       uses: actions/setup-go@v3
       with:
         go-version: 1.x
+
+    - name: Check versions
+      run: swift --version && xcodebuild -version && go version && make --version && wkhtmltopdf --version
 
     - name: Build
       run: make
