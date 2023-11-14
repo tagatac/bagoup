@@ -10,7 +10,7 @@ main.o: main.swift decode.h typedstream-parser-Bridging-Header.h
 	swiftc -c -import-objc-header typedstream-parser-Bridging-Header.h $<
 
 decode.o: decode.m decode.h typedstream-parser-Bridging-Header.h
-	clang -c $< -fobjc-arc -fmodules -I $(mkfile_dir)
+	clang -c $< -fobjc-arc -fmodules -I $(mkfile_dir) -L /usr/lib/swift
 
 clean:
 	rm -vf typedstream-decode main.o decode.o
