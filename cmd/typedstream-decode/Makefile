@@ -1,4 +1,4 @@
-SWIFT_LIB_DIR="$(shell xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/swift"
+SWIFT_LIB_DIR="$(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift"
 
 build: typedstream-decode
 
