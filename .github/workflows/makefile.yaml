@@ -12,8 +12,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install wkhtmltopdf
-      run: brew install wkhtmltopdf
+    - name: Install swift wkhtmltopdf
+      run: brew install swift wkhtmltopdf
 
     - name: Set Up Go
       uses: actions/setup-go@v3
