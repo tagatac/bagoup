@@ -8,7 +8,7 @@ SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_
 TEMPLATES=$(shell find . -type f -name '*.tmpl')
 LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
-build: bagoup typedstream-decode
+build: typedstream-decode bagoup
 
 bagoup: $(SRC) $(TEMPLATES) download
 	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
