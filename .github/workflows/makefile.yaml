@@ -8,20 +8,17 @@ on:
 jobs:
 
   build-and-test:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install swift wkhtmltopdf
-      run: brew install swift wkhtmltopdf
+    - name: Install  wkhtmltopdf
+      run: brew install wkhtmltopdf
 
     - name: Set Up Go
       uses: actions/setup-go@v3
       with:
         go-version: 1.x
-
-    - name: Check Versions
-      run: swift --version && xcodebuild -version && go version && make --version && wkhtmltopdf --version && xcode-select --print-path
 
     - name: List libraries
       run: ls -l `xcode-select --print-path`/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift
