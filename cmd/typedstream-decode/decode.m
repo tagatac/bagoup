@@ -1,6 +1,6 @@
 //
 //  decode.m
-//  typedstream-parser
+//  typedstream-decode
 //
 //  Created by David Tagatac on 11/12/23.
 //
