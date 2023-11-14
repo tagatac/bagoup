@@ -1,7 +1,10 @@
+SWIFT_LIB_DIR="$(shell xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/swift"
+
 build: typedstream-decode
 
 typedstream-decode: main.o decode.o
-	clang -o $@ $^
+	echo $(SWIFT_LIB_DIR)
+	clang -o $@ $^ -I$(SWIFT_LIB_DIR) -framework Foundation
 
 main.o: main.swift decode.h
 	swiftc -c -import-objc-header decode.h $<
