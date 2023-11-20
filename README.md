@@ -99,13 +99,85 @@ an example export directory structure for each option.
 
 ## Performance
 ### Plaintext
-Export to plaintext is fast. For example, on a 2015 MacBook, exporting
-**105,400 messages** from 711 chats to 642 files, as well as copying
-**7,399 attachments**, took **1m36s**.
+Export to plaintext is fast. For example, on an M1 Pro MacBook Pro, exporting
+**13,445 messages** from 93 chats to 88 files, as well as copying
+**848 attachments**, took **21s**.
+```
+BAGOUP RESULTS:
+bagoup version: 2.3-9-g5273031 Darwin/arm64
+Export folder: "messages-export"
+Export files written: 88
+Chats exported: 93
+Valid messages exported: 13445
+Invalid messages exported (see warnings above): 10
+Attachments copied: 848
+	image/heic-sequence: 1
+	image/heic: 207
+	video/quicktime: 20
+	image/gif: 20
+	image/png: 55
+	application/pdf: 3
+	text/vcard: 3
+	audio/x-m4a: 1
+	text/x-vlocation: 1
+	application/octet-stream: 423
+	image/jpeg: 111
+	image/tiff: 3
+Attachments referenced or embedded: 855
+	video/quicktime: 20
+	image/gif: 20
+	application/pdf: 3
+	text/vcard: 3
+	application/octet-stream: 429
+	image/heic: 208
+	image/tiff: 3
+	image/png: 55
+	image/heic-sequence: 1
+	audio/x-m4a: 1
+	image/jpeg: 111
+	text/x-vlocation: 1
+Attachments embedded: 0
+Attachments missing (see warnings above): 7
+HEIC conversions completed: 0
+HEIC conversions failed (see warnings above): 0
+Time elapsed: 20.973077459s
+```
 ### PDF
 Export to PDF is significantly slower, bottlenecked by PDF creation with
 `wkhtmltopdf`. Exporting the same data from above on the same MacBook took
-**2h7m47s**, nearly 80x slower than the export to plaintext.
+**6m58s**, nearly 20x slower than the export to plaintext.
+```
+BAGOUP RESULTS:
+bagoup version: 2.3-9-g5273031 Darwin/arm64
+Export folder: "messages-export"
+Export files written: 88
+Chats exported: 93
+Valid messages exported: 13445
+Invalid messages exported (see warnings above): 10
+Attachments copied: 0
+Attachments referenced or embedded: 855
+	text/vcard: 3
+	image/jpeg: 318
+	image/tiff: 3
+	video/quicktime: 20
+	image/gif: 20
+	image/heic-sequence: 1
+	audio/x-m4a: 1
+	text/x-vlocation: 1
+	application/octet-stream: 429
+	image/png: 55
+	image/heic: 1
+	application/pdf: 3
+Attachments embedded: 396
+	image/png: 55
+	image/gif: 20
+	image/jpeg: 318
+	image/tiff: 3
+Attachments missing (see warnings above): 7
+HEIC conversions completed: 207
+HEIC conversions failed (see warnings above): 0
+Time elapsed: 6m58.053383125s
+```
 
 ## Author
 Copyright (C) 2020-2023  [David Tagatac](mailto:david@tagatac.net)  
