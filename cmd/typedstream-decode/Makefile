@@ -1,17 +1,13 @@
-mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
-mkfile_dir := $(dir $(mkfile_path))
-
 build: typedstream-decode
 
 typedstream-decode: main.o decode.o
-	clang -o $@ decode.o $< -framework Foundation
+	swiftc -v -o $@ $^
 
-main.o: main.swift decode.h typedstream-parser-Bridging-Header.h
-	swiftc -c -import-objc-header typedstream-parser-Bridging-Header.h $<
+main.o: main.swift decode.h
+	swiftc -v -c -import-objc-header decode.h $< -framework Foundation
 
-decode.o: decode.m decode.h typedstream-parser-Bridging-Header.h
-	clang -c $< -fobjc-arc -fmodules -I $(mkfile_dir)
+decode.o: decode.m
+	clang -v -c $< -fobjc-arc -fmodules
 
 clean:
 	rm -vf typedstream-decode main.o decode.o
-
