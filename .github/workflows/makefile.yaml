@@ -20,8 +20,11 @@ jobs:
       with:
         go-version: 1.x
 
-    - name: List libraries
+    - name: List Libraries
       run: ls -l `xcode-select --print-path`/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift
+
+    - name: List Frameworks
+      run: ls -l /Applications/Xcode_14.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
 
     - name: Build
       run: make
