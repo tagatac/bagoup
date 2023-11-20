@@ -18,7 +18,7 @@ import (
 
 const _filenamePrefixMaxLength = 251
 
-func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
+func (cfg *configuration) writeFile(cnts *counts, entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
 	chatDirPath := strings.TrimRight(filepath.Join(cfg.Options.ExportPath, entityName), ". ")
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "create directory %q", chatDirPath)
@@ -56,10 +56,10 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 			return errors.Wrapf(err, "create directory %q", attDir)
 		}
 	}
-	return cfg.handleFileContents(outFile, messageIDs, attDir)
+	return cfg.handleFileContents(cnts, outFile, messageIDs, attDir)
 }
 
-func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs []chatdb.DatedMessageID, attDir string) error {
+func (cfg *configuration) handleFileContents(cnts *counts, outFile opsys.OutFile, messageIDs []chatdb.DatedMessageID, attDir string) error {
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	msgCount, invalidCount := 0, 0
 	for _, messageID := range messageIDs {
@@ -70,7 +70,7 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 		if err := outFile.WriteMessage(msg); err != nil {
 			return errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
 		}
-		if err := cfg.handleAttachments(outFile, messageID.ID, attDir); err != nil {
+		if err := cfg.handleAttachments(cnts, outFile, messageID.ID, attDir); err != nil {
 			return errors.Wrapf(err, "chat file %q - message %d", outFile.Name(), messageID.ID)
 		}
 		if ok {
@@ -88,13 +88,13 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 			return errors.Wrapf(err, "chat file %q - increase the open file limit from %d to %d to support %d embedded images", outFile.Name(), openFilesLimit, imgCount*2, imgCount)
 		}
 	}
-	cfg.counts.files++
-	cfg.counts.messages += msgCount
-	cfg.counts.messagesInvalid += invalidCount
+	cnts.files++
+	cnts.messages += msgCount
+	cnts.messagesInvalid += invalidCount
 	return nil
 }
 
-func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
+func (cfg *configuration) handleAttachments(cnts *counts, outFile opsys.OutFile, msgID int, attDir string) error {
 	msgPaths, ok := cfg.attachmentPaths[msgID]
 	if !ok {
 		return nil
@@ -104,20 +104,20 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 		err := cfg.validateAttachmentPath(attPath)
 		if _, ok := err.(errorMissingAttachment); ok {
 			// Attachment is missing. Just reference it, and skip copying/embedding.
-			cfg.counts.attachmentsMissing++
+			cnts.attachmentsMissing++
 			log.Printf("WARN: chat file %q - message %d - %s attachment %q (ID %d) - %s", outFile.Name(), msgID, mimeType, transferName, att.ID, err)
 			if err := outFile.ReferenceAttachment(transferName); err != nil {
 				return errors.Wrapf(err, "reference attachment %q", transferName)
 			}
-			cfg.counts.attachments[mimeType]++
+			cnts.attachments[mimeType]++
 			continue
 		} else if err != nil {
 			return err
 		}
-		if err := cfg.copyAttachment(&att, attDir); err != nil {
+		if err := cfg.copyAttachment(cnts, &att, attDir); err != nil {
 			return err
 		}
-		if err := cfg.writeAttachment(outFile, att); err != nil {
+		if err := cfg.writeAttachment(cnts, outFile, att); err != nil {
 			return err
 		}
 	}
@@ -141,7 +141,7 @@ func (cfg configuration) validateAttachmentPath(attPath string) error {
 	return nil
 }
 
-func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string) error {
+func (cfg *configuration) copyAttachment(cnts *counts, att *chatdb.Attachment, attDir string) error {
 	if !cfg.Options.CopyAttachments {
 		return nil
 	}
@@ -160,18 +160,18 @@ func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string) 
 		return errors.Wrapf(err, "copy attachment %q to %q", attPath, attDir)
 	}
 	att.Filename = dstPath
-	cfg.counts.attachmentsCopied[mimeType]++
+	cnts.attachmentsCopied[mimeType]++
 	return nil
 }
 
-func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
+func (cfg *configuration) writeAttachment(cnts *counts, outFile opsys.OutFile, att chatdb.Attachment) error {
 	attPath, mimeType := filepath.Join(cfg.Options.AttachmentsPath, att.Filename), att.MIMEType
 	if cfg.Options.OutputPDF {
 		if jpgPath, err := cfg.OS.HEIC2JPG(attPath); err != nil {
-			cfg.counts.conversionsFailed++
+			cnts.conversionsFailed++
 			log.Printf("WARN: chat file %q - convert HEIC file %q to JPG: %s", outFile.Name(), attPath, err)
 		} else if jpgPath != attPath {
-			cfg.counts.conversions++
+			cnts.conversions++
 			attPath, mimeType = jpgPath, "image/jpeg"
 		}
 	}
@@ -180,8 +180,8 @@ func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Atta
 		return errors.Wrapf(err, "include attachment %q", attPath)
 	}
 	if embedded {
-		cfg.counts.attachmentsEmbedded[mimeType]++
+		cnts.attachmentsEmbedded[mimeType]++
 	}
-	cfg.counts.attachments[mimeType]++
+	cnts.attachments[mimeType]++
 	return nil
 }

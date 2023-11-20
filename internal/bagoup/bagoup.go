@@ -54,9 +54,8 @@ type (
 		macOSVersion    *semver.Version
 		handleMap       map[int]string
 		attachmentPaths map[int][]chatdb.Attachment
-		counts
-		startTime time.Time
-		version   string
+		startTime       time.Time
+		version         string
 	}
 	counts struct {
 		files               int
@@ -95,11 +94,6 @@ func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, ptools pathto
 		ChatDB:    cdb,
 		PathTools: ptools,
 		logDir:    logDir,
-		counts: counts{
-			attachments:         map[string]int{},
-			attachmentsCopied:   map[string]int{},
-			attachmentsEmbedded: map[string]int{},
-		},
 		startTime: startTime,
 		version:   version,
 	}, nil
@@ -149,8 +143,8 @@ func (cfg *configuration) Run() error {
 	}
 
 	defer cfg.OS.RmTempDir()
-	err = cfg.exportChats(contactMap)
-	printResults(cfg.version, cfg.Options.ExportPath, cfg.counts, time.Since(cfg.startTime))
+	allCounts, err := cfg.exportChats(contactMap)
+	printResults(cfg.version, cfg.Options.ExportPath, allCounts, time.Since(cfg.startTime))
 	if err != nil {
 		return errors.Wrap(err, "export chats")
 	}
@@ -178,7 +172,8 @@ func (cfg *configuration) validatePaths() error {
 	return nil
 }
 
-func printResults(version, exportPath string, c counts, duration time.Duration) {
+func printResults(version, exportPath string, allCounts []*counts, duration time.Duration) {
+	c := mergeCounts(allCounts)
 	attCpString := makeAttachmentsString(c.attachmentsCopied)
 	attString := makeAttachmentsString(c.attachments)
 	attEmbdString := makeAttachmentsString(c.attachmentsEmbedded)
@@ -212,6 +207,42 @@ Time elapsed: %s%s`,
 		duration.String(),
 		"\x1b[0m",
 	)
+}
+
+func mergeCounts(allCounts []*counts) counts {
+	merged := counts{
+		attachments:         map[string]int{},
+		attachmentsCopied:   map[string]int{},
+		attachmentsEmbedded: map[string]int{},
+	}
+	for _, c := range allCounts {
+		for mimeType, count := range c.attachments {
+			if _, ok := merged.attachments[mimeType]; !ok {
+				merged.attachments[mimeType] = 0
+			}
+			merged.attachments[mimeType] += count
+		}
+		for mimeType, count := range c.attachmentsCopied {
+			if _, ok := merged.attachmentsCopied[mimeType]; !ok {
+				merged.attachmentsCopied[mimeType] = 0
+			}
+			merged.attachmentsCopied[mimeType] += count
+		}
+		for mimeType, count := range c.attachmentsEmbedded {
+			if _, ok := merged.attachmentsEmbedded[mimeType]; !ok {
+				merged.attachmentsEmbedded[mimeType] = 0
+			}
+			merged.attachmentsEmbedded[mimeType] += count
+		}
+		merged.attachmentsMissing += c.attachmentsMissing
+		merged.chats += c.chats
+		merged.conversions += c.conversions
+		merged.conversionsFailed += c.conversionsFailed
+		merged.files += c.files
+		merged.messages += c.messages
+		merged.messagesInvalid += c.messagesInvalid
+	}
+	return merged
 }
 
 func makeAttachmentsString(attCounts map[string]int) (attString string) {

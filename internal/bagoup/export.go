@@ -11,21 +11,42 @@ import (
 	"github.com/tagatac/bagoup/chatdb"
 )
 
-func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
+type countsAndError struct {
+	cnts *counts
+	err  error
+}
+
+func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) ([]*counts, error) {
 	if err := getAttachmentPaths(cfg); err != nil {
-		return err
+		return []*counts{}, err
 	}
 	chats, err := cfg.ChatDB.GetChats(contactMap)
 	if err != nil {
-		return errors.Wrap(err, "get chats")
+		return []*counts{}, errors.Wrap(err, "get chats")
 	}
 
+	results := make(chan countsAndError)
 	for _, entityChats := range chats {
-		if err := cfg.exportEntityChats(entityChats); err != nil {
-			return err
+		go func(ec chatdb.EntityChats) {
+			cnts, err := cfg.exportEntityChats(ec)
+			results <- countsAndError{
+				cnts: cnts,
+				err:  err,
+			}
+		}(entityChats)
+	}
+
+	allCounts := []*counts{}
+	for result := range results {
+		if result.err != nil {
+			return allCounts, result.err
+		}
+		allCounts = append(allCounts, result.cnts)
+		if len(allCounts) == len(chats) {
+			break
 		}
 	}
-	return nil
+	return allCounts, nil
 }
 
 func getAttachmentPaths(cfg *configuration) error {
@@ -52,29 +73,34 @@ func getAttachmentPaths(cfg *configuration) error {
 	return nil
 }
 
-func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) error {
+func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) (*counts, error) {
+	cnts := &counts{
+		attachments:         map[string]int{},
+		attachmentsCopied:   map[string]int{},
+		attachmentsEmbedded: map[string]int{},
+	}
 	mergeChats := !cfg.Options.SeparateChats
 	var guids []string
 	var entityMessageIDs []chatdb.DatedMessageID
 	for _, chat := range entityChats.Chats {
 		messageIDs, err := cfg.ChatDB.GetMessageIDs(chat.ID)
 		if err != nil {
-			return errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
+			return cnts, errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
 		}
 		if mergeChats {
 			guids = append(guids, chat.GUID)
 			entityMessageIDs = append(entityMessageIDs, messageIDs...)
 		} else {
-			if err := cfg.writeFile(entityChats.Name, []string{chat.GUID}, messageIDs); err != nil {
-				return err
+			if err := cfg.writeFile(cnts, entityChats.Name, []string{chat.GUID}, messageIDs); err != nil {
+				return cnts, err
 			}
 		}
-		cfg.counts.chats++
+		cnts.chats++
 	}
 	if mergeChats {
-		if err := cfg.writeFile(entityChats.Name, guids, entityMessageIDs); err != nil {
-			return err
+		if err := cfg.writeFile(cnts, entityChats.Name, guids, entityMessageIDs); err != nil {
+			return cnts, err
 		}
 	}
-	return nil
+	return cnts, nil
 }
