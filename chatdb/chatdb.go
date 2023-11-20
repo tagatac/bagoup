@@ -33,8 +33,8 @@ var _modernVersion = semver.MustParse("10.13")
 
 const _modernVersionDateDivisor = 1_000_000_000
 
-var _TypedStringAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = ([^\n]+);\n\}?`)
-var _TypedStringMultilineAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = {5}\{\n( {8}[[:alpha:]]+ = \d+;\n)+ {4}\};\n\}?`)
+var _TypedStreamAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = ([^\n]+);\n\}?`)
+var _TypedStreamMultilineAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = {5}\{\n( {8}[[:alpha:]]+ = \d+;\n)+ {4}\};\n\}?`)
 
 const _dependenciesURL = "https://github.com/tagatac/bagoup#dependencies"
 
@@ -346,9 +346,9 @@ func (d *chatDB) decodeTypedStream(s string) (string, error) {
 		return "", errors.Wrap(err, "decode attributedBody - POSSIBLE FIX: Add typedstream-decode to your system path (installed with bagoup)")
 	}
 	decodedBody := string(decodedBodyBytes)
-	decodedBody = _TypedStringAttributeRE.ReplaceAllString(decodedBody, "")
-	decodedBody = _TypedStringMultilineAttributeRE.ReplaceAllString(decodedBody, "")
-	return string(decodedBody), nil
+	decodedBody = _TypedStreamAttributeRE.ReplaceAllString(decodedBody, "")
+	decodedBody = _TypedStreamMultilineAttributeRE.ReplaceAllString(decodedBody, "")
+	return strings.TrimSuffix(decodedBody, "\n"), nil
 }
 
 func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error) {

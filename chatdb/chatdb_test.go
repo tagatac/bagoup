@@ -493,7 +493,8 @@ func TestGetMessage(t *testing.T) {
         code = 555555;
         displayCode = 555555;
     };
-}`,
+}
+`,
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: 555555\n",
 			wantValid:   true,
 		},
