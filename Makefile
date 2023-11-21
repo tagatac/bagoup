@@ -34,7 +34,7 @@ example: example-exports/examplegen.go download
 	cd example-exports && go run examplegen.go
 
 from-archive:
-	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make bagoup
+	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make build
 
 generate: clean
 	go install github.com/golang/mock/mockgen@latest
