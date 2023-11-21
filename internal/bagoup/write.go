@@ -4,6 +4,7 @@
 package bagoup
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,7 +17,11 @@ import (
 	"github.com/tagatac/bagoup/opsys/pdfgen"
 )
 
-const _filenamePrefixMaxLength = 251
+const (
+	_filenamePrefixMaxLength = 251
+	_pdfPreferredMessages    = 2048
+	_pdfMaxMessages          = 3072
+)
 
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
 	chatDirPath := strings.TrimRight(filepath.Join(cfg.Options.ExportPath, entityName), ". ")
@@ -27,10 +32,57 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	if len(filename) > _filenamePrefixMaxLength {
 		filename = filename[:_filenamePrefixMaxLength-1]
 	}
-	chatPath := filepath.Join(chatDirPath, filename)
-	var outFile opsys.OutFile
+	chatPathNoExt := filepath.Join(chatDirPath, filename)
+	attDir := filepath.Join(chatDirPath, "attachments")
+	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
+		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
+			return errors.Wrapf(err, "create directory %q", attDir)
+		}
+	}
+	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	if cfg.Options.OutputPDF {
-		chatPath += ".pdf"
+		return cfg.writePDFs(messageIDs, chatPathNoExt, attDir)
+	}
+	return cfg.writeTxt(messageIDs, chatPathNoExt, attDir)
+}
+
+func (cfg *configuration) writeTxt(messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
+	chatPath := chatPathNoExt + ".txt"
+	chatFile, err := cfg.OS.Create(chatPath)
+	if err != nil {
+		return errors.Wrapf(err, "create file %q", chatPath)
+	}
+	defer chatFile.Close()
+	outFile := cfg.OS.NewTxtOutFile(chatFile)
+	return cfg.handleFileContents(outFile, messageIDs, attDir)
+}
+
+func (cfg *configuration) writePDFs(messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
+	type messageIDsAndChatPath struct {
+		messageIDs []chatdb.DatedMessageID
+		chatPath   string
+	}
+	idsAndPaths := []messageIDsAndChatPath{}
+	fileIdx := 1
+	var msgIdx int
+	for msgIdx = 0; len(messageIDs)-_pdfMaxMessages > msgIdx; msgIdx += _pdfPreferredMessages {
+		idsAndPaths = append(idsAndPaths, messageIDsAndChatPath{
+			messageIDs: messageIDs[msgIdx : msgIdx+_pdfPreferredMessages],
+			chatPath:   fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx),
+		})
+		fileIdx++
+	}
+	lastChatPath := chatPathNoExt + ".pdf"
+	if fileIdx > 1 {
+		lastChatPath = fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx)
+	}
+	idsAndPaths = append(idsAndPaths, messageIDsAndChatPath{
+		messageIDs: messageIDs[msgIdx:],
+		chatPath:   lastChatPath,
+	})
+
+	for _, idsAndPath := range idsAndPaths {
+		chatPath := idsAndPath.chatPath
 		chatFile, err := cfg.OS.Create(chatPath)
 		if err != nil {
 			return errors.Wrapf(err, "create file %q", chatPath)
@@ -40,27 +92,15 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 		if err != nil {
 			return errors.Wrap(err, "create PDF generator")
 		}
-		outFile = cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.Options.IncludePPA)
-	} else {
-		chatPath += ".txt"
-		chatFile, err := cfg.OS.Create(chatPath)
-		if err != nil {
-			return errors.Wrapf(err, "create file %q", chatPath)
-		}
-		defer chatFile.Close()
-		outFile = cfg.OS.NewTxtOutFile(chatFile)
-	}
-	attDir := filepath.Join(chatDirPath, "attachments")
-	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
-		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
-			return errors.Wrapf(err, "create directory %q", attDir)
+		outFile := cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.Options.IncludePPA)
+		if err := cfg.handleFileContents(outFile, idsAndPath.messageIDs, attDir); err != nil {
+			return err
 		}
 	}
-	return cfg.handleFileContents(outFile, messageIDs, attDir)
+	return nil
 }
 
 func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs []chatdb.DatedMessageID, attDir string) error {
-	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	msgCount, invalidCount := 0, 0
 	for _, messageID := range messageIDs {
 		msg, ok, err := cfg.ChatDB.GetMessage(messageID.ID, cfg.handleMap)

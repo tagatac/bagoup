@@ -193,9 +193,9 @@ func TestExportChats(t *testing.T) {
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
+					osMock.EXPECT().MkdirAll("messages-export/testdisplayname/attachments", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt").Return(chatFile, nil),
 					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
-					osMock.EXPECT().MkdirAll("messages-export/testdisplayname/attachments", os.ModePerm),
 					ofMocks[0].EXPECT().Flush(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256),
 				)
