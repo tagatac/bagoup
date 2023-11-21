@@ -552,12 +552,16 @@ func TestGetMessage(t *testing.T) {
 			defer db.Close()
 			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, text, attributedBody, DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
+			exitCode := 0
+			if tt.ptsErr != "" {
+				exitCode = 1
+			}
 			cdb := &chatDB{
 				DB:             db,
 				selfHandle:     "Me",
 				dateDivisor:    _modernVersionDateDivisor,
 				cmJoinHasDates: true,
-				execCommand:    exectest.GenFakeExecCommand(tt.ptsOutput, tt.ptsErr),
+				execCommand:    exectest.GenFakeExecCommand("TestRunExecCmd", tt.ptsOutput, tt.ptsErr, exitCode),
 			}
 
 			message, ok, err := cdb.GetMessage(42, handleMap)

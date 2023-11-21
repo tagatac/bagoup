@@ -134,7 +134,11 @@ func TestGetMacOSVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			s := &opSys{execCommand: exectest.GenFakeExecCommand(tt.swVersOutput, tt.swVersErr)}
+			exitCode := 0
+			if tt.swVersErr != "" {
+				exitCode = 1
+			}
+			s := &opSys{execCommand: exectest.GenFakeExecCommand("TestRunExecCmd", tt.swVersOutput, tt.swVersErr, exitCode)}
 			v, err := s.GetMacOSVersion()
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
