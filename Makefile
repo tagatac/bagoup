@@ -8,13 +8,15 @@ SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_
 TEMPLATES=$(shell find . -type f -name '*.tmpl')
 LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
-build: typedstream-decode bagoup
+build: bin/typedstream-decode bin/bagoup
 
-typedstream-decode:
+bin/typedstream-decode:
 	make -C cmd/typedstream-decode
-	cp -vf cmd/typedstream-decode/typedstream-decode .
+	mkdir -vp bin
+	cp -vf cmd/typedstream-decode/typedstream-decode bin
 
-bagoup: $(SRC) $(TEMPLATES) download
+bin/bagoup: $(SRC) $(TEMPLATES) download
+	mkdir -vp bin
 	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
 
 .PHONY: deps download from-archive generate test zip clean
@@ -47,8 +49,8 @@ zip: build
 	zip $(ZIPFILE) bagoup
 
 clean:
-	rm -vrf bagoup \
-	typedstream-decode \
+	rm -vrf \
+	bin \
 	$(COVERAGE_FILE) \
 	$(ZIPFILE)
 	make -C cmd/typedstream-decode clean
