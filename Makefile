@@ -10,14 +10,14 @@ LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
 build: typedstream-decode bagoup
 
-bagoup: $(SRC) $(TEMPLATES) download
-	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
-
-.PHONY: deps download from-archive generate test typedstream-decode zip clean
-
 typedstream-decode:
 	make -C cmd/typedstream-decode
 	cp -vf cmd/typedstream-decode/typedstream-decode .
+
+bagoup: $(SRC) $(TEMPLATES) download
+	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
+
+.PHONY: deps download from-archive generate test zip clean
 
 deps:
 	go get -u -v ./...
