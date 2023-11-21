@@ -36,7 +36,7 @@ import (
 	"github.com/tagatac/bagoup/pathtools"
 )
 
-const _license = "Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>\nSee the source for usage terms."
+const _license = "Copyright (C) 2020-2023  David Tagatac <david@tagatac.net>\nSee the source for usage terms."
 
 var _version string
 

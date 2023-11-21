@@ -60,7 +60,7 @@ type (
 		// writing to a chat file, as well as flag indicating the validity of the
 		// text in the message.
 		GetMessage(messageID int, handleMap map[int]string) (string, bool, error)
-		// GetImagePaths returns a list of attachment filepaths associated with
+		// GetAttachmentPaths returns a list of attachment filepaths associated with
 		// each message ID.
 		GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error)
 	}
