@@ -2,7 +2,7 @@
 
 bagoup *(pronounced BAAGoop)* is an export utility for Mac OS Messages,
 implemented in Go, inspired by
-[Baskup](http://peterkaminski09.github.io/baskup/). It exports all of the
+[Baskup](https://github.com/PeterKaminski09/baskup). It exports all of the
 conversations saved in Messages to readable, searchable text or PDF files.
 
 ## Example Exports
