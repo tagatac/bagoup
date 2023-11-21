@@ -19,12 +19,6 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 ### PDF (--pdf flag)
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
 ## Dependencies
-- [python-typedstream](https://github.com/dgelessus/python-typedstream) (for compatibility with Messages on Mac OS 13 and newer)
-```
-git clone git@github.com:dgelessus/python-typedstream.git
-cd python-typedstream
-python3 -m pip install .
-```
 - [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for exports to plaintext)
 ```
 brew install wkhtmltopdf
