@@ -36,10 +36,9 @@ example: example-exports/examplegen.go download
 from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make build
 
-generate: clean
+generate: clean deps
 	go install github.com/golang/mock/mockgen@latest
 	go generate ./...
-	make deps
 
 test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) ./...

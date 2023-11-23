@@ -559,6 +559,7 @@ func TestWriteFile(t *testing.T) {
 		assert.NilError(t, err)
 		ofMock1 := mock_opsys.NewMockOutFile(ctrl)
 		chatFile2, err := fileSys.Create("testfile2")
+		assert.NilError(t, err)
 		ofMock2 := mock_opsys.NewMockOutFile(ctrl)
 
 		msgs := []chatdb.DatedMessageID{}
