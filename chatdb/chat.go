@@ -62,31 +62,34 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 }
 
 func addContactChat(card *vcard.Card, displayName string, chat Chat, contactChats map[*vcard.Card]EntityChats) {
-	if entityChats, ok := contactChats[card]; !ok {
-		contactName := card.PreferredValue(vcard.FieldFormattedName)
-		if contactName != "" {
-			displayName = contactName
-		}
-		contactChats[card] = EntityChats{
-			Name:  displayName,
-			Chats: []Chat{chat},
-		}
-	} else {
+	if entityChats, ok := contactChats[card]; ok {
+		// We have contact info, and we have seen this contact before.
 		entityChats.Chats = append(entityChats.Chats, chat)
 		contactChats[card] = entityChats
+		return
+	}
+	// We have contact info, but we haven't seen this contact before.
+	contactName := card.PreferredValue(vcard.FieldFormattedName)
+	if contactName != "" {
+		displayName = contactName
+	}
+	contactChats[card] = EntityChats{
+		Name:  displayName,
+		Chats: []Chat{chat},
 	}
 }
 
 func addAddressChat(address, displayName string, chat Chat, addressChats map[string]EntityChats) {
-	if entityChats, ok := addressChats[address]; !ok {
-		// We don't have contact info, and this is a new address.
-		addressChats[address] = EntityChats{
-			Name:  displayName,
-			Chats: []Chat{chat},
-		}
-	} else {
+	entityChats, ok := addressChats[address]
+	if ok {
 		// We don't have contact info, and we have seen this address before.
 		entityChats.Chats = append(entityChats.Chats, chat)
 		addressChats[address] = entityChats
+		return
+	}
+	// We don't have contact info, and this is a new address.
+	addressChats[address] = EntityChats{
+		Name:  displayName,
+		Chats: []Chat{chat},
 	}
 }
