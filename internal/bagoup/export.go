@@ -19,6 +19,7 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 	if err != nil {
 		return errors.Wrap(err, "get chats")
 	}
+	chats = filterEntities(cfg.Options.Entities, chats)
 
 	for _, entityChats := range chats {
 		if err := cfg.exportEntityChats(entityChats); err != nil {
@@ -50,6 +51,21 @@ func getAttachmentPaths(cfg *configuration) error {
 		}
 	}
 	return nil
+}
+
+func filterEntities(entities []string, chats []chatdb.EntityChats) []chatdb.EntityChats {
+	if len(entities) == 0 {
+		return chats
+	}
+	result := []chatdb.EntityChats{}
+	for _, entityChats := range chats {
+		for _, entity := range entities {
+			if entityChats.Name == entity {
+				result = append(result, entityChats)
+			}
+		}
+	}
+	return result
 }
 
 func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) error {

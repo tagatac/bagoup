@@ -79,15 +79,24 @@ Usage:
 Application Options:
   -i, --db-path=          Path to the Messages chat database file (default: ~/Library/Messages/chat.db)
   -o, --export-path=      Path to which the Messages will be exported (default: messages-export)
-  -m, --mac-os-version=   Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)
+  -m, --mac-os-version=   Version of Mac OS, e.g. '10.15', from which the Messages chat database file was
+                          copied (not needed if bagoup is running on the same Mac)
   -c, --contacts-path=    Path to the contacts vCard file
   -s, --self-handle=      Prefix to use for for messages sent by you (default: Me)
-      --separate-chats    Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file
+      --separate-chats    Do not merge chats with the same contact (e.g. iMessage and SMS) into a single
+                          file
   -p, --pdf               Export text and images to PDF files (requires full disk access)
       --include-ppa       Include plugin payload attachments (e.g. link previews) in generated PDFs
-  -a, --copy-attachments  Copy attachments to the same folder as the chat which included them (requires full disk access)
-  -r, --preserve-paths    When copying attachments, preserve the full path instead of co-locating them with the chats which included them
-  -t, --attachments-path= Root path to the attachments (useful for re-running bagoup on an export created with the --copy-attachments and --preserve-paths flags) (default: /)
+  -a, --copy-attachments  Copy attachments to the same folder as the chat which included them (requires
+                          full disk access)
+  -r, --preserve-paths    When copying attachments, preserve the full path instead of co-locating them
+                          with the chats which included them
+  -t, --attachments-path= Root path to the attachments (useful for re-running bagoup on an export created
+                          with the --copy-attachments and --preserve-paths flags) (default: /)
+  -e, --entity=           An entity name to include in the export (matches the folder name in the export,
+                          e.g. "John Smith" or "+15551234567"). If given, other entities' chats will not
+                          be exported. If this flag is used multiple times, all entities specified will
+                          be exported.
   -v, --version           Show the version of bagoup
 
 Help Options:
