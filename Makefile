@@ -46,7 +46,7 @@ test: download
 	go tool cover -func=$(COVERAGE_FILE)
 
 zip: build
-	zip $(ZIPFILE) bagoup
+	zip --recurse-paths $(ZIPFILE) bin
 
 clean:
 	rm -vrf \
