@@ -118,7 +118,7 @@ Export to PDF is significantly slower, bottlenecked by PDF creation with
 
 ## Author
 Copyright (C) 2020-2023  [David Tagatac](mailto:david@tagatac.net)  
-See main.go for usage terms.
+See cmd/bagoup/main.go for usage terms.
 
 [ci-img]: https://github.com/tagatac/bagoup/actions/workflows/makefile.yaml/badge.svg?branch=main
 [ci]: https://github.com/tagatac/bagoup/actions?query=branch%3Amain

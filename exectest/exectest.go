@@ -1,5 +1,5 @@
-// Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
-// See main.go for usage terms.
+// Copyright (C) 2020  David Tagatac <david@tagatac.net>
+// See cmd/bagoup/main.go for usage terms.
 
 // Package exectest provides a method for mocking exec.Command.
 // Adapted from https://npf.io/2015/06/testing-exec-command/.

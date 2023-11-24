@@ -1,8 +1,8 @@
+// Copyright (C) 2023  David Tagatac <david@tagatac.net>
+// See cmd/bagoup/main.go for usage terms.
 //
 //  decode.h
 //  typedstream-decode
-//
-//  Created by David Tagatac on 11/12/23.
 //
 
 #ifndef decode_h

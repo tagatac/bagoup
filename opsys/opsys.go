@@ -1,5 +1,5 @@
-// Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
-// See main.go for usage terms.
+// Copyright (C) 2020  David Tagatac <david@tagatac.net>
+// See cmd/bagoup/main.go for usage terms.
 
 // Package opsys provides an interface OS for interacting with the running
 // operating system, both with the filesystem and with Mac OS commands.
