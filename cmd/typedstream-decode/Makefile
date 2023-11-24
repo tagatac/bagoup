@@ -11,3 +11,6 @@ decode.o: decode.m
 
 clean:
 	rm -vf typedstream-decode main.o decode.o
+
+typedstream-decode-linux: decode.m
+	clang -g -o $@ -I /usr/include/GNUstep -I /usr/local/include/GNUstep $< -lobjc -lgnustep-base
