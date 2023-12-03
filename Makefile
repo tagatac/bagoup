@@ -10,10 +10,9 @@ LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
 build: bin/typedstream-decode bin/bagoup
 
-bin/typedstream-decode:
-	make -C cmd/typedstream-decode
+bin/typedstream-decode: cmd/typedstream-decode/typedstream-decode.m
 	mkdir -vp bin
-	cp -vf cmd/typedstream-decode/typedstream-decode bin
+	clang -framework Foundation -o $@ $<
 
 bin/bagoup: $(SRC) $(TEMPLATES) download
 	mkdir -vp bin
@@ -52,4 +51,3 @@ clean:
 	bin \
 	$(COVERAGE_FILE) \
 	$(ZIPFILE)
-	make -C cmd/typedstream-decode clean
