@@ -8,6 +8,13 @@ SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_
 TEMPLATES=$(shell find . -type f -name '*.tmpl')
 LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
+PKGS=$(shell go list ./... | grep -v '/mock_' | tr '\n' ' ')
+EXCLUDE_PKGS=\
+	github.com/tagatac/bagoup/example-exports \
+	github.com/tagatac/bagoup/exectest
+PKGS_TO_TEST=$(filter-out $(EXCLUDE_PKGS),$(PKGS))
+PKGS_TO_COVER=$(shell echo "$(PKGS_TO_TEST)" | tr ' ' ',')
+
 build: bin/typedstream-decode bin/bagoup
 
 bin/typedstream-decode: cmd/typedstream-decode/typedstream-decode.m
@@ -40,7 +47,7 @@ generate: clean deps
 	go generate ./...
 
 test: download
-	go test -race -coverprofile=$(COVERAGE_FILE) ./...
+	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
 	go tool cover -func=$(COVERAGE_FILE)
 
 zip: build

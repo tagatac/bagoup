@@ -1,3 +1,6 @@
+// Copyright (C) 2023  David Tagatac <david@tagatac.net>
+// See cmd/bagoup/main.go for usage terms.
+
 #import <Foundation/Foundation.h>
 
 int main(int argc, const char * argv[]) {

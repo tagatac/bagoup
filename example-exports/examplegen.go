@@ -1,3 +1,6 @@
+// Copyright (C) 2022  David Tagatac <david@tagatac.net>
+// See cmd/bagoup/main.go for usage terms.
+
 package main
 
 import (

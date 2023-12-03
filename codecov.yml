@@ -1,5 +1,3 @@
 coverage:
   status:
     patch: off
-ignore:
-  - example-exports/examplegen.go
