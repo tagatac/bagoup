@@ -1,6 +1,5 @@
 .DS_Store
 .vscode/
 bin
-!cmd/*
 bagoup-*-*-*.zip
 coverage.out
