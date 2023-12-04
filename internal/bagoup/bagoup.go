@@ -165,10 +165,10 @@ func (cfg *configuration) validatePaths() error {
 	if err := cfg.OS.FileAccess(cfg.Options.DBPath); err != nil {
 		return errors.Wrapf(err, "test DB file %q - FIX: %s", cfg.Options.DBPath, _readmeURL)
 	}
-	if exist, err := cfg.OS.FileExist(cfg.Options.ExportPath); exist {
-		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", cfg.Options.ExportPath)
-	} else if err != nil {
+	if ok, err := cfg.OS.FileExist(cfg.Options.ExportPath); err != nil {
 		return errors.Wrapf(err, "check export path %q", cfg.Options.ExportPath)
+	} else if ok {
+		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", cfg.Options.ExportPath)
 	}
 	var err error
 	var attPathAbs string
