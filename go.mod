@@ -1,6 +1,6 @@
 module github.com/tagatac/bagoup
 
-go 1.19
+go 1.20
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.4.1
