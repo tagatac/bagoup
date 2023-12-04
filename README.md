@@ -124,7 +124,7 @@ See cmd/bagoup/main.go for usage terms.
 [ci]: https://github.com/tagatac/bagoup/actions?query=branch%3Amain
 [cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/main/graph/badge.svg
 [cov]: https://codecov.io/gh/tagatac/bagoup
-[card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup
-[card]: https://goreportcard.com/report/github.com/tagatac/bagoup
+[card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup/v2
+[card]: https://goreportcard.com/report/github.com/tagatac/bagoup/v2
 [release-img]: https://img.shields.io/github/release/tagatac/bagoup.svg
 [release]: https://github.com/tagatac/bagoup/releases/latest

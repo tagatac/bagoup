@@ -56,7 +56,7 @@ func GenFakeExecCommand(testname, output, err string, exitCode int) func(string,
 	}
 }
 
-// RunExecCmd writes the messages specified as envrionment variables in
+// RunExecCmd writes the messages specified as environment variables in
 // GenFakeExecCommand, to stdout and stderr before exiting with the correct exit
 // code.
 func RunExecCmd() {
