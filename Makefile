@@ -8,7 +8,7 @@ SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_
 TEMPLATES=$(shell find . -type f -name '*.tmpl')
 LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
-PKGS=$(shell go list ./... | grep -v '/mock_' | tr '\n' ' ')
+PKGS=$(shell go list ./... | grep --invert-match '/mock_' | tr '\n' ' ')
 EXCLUDE_PKGS=\
 	github.com/tagatac/bagoup/v2/example-exports \
 	github.com/tagatac/bagoup/v2/exectest
@@ -30,7 +30,6 @@ bin/bagoup: $(SRC) $(TEMPLATES) download
 deps:
 	go get -u -v ./...
 	go mod tidy -v
-	go get -u golang.org/x/tools/cover
 
 download:
 	go mod download
@@ -42,7 +41,7 @@ example: example-exports/examplegen.go download
 from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make build
 
-generate: clean deps
+generate:
 	go install github.com/golang/mock/mockgen@latest
 	go generate ./...
 
