@@ -1,4 +1,4 @@
-module github.com/tagatac/bagoup
+module github.com/tagatac/bagoup/v2
 
 go 1.20
 

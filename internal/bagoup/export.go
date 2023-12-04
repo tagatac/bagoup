@@ -8,7 +8,7 @@ import (
 
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
-	"github.com/tagatac/bagoup/chatdb"
+	"github.com/tagatac/bagoup/v2/chatdb"
 )
 
 func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {

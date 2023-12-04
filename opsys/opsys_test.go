@@ -16,8 +16,8 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/exectest"
-	"github.com/tagatac/bagoup/opsys/scall/mock_scall"
+	"github.com/tagatac/bagoup/v2/exectest"
+	"github.com/tagatac/bagoup/v2/opsys/scall/mock_scall"
 	"gotest.tools/v3/assert"
 )
 

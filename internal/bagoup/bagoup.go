@@ -16,9 +16,9 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
-	"github.com/tagatac/bagoup/chatdb"
-	"github.com/tagatac/bagoup/opsys"
-	"github.com/tagatac/bagoup/pathtools"
+	"github.com/tagatac/bagoup/v2/chatdb"
+	"github.com/tagatac/bagoup/v2/opsys"
+	"github.com/tagatac/bagoup/v2/pathtools"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate mockgen -destination=mock_pathtools/mock_pathtools.go github.com/tagatac/bagoup/pathtools PathTools
+//go:generate mockgen -destination=mock_pathtools/mock_pathtools.go github.com/tagatac/bagoup/v2/pathtools PathTools
 
 type (
 	PathTools interface {

@@ -20,13 +20,13 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/opsys/pdfgen"
-	"github.com/tagatac/bagoup/opsys/scall"
+	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
+	"github.com/tagatac/bagoup/v2/opsys/scall"
 	"github.com/tagatac/goheif/heic2jpg"
 	"github.com/tagatac/gorecurcopy"
 )
 
-//go:generate mockgen -destination=mock_opsys/mock_opsys.go github.com/tagatac/bagoup/opsys OS
+//go:generate mockgen -destination=mock_opsys/mock_opsys.go github.com/tagatac/bagoup/v2/opsys OS
 
 type (
 	// OS interacts with the local filesystem and operating system.

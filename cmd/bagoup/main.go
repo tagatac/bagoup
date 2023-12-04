@@ -29,11 +29,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/chatdb"
-	"github.com/tagatac/bagoup/internal/bagoup"
-	"github.com/tagatac/bagoup/opsys"
-	"github.com/tagatac/bagoup/opsys/scall"
-	"github.com/tagatac/bagoup/pathtools"
+	"github.com/tagatac/bagoup/v2/chatdb"
+	"github.com/tagatac/bagoup/v2/internal/bagoup"
+	"github.com/tagatac/bagoup/v2/opsys"
+	"github.com/tagatac/bagoup/v2/opsys/scall"
+	"github.com/tagatac/bagoup/v2/pathtools"
 )
 
 const _license = "Copyright (C) 2020-2023  David Tagatac <david@tagatac.net>\nSee the source for usage terms."

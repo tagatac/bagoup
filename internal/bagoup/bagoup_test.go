@@ -14,9 +14,9 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/chatdb/mock_chatdb"
-	"github.com/tagatac/bagoup/opsys/mock_opsys"
-	"github.com/tagatac/bagoup/pathtools/mock_pathtools"
+	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
+	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"
+	"github.com/tagatac/bagoup/v2/pathtools/mock_pathtools"
 	"gotest.tools/v3/assert"
 )
 

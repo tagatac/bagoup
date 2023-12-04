@@ -14,7 +14,7 @@ import (
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/opsys/pdfgen"
+	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 	"golang.org/x/net/html"
 )
 
@@ -39,7 +39,7 @@ var _embeddableImageTypes []string = []string{
 	".webp",
 }
 
-//go:generate mockgen -destination=mock_opsys/mock_outfile.go github.com/tagatac/bagoup/opsys OutFile
+//go:generate mockgen -destination=mock_opsys/mock_outfile.go github.com/tagatac/bagoup/v2/opsys OutFile
 
 type (
 	// Outfile represents single messages export file, either text or PDF.

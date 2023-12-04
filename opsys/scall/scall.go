@@ -5,7 +5,7 @@ package scall
 
 import "syscall"
 
-//go:generate mockgen -destination=mock_scall/mock_scall.go github.com/tagatac/bagoup/opsys/scall Syscall
+//go:generate mockgen -destination=mock_scall/mock_scall.go github.com/tagatac/bagoup/v2/opsys/scall Syscall
 
 type (
 	// Syscall is a thin wrapper on the standard syscall library.

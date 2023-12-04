@@ -12,9 +12,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/tagatac/bagoup/chatdb"
-	"github.com/tagatac/bagoup/opsys"
-	"github.com/tagatac/bagoup/opsys/pdfgen"
+	"github.com/tagatac/bagoup/v2/chatdb"
+	"github.com/tagatac/bagoup/v2/opsys"
+	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/tagatac/bagoup/pathtools"
+	"github.com/tagatac/bagoup/v2/pathtools"
 )
 
 // Attachment represents a row from the attachment table.

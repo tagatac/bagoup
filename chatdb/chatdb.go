@@ -17,7 +17,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
-	"github.com/tagatac/bagoup/pathtools"
+	"github.com/tagatac/bagoup/v2/pathtools"
 )
 
 const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issues"
@@ -27,7 +27,7 @@ var _modernVersion = semver.MustParse("10.13")
 
 const _modernVersionDateDivisor = 1_000_000_000
 
-//go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/chatdb ChatDB
+//go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/v2/chatdb ChatDB
 
 type (
 	// ChatDB extracts data from a Mac OS Messages database on disk.

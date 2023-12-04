@@ -10,9 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/opsys"
-	"github.com/tagatac/bagoup/opsys/pdfgen"
-	"github.com/tagatac/bagoup/opsys/scall"
+	"github.com/tagatac/bagoup/v2/opsys"
+	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
+	"github.com/tagatac/bagoup/v2/opsys/scall"
 )
 
 type parameters struct {

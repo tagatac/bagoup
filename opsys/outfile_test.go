@@ -10,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"github.com/tagatac/bagoup/opsys/pdfgen/mock_pdfgen"
+	"github.com/tagatac/bagoup/v2/opsys/pdfgen/mock_pdfgen"
 	"gotest.tools/v3/assert"
 )
 

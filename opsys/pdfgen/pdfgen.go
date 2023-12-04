@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-//go:generate mockgen -destination=mock_pdfgen/mock_pdfgen.go github.com/tagatac/bagoup/opsys/pdfgen PDFGenerator
+//go:generate mockgen -destination=mock_pdfgen/mock_pdfgen.go github.com/tagatac/bagoup/v2/opsys/pdfgen PDFGenerator
 
 type (
 	// PDFGenerator is a thin wrapper for the wkhtmltopdf.PDFGenerator struct.

@@ -8,7 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/pkg/errors"
-	"github.com/tagatac/bagoup/pathtools"
+	"github.com/tagatac/bagoup/v2/pathtools"
 	"gotest.tools/v3/assert"
 )
 
