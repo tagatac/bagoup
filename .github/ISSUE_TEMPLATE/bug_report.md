@@ -20,12 +20,16 @@ Steps to reproduce the behavior:
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
+**Observed behavior**
+A clear and concise description of what you observed to be different from what
+you expected.
+
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
 **Environment (please complete the following information):**
  - OS: [e.g. Mac OS 12.5]
- - Version [e.g. v2.0.4] (obtain with `bagoup --version`)
+ - Version: [e.g. v2.0.4] (obtain with `bagoup --version`)
 
 **Additional context**
 Add any other context about the problem here.
