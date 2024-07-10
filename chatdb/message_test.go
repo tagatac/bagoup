@@ -208,6 +208,27 @@ func TestGetMessage(t *testing.T) {
 			wantValid:   true,
 		},
 		{
+			msg: "Google 2FA code encoded in attributedBody",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, 10, nil, "", "2023-12-17 21:27:07")
+				query.WillReturnRows(rows)
+			},
+			ptsOutput: `G-123456{
+    "__kIMDataDetectedAttributeName" = {length = 537, bytes = 0x62706c69 73743030 d4010203 04050607 ... 00000000 00000185 };
+    "__kIMMessagePartAttributeName" = 0;
+    "__kIMOneTimeCodeAttributeName" =     {
+        code = 123456;
+        displayCode = "G-123456";
+    };
+} is your Google verification code.{
+    "__kIMMessagePartAttributeName" = 0;
+}
+`,
+			wantMessage: "[2023-12-17 21:27:07] testhandle1: G-123456 is your Google verification code.\n",
+			wantValid:   true,
+		},
+		{
 			msg: "DB error",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				query.WillReturnError(errors.New("this is a DB error"))
