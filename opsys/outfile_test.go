@@ -103,7 +103,7 @@ func TestPDFFile(t *testing.T) {
                 vertical-align: -0.1em;
             }
         </style>
-        <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
         <script>window.onload = function () { twemoji.parse(document.body); }</script>
 
     </head>
@@ -156,7 +156,7 @@ func TestPDFFile(t *testing.T) {
                 vertical-align: -0.1em;
             }
         </style>
-        <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
         <script>window.onload = function () { twemoji.parse(document.body); }</script>
 
     </head>
