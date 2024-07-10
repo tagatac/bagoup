@@ -16,7 +16,7 @@ import (
 
 var (
 	_TypedStreamAttributeRE          = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = ([^\n]+);\n\}?`)
-	_TypedStreamMultilineAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = {5}\{\n( {8}[[:alpha:]]+ = \d+;\n)+ {4}\};\n\}?`)
+	_TypedStreamMultilineAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = {5}\{\n( {8}[[:alpha:]]+ = [\w-"]+;\n)+ {4}\};\n\}?`)
 )
 
 // DatedMessageID pairs a message ID and its date, in the legacy date format.
