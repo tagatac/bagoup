@@ -2,7 +2,6 @@ COVERAGE_FILE=coverage.out
 BAGOUP_VERSION?=$(shell git describe --tags | sed 's/^v//g')
 OS=$(shell uname -s)
 HW=$(shell uname -m)
-ZIPFILE="bagoup-$(BAGOUP_VERSION)-$(OS)-$(HW).zip"
 
 SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_*.go')
 TEMPLATES=$(shell find . -type f -name '*.tmpl')
@@ -25,7 +24,7 @@ bin/bagoup: $(SRC) $(TEMPLATES) download
 	mkdir -vp bin
 	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
 
-.PHONY: deps download from-archive generate test zip clean
+.PHONY: deps download from-archive generate test clean
 
 deps:
 	go get -u -v ./...
@@ -49,11 +48,7 @@ test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
 	go tool cover -func=$(COVERAGE_FILE)
 
-zip: build
-	zip --recurse-paths $(ZIPFILE) bin
-
 clean:
 	rm -vrf \
 	bin \
-	$(COVERAGE_FILE) \
-	$(ZIPFILE)
+	$(COVERAGE_FILE)
