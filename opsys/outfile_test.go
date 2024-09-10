@@ -47,9 +47,11 @@ func TestTxtFile(t *testing.T) {
 	assert.Equal(t, false, embedded)
 
 	// Stage (no-op) and close the text file
-	imgCount, err := rwOF.Flush()
+	imgCount, err := rwOF.Stage()
 	assert.NilError(t, err)
 	assert.Equal(t, imgCount, 0)
+	err = rwOF.Flush()
+	assert.NilError(t, err)
 
 	// Check file contents
 	contents, err := afero.ReadFile(rwFS, "testfile.txt")
@@ -65,7 +67,8 @@ func TestPDFFile(t *testing.T) {
 		setupMock    func(*mock_pdfgen.MockPDFGenerator)
 		wantHTML     template.HTML
 		wantImgCount int
-		wantErr      string
+		wantStageErr string
+		wantFlushErr string
 	}{
 		{
 			msg: "happy",
@@ -175,12 +178,12 @@ func TestPDFFile(t *testing.T) {
 		{
 			msg:          "bad template path",
 			templatePath: "invalid template path",
-			wantErr:      "parse HTML template: template: pattern matches no files: `invalid template path`",
+			wantStageErr: "parse HTML template: template: pattern matches no files: `invalid template path`",
 		},
 		{
 			msg:          "invalid tamplate",
 			templatePath: "testdata/outfile_html_invalid.tmpl",
-			wantErr:      `execute HTML template: template: outfile_html_invalid.tmpl:1:2: executing "outfile_html_invalid.tmpl" at <.InvalidReference>: can't evaluate field InvalidReference in type opsys.htmlFileData`,
+			wantStageErr: `execute HTML template: template: outfile_html_invalid.tmpl:1:2: executing "outfile_html_invalid.tmpl" at <.InvalidReference>: can't evaluate field InvalidReference in type opsys.htmlFileData`,
 		},
 		{
 			msg: "PDF creation error",
@@ -190,7 +193,50 @@ func TestPDFFile(t *testing.T) {
 					pMock.EXPECT().Create().Return(errors.New("this is a PDF creation error")),
 				)
 			},
-			wantErr: "write out PDF: this is a PDF creation error",
+			wantHTML: template.HTML(
+				`
+
+<!doctype html>
+<html>
+    <head>
+        <title>testfile</title>
+        <meta charset="utf-8">
+
+        <style>
+            body {
+                word-wrap: break-word;
+            }
+            img {
+                max-width: 875px;
+                max-height: 1300px;
+            }
+        </style>
+
+        
+        <style>
+            img.emoji {
+                height: 1em;
+                width: 1em;
+                margin: 0 .05em 0 .1em;
+                vertical-align: -0.1em;
+            }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+        <script>window.onload = function () { twemoji.parse(document.body); }</script>
+
+    </head>
+    <body>
+        test message<br/>
+        <img src="tennisballs.jpeg" alt="tennisballs.jpeg"/><br/>
+        <em>&lt;attached: video.mov&gt;</em><br/>
+        <em>&lt;attached: signallogo.pluginPayloadAttachment&gt;</em><br/>
+        
+    </body>
+</html>
+`,
+			),
+			wantImgCount: 1,
+			wantFlushErr: "this is a PDF creation error",
 		},
 	}
 
@@ -230,14 +276,22 @@ func TestPDFFile(t *testing.T) {
 			assert.Equal(t, tt.includePPA, embedded)
 
 			// Stage the PDF
-			imgCount, err := of.Flush()
-			if tt.wantErr != "" {
-				assert.Error(t, err, tt.wantErr)
+			imgCount, err := of.Stage()
+			if tt.wantStageErr != "" {
+				assert.Error(t, err, tt.wantStageErr)
 				return
 			}
 			assert.NilError(t, err)
 			assert.Equal(t, tt.wantImgCount, imgCount)
-			assert.Equal(t, pdf.html, tt.wantHTML)
+			assert.Equal(t, template.HTML(pdf.buf.String()), tt.wantHTML)
+
+			// Flush the PDF
+			err = of.Flush()
+			if tt.wantFlushErr != "" {
+				assert.Error(t, err, tt.wantFlushErr)
+				return
+			}
+			assert.NilError(t, err)
 		})
 	}
 }
