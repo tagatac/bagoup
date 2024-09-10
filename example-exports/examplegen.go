@@ -80,8 +80,11 @@ func main() {
 				log.Panic(errors.Wrapf(err, "write message %q", msg))
 			}
 		}
-		if _, err := of.Flush(); err != nil {
+		if _, err := of.Stage(); err != nil {
 			log.Panic(errors.Wrap(err, "stage outfile"))
+		}
+		if err := of.Flush(); err != nil {
+			log.Panic(errors.Wrap(err, "flush outfile"))
 		}
 	}
 }

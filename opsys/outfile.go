@@ -55,9 +55,11 @@ type (
 		WriteAttachment(attPath string) (bool, error)
 		// ReferenceAttachment adds a reference to the given filename in the Outfile.
 		ReferenceAttachment(filename string) error
-		// Flush flushes the contents of an OutFile to disk, and returns the
-		// number of images embedded in the OutFile.
-		Flush() (int, error)
+		// Stage prepares the OutFile for flushing to disk, and returns the number
+		// of images embedded in the OutFile.
+		Stage() (int, error)
+		// Flush flushes the contents of an OutFile to disk.
+		Flush() error
 	}
 )
 
@@ -82,8 +84,12 @@ func (f txtFile) ReferenceAttachment(filename string) error {
 	return f.WriteMessage(fmt.Sprintf("<attached: %s>\n", filename))
 }
 
-func (f txtFile) Flush() (int, error) {
+func (f txtFile) Stage() (int, error) {
 	return 0, nil
+}
+
+func (f txtFile) Flush() error {
+	return nil
 }
 
 type (
@@ -93,7 +99,7 @@ type (
 		contents             htmlFileData
 		embeddableImageTypes []string
 		templatePath         string
-		html                 template.HTML
+		buf                  bytes.Buffer
 	}
 
 	htmlFileData struct {
@@ -158,21 +164,21 @@ func (f *pdfFile) ReferenceAttachment(filename string) error {
 	return nil
 }
 
-func (f *pdfFile) Flush() (int, error) {
+func (f *pdfFile) Stage() (int, error) {
 	tmpl, err := template.ParseFS(_embedFS, f.templatePath)
 	if err != nil {
 		return 0, errors.Wrap(err, "parse HTML template")
 	}
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, f.contents); err != nil {
+	if err := tmpl.Execute(&f.buf, f.contents); err != nil {
 		return 0, errors.Wrap(err, "execute HTML template")
 	}
-	f.html = template.HTML(buf.String())
-	page := wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
+	htmlStr := template.HTML(f.buf.String())
+	return strings.Count(string(htmlStr), "<img"), nil
+}
+
+func (f *pdfFile) Flush() error {
+	page := wkhtmltopdf.NewPageReader(bytes.NewReader(f.buf.Bytes()))
 	page.EnableLocalFileAccess.Set(true)
 	f.PDFGenerator.AddPage(page)
-	if err := f.PDFGenerator.Create(); err != nil {
-		return 0, errors.Wrap(err, "write out PDF")
-	}
-	return strings.Count(string(f.html), "<img"), nil
+	return f.PDFGenerator.Create()
 }
