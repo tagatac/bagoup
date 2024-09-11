@@ -35,11 +35,3 @@ func NewPDFGenerator(chatFile afero.File) (PDFGenerator, error) {
 	pdfg.SetOutput(chatFile)
 	return pdfGenerator{PDFGenerator: pdfg}, nil
 }
-
-func (g pdfGenerator) AddPage(p wkhtmltopdf.PageProvider) {
-	g.PDFGenerator.AddPage(p)
-}
-
-func (g pdfGenerator) Create() error {
-	return g.PDFGenerator.Create()
-}
