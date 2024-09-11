@@ -12,7 +12,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.23
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.11.0
-	github.com/tagatac/goheif v0.0.0-20231114190950-071c07ac44c7
+	github.com/tagatac/goheif v0.0.0-20240911013117-7664771f24c3
 	github.com/tagatac/gorecurcopy v1.0.1
 	golang.org/x/net v0.29.0
 	gotest.tools/v3 v3.0.2
