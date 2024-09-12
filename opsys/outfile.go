@@ -19,7 +19,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-//go:embed templates/* all:testdata/**
+//go:embed templates/* all:testdata/*
 var _embedFS embed.FS
 
 // Embeddable image types copied from

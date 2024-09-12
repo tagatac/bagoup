@@ -234,7 +234,7 @@ func TestPDFFile(t *testing.T) {
 			wantStageErr: "parse HTML template: template: pattern matches no files: `invalid template path`",
 		},
 		{
-			msg:          "invalid tamplate",
+			msg:          "invalid template",
 			templatePath: "testdata/outfile_html_invalid.tmpl",
 			wantStageErr: `execute HTML template: template: outfile_html_invalid.tmpl:1:2: executing "outfile_html_invalid.tmpl" at <.InvalidReference>: can't evaluate field InvalidReference in type opsys.htmlFileData`,
 		},
