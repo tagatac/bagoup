@@ -38,10 +38,7 @@ func main() {
 		{isPDF: false, exportPath: "messages-export"},
 		{isPDF: true, exportPath: "messages-export-pdf"},
 	}
-	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat)
-	if err != nil {
-		log.Panic(errors.Wrap(err, "instantiate OS"))
-	}
+	s := opsys.NewOS(afero.NewOsFs(), os.Stat)
 	for _, params := range runs {
 		chatPath := filepath.Join(params.exportPath, "Novak Djokovic")
 		if err := s.MkdirAll(chatPath, os.ModePerm); err != nil {

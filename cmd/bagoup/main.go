@@ -56,8 +56,7 @@ func main() {
 	logFatalOnErr(errors.Wrap(err, "create pathtools"))
 	opts.DBPath = ptools.ReplaceTilde(opts.DBPath)
 
-	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat)
-	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
+	s := opsys.NewOS(afero.NewOsFs(), os.Stat)
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
 	defer db.Close()

@@ -57,9 +57,8 @@ func TestFileAccess(t *testing.T) {
 			if tt.setupFS != nil {
 				tt.setupFS(fs)
 			}
-			s, err := NewOS(fs, nil)
-			assert.NilError(t, err)
-			err = s.FileAccess("testfile")
+			s := NewOS(fs, nil)
+			err := s.FileAccess("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
@@ -96,8 +95,7 @@ func TestFileExist(t *testing.T) {
 			osStat := func(string) (os.FileInfo, error) {
 				return nil, tt.err
 			}
-			s, err := NewOS(nil, osStat)
-			assert.NilError(t, err)
+			s := NewOS(nil, osStat)
 			exist, err := s.FileExist("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -283,8 +281,7 @@ END:VCARD
 			if tt.setupFs != nil {
 				tt.setupFs(fs)
 			}
-			s, err := NewOS(fs, nil)
-			assert.NilError(t, err)
+			s := NewOS(fs, nil)
 			contactMap, err := s.GetContactMap("contacts.vcf")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -326,17 +323,15 @@ func TestReadFile(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		data := []byte("test file contents\n")
 		assert.NilError(t, afero.WriteFile(fs, "testfile", data, os.ModePerm))
-		testOS, err := NewOS(fs, nil)
-		assert.NilError(t, err)
+		testOS := NewOS(fs, nil)
 		contents, err := testOS.ReadFile("testfile")
 		assert.NilError(t, err)
 		assert.Equal(t, contents, string(data))
 	})
 
 	t.Run("read failure", func(t *testing.T) {
-		testOS, err := NewOS(afero.NewMemMapFs(), nil)
-		assert.NilError(t, err)
-		_, err = testOS.ReadFile("nonexistentfile")
+		testOS := NewOS(afero.NewMemMapFs(), nil)
+		_, err := testOS.ReadFile("nonexistentfile")
 		assert.Error(t, err, "open nonexistentfile: file does not exist")
 	})
 }
@@ -458,8 +453,7 @@ func TestCopyFile(t *testing.T) {
 					return nil, errors.New("this is a stat error")
 				}
 			}
-			s, err := NewOS(fs, stat)
-			assert.NilError(t, err)
+			s := NewOS(fs, stat)
 			dstPath, err := s.CopyFile("testfile.txt", "destinationdir", tt.unique)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)

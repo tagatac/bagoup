@@ -81,14 +81,14 @@ type (
 )
 
 // NewOS returns an OS from a given filesystem, os Stat, and exec Command.
-func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error)) (OS, error) {
+func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error)) OS {
 	return &opSys{
 		Fs:          fs,
 		Converter:   heic2jpg.NewConverter(),
 		osStat:      osStat,
 		execCommand: exec.Command,
 		Syscall:     scall.NewSyscall(),
-	}, nil
+	}
 }
 
 func (s opSys) FileAccess(fp string) error {
