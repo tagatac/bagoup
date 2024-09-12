@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -180,11 +181,9 @@ func (cfg *configuration) validatePaths() error {
 }
 
 func printResults(version, exportPath string, c counts, duration time.Duration) {
-	attCpString := makeAttachmentsString(c.attachmentsCopied)
-	attString := makeAttachmentsString(c.attachments)
-	attEmbdString := makeAttachmentsString(c.attachmentsEmbedded)
 	log.Printf(`%sBAGOUP RESULTS:
 bagoup version: %s
+Invocation: %s
 Export folder: %q
 Export files written: %d
 Chats exported: %d
@@ -199,14 +198,15 @@ HEIC conversions failed (see warnings above): %d
 Time elapsed: %s%s`,
 		"\x1b[1m",
 		version,
+		strings.Join(os.Args, " "),
 		exportPath,
 		c.files,
 		c.chats,
 		c.messages,
 		c.messagesInvalid,
-		attCpString,
-		attString,
-		attEmbdString,
+		makeAttachmentsString(c.attachmentsCopied),
+		makeAttachmentsString(c.attachments),
+		makeAttachmentsString(c.attachmentsEmbedded),
 		c.attachmentsMissing,
 		c.conversions,
 		c.conversionsFailed,
