@@ -29,7 +29,7 @@ const (
 //
 //	func TestApp(t *testing.T) {
 //	  ...
-//	  mockCommand := exectest.GenFakeExecCommand("TestRunExecCommand", "mock output", "mock error", 1)
+//	  mockCommand := exectest.GenFakeExecCommand("TestRunExecCmd", "mock output", "mock error", 1)
 //	  mockCmd := mockCommand.Cmd("/opt/app/bin/app")
 //	  ...
 //	  mockCmd.Run()
