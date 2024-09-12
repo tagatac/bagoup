@@ -15,11 +15,11 @@ require (
 	github.com/tagatac/goheif v0.0.0-20240911013117-7664771f24c3
 	github.com/tagatac/gorecurcopy v1.0.1
 	golang.org/x/net v0.29.0
-	gotest.tools/v3 v3.0.2
+	gotest.tools/v3 v3.5.1
 )
 
 require (
-	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 )
