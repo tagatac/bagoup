@@ -239,6 +239,8 @@ func (s *opSys) GetOpenFilesLimit() (int, error) {
 	if s.openFilesLimitSoft > 0 {
 		return s.openFilesLimitSoft, nil
 	}
+	// Get the soft limit from the ulimit command because the soft limit from the
+	// syscall does not apply to subprocesses.
 	cmd := s.execCommand("ulimit", "-n")
 	o, err := cmd.Output()
 	if err != nil {

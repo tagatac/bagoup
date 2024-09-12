@@ -275,6 +275,32 @@ func TestWriteFile(t *testing.T) {
 			wantErr: `stage chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf" for writing: this is a staging error`,
 		},
 		{
+			msg: "get open files limit fails",
+			pdf: true,
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
+				gomock.InOrder(
+					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
+					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
+					ofMock.EXPECT().WriteMessage("message1"),
+					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
+					ofMock.EXPECT().WriteMessage("message2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment1.heic").Return("attachment1.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.jpeg"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
+					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
+					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
+					ofMock.EXPECT().Stage().Return(500, nil),
+					osMock.EXPECT().GetOpenFilesLimit().Return(0, errors.New("this is a ulimit error")),
+				)
+			},
+			wantErr: `this is a ulimit error`,
+		},
+		{
 			msg: "open files limit increase fails",
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {

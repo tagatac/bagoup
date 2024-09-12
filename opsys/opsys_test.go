@@ -57,8 +57,9 @@ func TestFileAccess(t *testing.T) {
 			if tt.setupFS != nil {
 				tt.setupFS(fs)
 			}
-			s := &opSys{Fs: fs}
-			err := s.FileAccess("testfile")
+			s, err := NewOS(fs, nil)
+			assert.NilError(t, err)
+			err = s.FileAccess("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
@@ -95,7 +96,8 @@ func TestFileExist(t *testing.T) {
 			osStat := func(string) (os.FileInfo, error) {
 				return nil, tt.err
 			}
-			s := &opSys{osStat: osStat}
+			s, err := NewOS(nil, osStat)
+			assert.NilError(t, err)
 			exist, err := s.FileExist("testfile")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -149,8 +151,6 @@ func TestGetMacOSVersion(t *testing.T) {
 		})
 	}
 }
-
-func TestRunExecCmd(t *testing.T) { exectest.RunExecCmd() }
 
 func TestGetContactMap(t *testing.T) {
 	tagCard := &vcard.Card{
@@ -283,7 +283,8 @@ END:VCARD
 			if tt.setupFs != nil {
 				tt.setupFs(fs)
 			}
-			s := &opSys{Fs: fs}
+			s, err := NewOS(fs, nil)
+			assert.NilError(t, err)
 			contactMap, err := s.GetContactMap("contacts.vcf")
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -325,15 +326,17 @@ func TestReadFile(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		data := []byte("test file contents\n")
 		assert.NilError(t, afero.WriteFile(fs, "testfile", data, os.ModePerm))
-		testOS := opSys{Fs: fs}
+		testOS, err := NewOS(fs, nil)
+		assert.NilError(t, err)
 		contents, err := testOS.ReadFile("testfile")
 		assert.NilError(t, err)
 		assert.Equal(t, contents, string(data))
 	})
 
 	t.Run("read failure", func(t *testing.T) {
-		testOS := opSys{Fs: afero.NewMemMapFs()}
-		_, err := testOS.ReadFile("nonexistentfile")
+		testOS, err := NewOS(afero.NewMemMapFs(), nil)
+		assert.NilError(t, err)
+		_, err = testOS.ReadFile("nonexistentfile")
 		assert.Error(t, err, "open nonexistentfile: file does not exist")
 	})
 }
@@ -455,7 +458,8 @@ func TestCopyFile(t *testing.T) {
 					return nil, errors.New("this is a stat error")
 				}
 			}
-			s := &opSys{Fs: fs, osStat: stat}
+			s, err := NewOS(fs, stat)
+			assert.NilError(t, err)
 			dstPath, err := s.CopyFile("testfile.txt", "destinationdir", tt.unique)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
@@ -705,3 +709,5 @@ func TestSetOpenFilesLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestRunExecCmd(t *testing.T) { exectest.RunExecCmd() }
