@@ -54,7 +54,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush(),
 				)
 			},
@@ -81,7 +81,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush(),
 				)
 			},
@@ -110,7 +110,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage().Return(500, nil),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					osMock.EXPECT().SetOpenFilesLimit(1000),
 					ofMock.EXPECT().Flush(),
 				)
@@ -140,7 +140,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush(),
 				)
 			},
@@ -170,7 +170,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush(),
 				)
 			},
@@ -275,6 +275,32 @@ func TestWriteFile(t *testing.T) {
 			wantErr: `stage chat file "messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf" for writing: this is a staging error`,
 		},
 		{
+			msg: "get open files limit fails",
+			pdf: true,
+			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
+				gomock.InOrder(
+					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
+					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
+					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
+					ofMock.EXPECT().WriteMessage("message1"),
+					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
+					ofMock.EXPECT().WriteMessage("message2"),
+					osMock.EXPECT().FileExist("attachment1.heic").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment1.heic").Return("attachment1.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment1.jpeg"),
+					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
+					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
+					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
+					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
+					ofMock.EXPECT().Stage().Return(500, nil),
+					osMock.EXPECT().GetOpenFilesLimit().Return(0, errors.New("this is a ulimit error")),
+				)
+			},
+			wantErr: `this is a ulimit error`,
+		},
+		{
 			msg: "open files limit increase fails",
 			pdf: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMock *mock_opsys.MockOutFile) {
@@ -295,7 +321,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage().Return(500, nil),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					osMock.EXPECT().SetOpenFilesLimit(1000).Return(errors.New("this is a syscall error")),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 				)
@@ -323,7 +349,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush().Return(errors.New("this is a flush error")),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 				)
@@ -349,7 +375,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush(),
 				)
 			},
@@ -456,7 +482,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush(),
 				)
 			},
@@ -501,7 +527,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.txt"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
-					osMock.EXPECT().GetOpenFilesLimit().Return(256),
+					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMock.EXPECT().Flush(),
 				)
 			},
@@ -575,7 +601,7 @@ func TestWriteFile(t *testing.T) {
 			osMock.EXPECT().Create("friend/iMessage;-;heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress@gmail.c.txt").Return(chatFile, nil),
 			osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMock),
 			ofMock.EXPECT().Stage(),
-			osMock.EXPECT().GetOpenFilesLimit().Return(256),
+			osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 			ofMock.EXPECT().Flush(),
 		)
 
@@ -617,7 +643,7 @@ func TestWriteFile(t *testing.T) {
 		mockCalls = append(
 			mockCalls,
 			ofMock1.EXPECT().Stage(),
-			osMock.EXPECT().GetOpenFilesLimit().Return(256),
+			osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 			ofMock1.EXPECT().Flush(),
 			osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com.2.pdf").Return(chatFile2, nil),
 			osMock.EXPECT().NewPDFOutFile(chatFile2, gomock.Any(), false).Return(ofMock2),
@@ -634,7 +660,7 @@ func TestWriteFile(t *testing.T) {
 		mockCalls = append(
 			mockCalls,
 			ofMock2.EXPECT().Stage(),
-			osMock.EXPECT().GetOpenFilesLimit().Return(256),
+			osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 			ofMock2.EXPECT().Flush(),
 		)
 		gomock.InOrder(mockCalls...)

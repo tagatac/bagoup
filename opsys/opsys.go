@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"unicode"
@@ -54,7 +55,7 @@ type (
 		// staging converted images for inclusion in PDF files.
 		RmTempDir() error
 		// GetOpenFilesLimit gets the current limit on the number of open files.
-		GetOpenFilesLimit() int
+		GetOpenFilesLimit() (int, error)
 		// SetOpenFilesLimit sets the open files limit to the given value to
 		// accommodate wkhtmltopdf:
 		// https://github.com/wkhtmltopdf/wkhtmltopdf/issues/3081#issue-172083214
@@ -80,19 +81,13 @@ type (
 )
 
 // NewOS returns an OS from a given filesystem, os Stat, and exec Command.
-func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), sc scall.Syscall) (OS, error) {
-	var openFilesLimit syscall.Rlimit
-	if err := sc.Getrlimit(syscall.RLIMIT_NOFILE, &openFilesLimit); err != nil {
-		return nil, errors.Wrap(err, "check file count limit")
-	}
+func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error)) (OS, error) {
 	return &opSys{
-		Fs:                 fs,
-		Converter:          heic2jpg.NewConverter(),
-		osStat:             osStat,
-		execCommand:        exec.Command,
-		Syscall:            sc,
-		openFilesLimitHard: openFilesLimit.Max,
-		openFilesLimitSoft: int(openFilesLimit.Cur),
+		Fs:          fs,
+		Converter:   heic2jpg.NewConverter(),
+		osStat:      osStat,
+		execCommand: exec.Command,
+		Syscall:     scall.NewSyscall(),
 	}, nil
 }
 
@@ -240,8 +235,28 @@ func (s *opSys) RmTempDir() error {
 	return nil
 }
 
-func (s opSys) GetOpenFilesLimit() int {
-	return int(s.openFilesLimitSoft)
+func (s *opSys) GetOpenFilesLimit() (int, error) {
+	if s.openFilesLimitSoft > 0 {
+		return s.openFilesLimitSoft, nil
+	}
+	// Get the soft limit from the ulimit command because the soft limit from the
+	// syscall does not apply to subprocesses.
+	cmd := s.execCommand("ulimit", "-n")
+	o, err := cmd.Output()
+	if err != nil {
+		return 0, errors.Wrap(err, "call ulimit")
+	}
+	softLimit, err := strconv.Atoi(strings.TrimSuffix(string(o), "\n"))
+	if err != nil {
+		return 0, errors.Wrap(err, "parse open files soft limit")
+	}
+	s.openFilesLimitSoft = softLimit
+	var openFilesLimit syscall.Rlimit
+	if err := s.Syscall.Getrlimit(syscall.RLIMIT_NOFILE, &openFilesLimit); err != nil {
+		return 0, errors.Wrap(err, "get open files hard limit")
+	}
+	s.openFilesLimitHard = openFilesLimit.Max
+	return s.openFilesLimitSoft, nil
 }
 
 func (s *opSys) SetOpenFilesLimit(n int) error {

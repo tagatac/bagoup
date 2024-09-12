@@ -32,7 +32,6 @@ import (
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/internal/bagoup"
 	"github.com/tagatac/bagoup/v2/opsys"
-	"github.com/tagatac/bagoup/v2/opsys/scall"
 	"github.com/tagatac/bagoup/v2/pathtools"
 )
 
@@ -57,7 +56,7 @@ func main() {
 	logFatalOnErr(errors.Wrap(err, "create pathtools"))
 	opts.DBPath = ptools.ReplaceTilde(opts.DBPath)
 
-	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, scall.NewSyscall())
+	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat)
 	logFatalOnErr(errors.Wrap(err, "instantiate OS"))
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
