@@ -300,8 +300,8 @@ func TestGetMessage(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, tt.wantValid, ok)
-			assert.Equal(t, tt.wantMessage, message)
+			assert.Equal(t, ok, tt.wantValid)
+			assert.Equal(t, message, tt.wantMessage)
 		})
 	}
 }

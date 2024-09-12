@@ -582,12 +582,12 @@ func TestWriteFile(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, 2-tt.wantInvalid, cfg.counts.messages)
-			assert.Equal(t, tt.wantInvalid, cfg.counts.messagesInvalid)
-			assert.Equal(t, tt.wantJPGs, cfg.counts.attachments["image/jpeg"])
-			assert.Equal(t, tt.wantEmbedded, cfg.counts.attachmentsEmbedded["image/jpeg"])
-			assert.Equal(t, tt.wantConv, cfg.counts.conversions)
-			assert.Equal(t, tt.wantConvFail, cfg.counts.conversionsFailed)
+			assert.Equal(t, cfg.counts.messages, 2-tt.wantInvalid)
+			assert.Equal(t, cfg.counts.messagesInvalid, tt.wantInvalid)
+			assert.Equal(t, cfg.counts.attachments["image/jpeg"], tt.wantJPGs)
+			assert.Equal(t, cfg.counts.attachmentsEmbedded["image/jpeg"], tt.wantEmbedded)
+			assert.Equal(t, cfg.counts.conversions, tt.wantConv)
+			assert.Equal(t, cfg.counts.conversionsFailed, tt.wantConvFail)
 		})
 	}
 
@@ -686,11 +686,11 @@ func TestWriteFile(t *testing.T) {
 			msgs,
 		)
 		assert.NilError(t, err)
-		assert.Equal(t, 4000, cfg.counts.messages)
-		assert.Equal(t, 0, cfg.counts.messagesInvalid)
-		assert.Equal(t, 0, len(cfg.counts.attachments))
-		assert.Equal(t, 0, len(cfg.counts.attachmentsEmbedded))
-		assert.Equal(t, 0, cfg.counts.conversions)
-		assert.Equal(t, 0, cfg.counts.conversionsFailed)
+		assert.Equal(t, cfg.counts.messages, 4000)
+		assert.Equal(t, cfg.counts.messagesInvalid, 0)
+		assert.Equal(t, len(cfg.counts.attachments), 0)
+		assert.Equal(t, len(cfg.counts.attachmentsEmbedded), 0)
+		assert.Equal(t, cfg.counts.conversions, 0)
+		assert.Equal(t, cfg.counts.conversionsFailed, 0)
 	})
 }

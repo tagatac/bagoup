@@ -41,10 +41,10 @@ func TestTxtFile(t *testing.T) {
 	// Write attachment
 	embedded, err := rwOF.WriteAttachment("tennisballs.jpeg")
 	assert.NilError(t, err)
-	assert.Equal(t, false, embedded)
+	assert.Equal(t, embedded, false)
 	embedded, err = roOF.WriteAttachment("tennisballs.jpeg")
 	assert.Error(t, err, "write testfile.txt: file handle is read only")
-	assert.Equal(t, false, embedded)
+	assert.Equal(t, embedded, false)
 
 	// Stage (no-op) and close the text file
 	imgCount, err := rwOF.Stage()
@@ -253,7 +253,7 @@ func TestPDFFile(t *testing.T) {
 			}
 			of := opSys{}.NewPDFOutFile(chatFile, pMock, tt.includePPA)
 			pdf, ok := of.(*pdfFile)
-			assert.Equal(t, true, ok)
+			assert.Equal(t, ok, true)
 			if tt.templatePath != "" {
 				pdf.templatePath = tt.templatePath
 			}
@@ -267,13 +267,13 @@ func TestPDFFile(t *testing.T) {
 			// Write attachments
 			embedded, err := of.WriteAttachment("tennisballs.jpeg")
 			assert.NilError(t, err)
-			assert.Equal(t, true, embedded)
+			assert.Equal(t, embedded, true)
 			embedded, err = of.WriteAttachment("video.mov")
 			assert.NilError(t, err)
-			assert.Equal(t, false, embedded)
+			assert.Equal(t, embedded, false)
 			embedded, err = of.WriteAttachment("signallogo.pluginPayloadAttachment")
 			assert.NilError(t, err)
-			assert.Equal(t, tt.includePPA, embedded)
+			assert.Equal(t, embedded, tt.includePPA)
 
 			// Stage the PDF
 			imgCount, err := of.Stage()
@@ -282,7 +282,7 @@ func TestPDFFile(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, tt.wantImgCount, imgCount)
+			assert.Equal(t, imgCount, tt.wantImgCount)
 			assert.Equal(t, template.HTML(pdf.buf.String()), tt.wantHTML)
 
 			// Flush the PDF

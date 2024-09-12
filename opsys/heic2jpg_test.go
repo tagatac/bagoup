@@ -84,7 +84,7 @@ func TestHEIC2JPG(t *testing.T) {
 			}
 			assert.NilError(t, err)
 			if tt.wantName != "" {
-				assert.Equal(t, tt.wantName, converted)
+				assert.Equal(t, converted, tt.wantName)
 			}
 		})
 	}

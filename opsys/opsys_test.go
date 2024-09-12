@@ -102,7 +102,7 @@ func TestFileExist(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, tt.wantExist, exist)
+			assert.Equal(t, exist, tt.wantExist)
 		})
 	}
 }
@@ -313,7 +313,7 @@ func TestSanitizePhone(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			assert.Equal(t, tt.clean, sanitizePhone(tt.dirty))
+			assert.Equal(t, sanitizePhone(tt.dirty), tt.clean)
 		})
 	}
 }
@@ -510,7 +510,7 @@ func TestGetTempDir(t *testing.T) {
 			}
 			assert.NilError(t, err)
 			if tt.wantTempDir != "" {
-				assert.Equal(t, tt.wantTempDir, tempDir)
+				assert.Equal(t, tempDir, tt.wantTempDir)
 				return
 			}
 			prefix := filepath.Join(afero.GetTempDir(fs, ""), "bagoup")
@@ -558,7 +558,7 @@ func TestRmTempDir(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, "", s.tempDir)
+			assert.Equal(t, s.tempDir, "")
 		})
 	}
 }
@@ -635,9 +635,9 @@ func TestGetOpenFilesLimit(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, tt.wantSoftLimit, limit)
-			assert.Equal(t, tt.wantSoftLimit, s.openFilesLimitSoft)
-			assert.Equal(t, tt.wantHardLimit, s.openFilesLimitHard)
+			assert.Equal(t, limit, tt.wantSoftLimit)
+			assert.Equal(t, s.openFilesLimitSoft, tt.wantSoftLimit)
+			assert.Equal(t, s.openFilesLimitHard, tt.wantHardLimit)
 		})
 	}
 }
@@ -653,8 +653,8 @@ func TestSetOpenFilesLimit(t *testing.T) {
 			msg: "happy",
 			setupMock: func(scMock *mock_scall.MockSyscall) {
 				scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
-					assert.Equal(t, uint64(512), lim.Cur)
-					assert.Equal(t, uint64(math.MaxInt64), lim.Max)
+					assert.Equal(t, lim.Cur, uint64(512))
+					assert.Equal(t, lim.Max, uint64(math.MaxInt64))
 				})
 			},
 		},
@@ -667,8 +667,8 @@ func TestSetOpenFilesLimit(t *testing.T) {
 			msg: "error setting limit",
 			setupMock: func(scMock *mock_scall.MockSyscall) {
 				scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).DoAndReturn(func(_ int, lim *syscall.Rlimit) error {
-					assert.Equal(t, uint64(512), lim.Cur)
-					assert.Equal(t, uint64(math.MaxInt64), lim.Max)
+					assert.Equal(t, lim.Cur, uint64(512))
+					assert.Equal(t, lim.Max, uint64(math.MaxInt64))
 					return errors.New("this is a syscall error")
 				})
 			},
@@ -698,7 +698,7 @@ func TestSetOpenFilesLimit(t *testing.T) {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, 512, s.openFilesLimitSoft)
+			assert.Equal(t, s.openFilesLimitSoft, 512)
 			assert.NilError(t, err)
 		})
 	}

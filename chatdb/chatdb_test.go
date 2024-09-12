@@ -83,8 +83,8 @@ func TestInit(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, tt.wantDivisor, cdb.dateDivisor)
-			assert.Equal(t, tt.wantJoinHasDates, cdb.cmJoinHasDates)
+			assert.Equal(t, cdb.dateDivisor, tt.wantDivisor)
+			assert.Equal(t, cdb.cmJoinHasDates, tt.wantJoinHasDates)
 		})
 	}
 }
