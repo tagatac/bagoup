@@ -3,7 +3,7 @@ module github.com/tagatac/bagoup/v2
 go 1.20
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.4.1
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/Masterminds/semver v1.5.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/emersion/go-vcard v0.0.0-20230815062825-8fda7d206ec9
@@ -19,7 +19,7 @@ require (
 )
 
 require (
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 )

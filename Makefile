@@ -27,7 +27,7 @@ bin/bagoup: $(SRC) $(TEMPLATES) download
 .PHONY: deps download from-archive generate test clean
 
 deps:
-	go get -u -v ./...
+	go get -u -t -v ./...
 	go mod tidy -v
 
 download:
