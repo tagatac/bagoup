@@ -172,11 +172,12 @@ func (mr *MockOSMockRecorder) GetMacOSVersion() *gomock.Call {
 }
 
 // GetOpenFilesLimit mocks base method.
-func (m *MockOS) GetOpenFilesLimit() int {
+func (m *MockOS) GetOpenFilesLimit() (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOpenFilesLimit")
 	ret0, _ := ret[0].(int)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetOpenFilesLimit indicates an expected call of GetOpenFilesLimit.

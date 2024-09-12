@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/opsys"
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
-	"github.com/tagatac/bagoup/v2/opsys/scall"
 )
 
 type parameters struct {
@@ -39,7 +38,7 @@ func main() {
 		{isPDF: false, exportPath: "messages-export"},
 		{isPDF: true, exportPath: "messages-export-pdf"},
 	}
-	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat, scall.NewSyscall())
+	s, err := opsys.NewOS(afero.NewOsFs(), os.Stat)
 	if err != nil {
 		log.Panic(errors.Wrap(err, "instantiate OS"))
 	}

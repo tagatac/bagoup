@@ -123,7 +123,11 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 	if err != nil {
 		return errors.Wrapf(err, "stage chat file %q for writing", outFile.Name())
 	}
-	if openFilesLimit := cfg.OS.GetOpenFilesLimit(); imgCount*2 > openFilesLimit {
+	openFilesLimit, err := cfg.OS.GetOpenFilesLimit()
+	if err != nil {
+		return err
+	}
+	if imgCount*2 > openFilesLimit {
 		if err := cfg.OS.SetOpenFilesLimit(imgCount * 2); err != nil {
 			return errors.Wrapf(err, "chat file %q - increase the open file limit from %d to %d to support %d embedded images", outFile.Name(), openFilesLimit, imgCount*2, imgCount)
 		}

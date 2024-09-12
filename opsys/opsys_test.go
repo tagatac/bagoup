@@ -565,63 +565,114 @@ func TestRmTempDir(t *testing.T) {
 	}
 }
 
-func TestOpenFilesLimit(t *testing.T) {
+func TestGetOpenFilesLimit(t *testing.T) {
 	tests := []struct {
-		msg        string
-		setupMock  func(*mock_scall.MockSyscall)
-		wantNewErr string
-		wantErr    string
+		msg              string
+		currentSoftLimit int
+		currentHardLimit uint64
+		setupMocks       func(*mock_scall.MockSyscall)
+		ulimitOutput     string
+		ulimitErr        string
+		ulimitExitCode   int
+		wantSoftLimit    int
+		wantHardLimit    uint64
+		wantErr          string
+	}{
+		{
+			msg:              "limit already known",
+			currentSoftLimit: 256,
+			wantSoftLimit:    256,
+		},
+		{
+			msg:          "happy",
+			ulimitOutput: "256\n",
+			setupMocks: func(scMock *mock_scall.MockSyscall) {
+				scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
+					lim.Cur = 256
+					lim.Max = math.MaxInt64
+				})
+			},
+			wantSoftLimit: 256,
+			wantHardLimit: math.MaxInt64,
+		},
+		{
+			msg:            "ulimit error",
+			ulimitErr:      "this is a ulimit error",
+			ulimitExitCode: 1,
+			wantErr:        "call ulimit: exit status 1",
+		},
+		{
+			msg:          "ulimit bad output",
+			ulimitOutput: "asdf\n",
+			wantErr:      `parse open files soft limit: strconv.Atoi: parsing "asdf": invalid syntax`,
+		},
+		{
+			msg:          "syscall error",
+			ulimitOutput: "256\n",
+			setupMocks: func(scMock *mock_scall.MockSyscall) {
+				scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Return(errors.New("this is a syscall error"))
+			},
+			wantErr: "get open files hard limit: this is a syscall error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			scMock := mock_scall.NewMockSyscall(ctrl)
+			if tt.setupMocks != nil {
+				tt.setupMocks(scMock)
+			}
+
+			s := &opSys{
+				execCommand:        exectest.GenFakeExecCommand("TestRunExecCmd", tt.ulimitOutput, tt.ulimitErr, tt.ulimitExitCode),
+				Syscall:            scMock,
+				openFilesLimitSoft: tt.currentSoftLimit,
+				openFilesLimitHard: tt.currentHardLimit,
+			}
+			limit, err := s.GetOpenFilesLimit()
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			assert.Equal(t, tt.wantSoftLimit, limit)
+			assert.Equal(t, tt.wantSoftLimit, s.openFilesLimitSoft)
+			assert.Equal(t, tt.wantHardLimit, s.openFilesLimitHard)
+		})
+	}
+}
+
+func TestSetOpenFilesLimit(t *testing.T) {
+	tests := []struct {
+		msg              string
+		currentHardLimit uint64
+		setupMock        func(*mock_scall.MockSyscall)
+		wantErr          string
 	}{
 		{
 			msg: "happy",
 			setupMock: func(scMock *mock_scall.MockSyscall) {
-				gomock.InOrder(
-					scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
-						lim.Cur = 256
-						lim.Max = uint64(math.MaxInt64)
-					}),
-					scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
-						assert.Equal(t, uint64(512), lim.Cur)
-						assert.Equal(t, uint64(math.MaxInt64), lim.Max)
-					}),
-				)
+				scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
+					assert.Equal(t, uint64(512), lim.Cur)
+					assert.Equal(t, uint64(math.MaxInt64), lim.Max)
+				})
 			},
 		},
 		{
-			msg: "error checking limits",
-			setupMock: func(scMock *mock_scall.MockSyscall) {
-				scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).DoAndReturn(func(_ int, lim *syscall.Rlimit) error {
-					lim.Cur = 256
-					lim.Max = uint64(math.MaxInt64)
-					return errors.New("this is a syscall error")
-				})
-			},
-			wantNewErr: "check file count limit: this is a syscall error",
-		},
-		{
-			msg: "new limit too high",
-			setupMock: func(scMock *mock_scall.MockSyscall) {
-				scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
-					lim.Cur = 256
-					lim.Max = 500
-				})
-			},
-			wantErr: "512 exceeds the open fd hard limit of 500 - this can be increased with `sudo ulimit -Hn 512`",
+			msg:              "new limit too high",
+			currentHardLimit: 500,
+			wantErr:          "512 exceeds the open fd hard limit of 500 - this can be increased with `sudo ulimit -Hn 512`",
 		},
 		{
 			msg: "error setting limit",
 			setupMock: func(scMock *mock_scall.MockSyscall) {
-				gomock.InOrder(
-					scMock.EXPECT().Getrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).Do(func(_ int, lim *syscall.Rlimit) {
-						lim.Cur = 256
-						lim.Max = uint64(math.MaxInt64)
-					}),
-					scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).DoAndReturn(func(_ int, lim *syscall.Rlimit) error {
-						assert.Equal(t, uint64(512), lim.Cur)
-						assert.Equal(t, uint64(math.MaxInt64), lim.Max)
-						return errors.New("this is a syscall error")
-					}),
-				)
+				scMock.EXPECT().Setrlimit(syscall.RLIMIT_NOFILE, gomock.Any()).DoAndReturn(func(_ int, lim *syscall.Rlimit) error {
+					assert.Equal(t, uint64(512), lim.Cur)
+					assert.Equal(t, uint64(math.MaxInt64), lim.Max)
+					return errors.New("this is a syscall error")
+				})
 			},
 			wantErr: "this is a syscall error",
 		},
@@ -632,21 +683,24 @@ func TestOpenFilesLimit(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			scMock := mock_scall.NewMockSyscall(ctrl)
-			tt.setupMock(scMock)
-
-			s, err := NewOS(nil, nil, scMock)
-			if tt.wantNewErr != "" {
-				assert.Error(t, err, tt.wantNewErr)
-				return
+			if tt.setupMock != nil {
+				tt.setupMock(scMock)
 			}
-			assert.NilError(t, err)
-			assert.Equal(t, 256, s.GetOpenFilesLimit())
-			err = s.SetOpenFilesLimit(512)
+
+			s := &opSys{
+				Syscall:            scMock,
+				openFilesLimitSoft: 256,
+				openFilesLimitHard: math.MaxInt64,
+			}
+			if tt.currentHardLimit != 0 {
+				s.openFilesLimitHard = tt.currentHardLimit
+			}
+			err := s.SetOpenFilesLimit(512)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, 512, s.GetOpenFilesLimit())
+			assert.Equal(t, 512, s.openFilesLimitSoft)
 			assert.NilError(t, err)
 		})
 	}
