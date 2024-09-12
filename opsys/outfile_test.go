@@ -61,14 +61,15 @@ func TestTxtFile(t *testing.T) {
 
 func TestPDFFile(t *testing.T) {
 	tests := []struct {
-		msg          string
-		includePPA   bool
-		templatePath string
-		setupMock    func(*mock_pdfgen.MockPDFGenerator)
-		wantHTML     template.HTML
-		wantImgCount int
-		wantStageErr string
-		wantFlushErr string
+		msg                     string
+		includePPA              bool
+		includeProblematicPaths bool
+		templatePath            string
+		setupMock               func(*mock_pdfgen.MockPDFGenerator)
+		wantHTML                template.HTML
+		wantImgCount            int
+		wantStageErr            string
+		wantFlushErr            string
 	}{
 		{
 			msg: "happy",
@@ -176,6 +177,58 @@ func TestPDFFile(t *testing.T) {
 			wantImgCount: 2,
 		},
 		{
+			msg:                     "problematic filenames",
+			includeProblematicPaths: true,
+			setupMock: func(pMock *mock_pdfgen.MockPDFGenerator) {
+				gomock.InOrder(
+					pMock.EXPECT().AddPage(gomock.Any()),
+					pMock.EXPECT().Create(),
+				)
+			},
+			wantHTML: template.HTML(
+				`
+
+<!doctype html>
+<html>
+    <head>
+        <title>testfile</title>
+        <meta charset="utf-8">
+
+        <style>
+            body {
+                word-wrap: break-word;
+            }
+            img {
+                max-width: 875px;
+                max-height: 1300px;
+            }
+        </style>
+
+        
+        <style>
+            img.emoji {
+                height: 1em;
+                width: 1em;
+                margin: 0 .05em 0 .1em;
+                vertical-align: -0.1em;
+            }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+        <script>window.onload = function () { twemoji.parse(document.body); }</script>
+
+    </head>
+    <body>
+        test message<br/>
+        <img src="problematic-paths/question%3Fmark.jpeg" alt="question?mark.jpeg"/><br/>
+        <img src="problematic-paths/narrow%E2%80%AFno-break%E2%80%AFspace.jpeg" alt="narrow\u202fno-break\u202fspace.jpeg"/><br/>
+        
+    </body>
+</html>
+`,
+			),
+			wantImgCount: 2,
+		},
+		{
 			msg:          "bad template path",
 			templatePath: "invalid template path",
 			wantStageErr: "parse HTML template: template: pattern matches no files: `invalid template path`",
@@ -265,15 +318,24 @@ func TestPDFFile(t *testing.T) {
 			assert.NilError(t, of.WriteMessage("test message\n"))
 
 			// Write attachments
-			embedded, err := of.WriteAttachment("tennisballs.jpeg")
-			assert.NilError(t, err)
-			assert.Equal(t, embedded, true)
-			embedded, err = of.WriteAttachment("video.mov")
-			assert.NilError(t, err)
-			assert.Equal(t, embedded, false)
-			embedded, err = of.WriteAttachment("signallogo.pluginPayloadAttachment")
-			assert.NilError(t, err)
-			assert.Equal(t, embedded, tt.includePPA)
+			if tt.includeProblematicPaths {
+				embedded, err := of.WriteAttachment("problematic-paths/question?mark.jpeg")
+				assert.NilError(t, err)
+				assert.Equal(t, embedded, true)
+				embedded, err = of.WriteAttachment("problematic-paths/narrow no-break space.jpeg")
+				assert.NilError(t, err)
+				assert.Equal(t, embedded, true)
+			} else {
+				embedded, err := of.WriteAttachment("tennisballs.jpeg")
+				assert.NilError(t, err)
+				assert.Equal(t, embedded, true)
+				embedded, err = of.WriteAttachment("video.mov")
+				assert.NilError(t, err)
+				assert.Equal(t, embedded, false)
+				embedded, err = of.WriteAttachment("signallogo.pluginPayloadAttachment")
+				assert.NilError(t, err)
+				assert.Equal(t, embedded, tt.includePPA)
+			}
 
 			// Stage the PDF
 			imgCount, err := of.Stage()

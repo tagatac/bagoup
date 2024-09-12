@@ -19,7 +19,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-//go:embed templates/* testdata/*
+//go:embed templates/* all:testdata/**
 var _embedFS embed.FS
 
 // Embeddable image types copied from
@@ -145,9 +145,7 @@ func (f *pdfFile) WriteAttachment(attPath string) (bool, error) {
 	for _, t := range f.embeddableImageTypes {
 		if ext == t {
 			embedded = true
-			attPath = url.PathEscape(attPath)
-			attPath = strings.ReplaceAll(attPath, "%2F", "/")
-			att = template.HTML(fmt.Sprintf("<img src=%q alt=%q/><br/>", attPath, filepath.Base(attPath)))
+			att = template.HTML(fmt.Sprintf("<img src=%q alt=%q/><br/>", urlEscapeFilePath(attPath), filepath.Base(attPath)))
 			break
 		}
 	}
@@ -156,6 +154,17 @@ func (f *pdfFile) WriteAttachment(attPath string) (bool, error) {
 	}
 	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: att})
 	return true, nil
+}
+
+// urlEscapeFilePath escapes the path parts of a file path, so that it can be
+// used as a URL in wkhtmltopdf. Notably, it does not escape the separator.
+// See https://github.com/wkhtmltopdf/wkhtmltopdf/issues/4406 for more info.
+func urlEscapeFilePath(path string) string {
+	parts := strings.Split(path, string(filepath.Separator))
+	for i, part := range parts {
+		parts[i] = url.PathEscape(part)
+	}
+	return strings.Join(parts, string(filepath.Separator))
 }
 
 func (f *pdfFile) ReferenceAttachment(filename string) error {
