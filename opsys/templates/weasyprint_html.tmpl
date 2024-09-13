@@ -1,0 +1,32 @@
+<!--
+Copyright (C) 2022  David Tagatac <david@tagatac.net>
+See cmd/bagoup/main.go for usage terms.
+-->
+
+<!doctype html>
+<html>
+    <head>
+        <title>{{.Title}}</title>
+        <meta charset="utf-8">
+
+        <style>
+            @page {
+                margin: 50px;
+                width: 900px;
+            }
+            body {
+                font-size: 12pt;
+                word-wrap: break-word;
+            }
+            img {
+                max-width: 880px;
+                max-height: 1010px;
+            }
+        </style>
+
+    </head>
+    <body>
+        {{range .Lines}}{{.Element}}
+        {{end}}
+    </body>
+</html>
