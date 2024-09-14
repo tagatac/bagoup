@@ -47,6 +47,7 @@ func main() {
 		os.Exit(0)
 	}
 	logFatalOnErr(errors.Wrap(err, "parse flags"))
+	logFatalOnErr(errors.Wrap(bagoup.ValidateOptions(opts), "validate options"))
 	if opts.PrintVersion {
 		fmt.Printf("bagoup version %s\n%s\n", _version, _license)
 		return
