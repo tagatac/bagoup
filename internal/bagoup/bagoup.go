@@ -149,12 +149,17 @@ func (cfg *configuration) validatePaths() error {
 	if err := cfg.OS.FileAccess(cfg.Options.DBPath); err != nil {
 		return errors.Wrapf(err, "test DB file %q - FIX: %s", cfg.Options.DBPath, _readmeURL)
 	}
-	if ok, err := cfg.OS.FileExist(cfg.Options.ExportPath); err != nil {
-		return errors.Wrapf(err, "check export path %q", cfg.Options.ExportPath)
-	} else if ok {
-		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", cfg.Options.ExportPath)
-	}
 	var err error
+	var exportPathAbs string
+	if exportPathAbs, err = filepath.Abs(cfg.Options.ExportPath); err != nil {
+		return errors.Wrapf(err, "convert export path %q to an absolute path", cfg.Options.ExportPath)
+	}
+	cfg.Options.ExportPath = exportPathAbs
+	if ok, err := cfg.OS.FileExist(exportPathAbs); err != nil {
+		return errors.Wrapf(err, "check export path %q", exportPathAbs)
+	} else if ok {
+		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", exportPathAbs)
+	}
 	var attPathAbs string
 	if attPathAbs, err = filepath.Abs(cfg.Options.AttachmentsPath); err != nil {
 		return errors.Wrapf(err, "convert attachments path %q to an absolute path", cfg.Options.AttachmentsPath)
