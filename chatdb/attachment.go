@@ -17,6 +17,7 @@ import (
 type Attachment struct {
 	ID           int
 	Filename     string
+	Filepath     string
 	MIMEType     string
 	TransferName string
 }
