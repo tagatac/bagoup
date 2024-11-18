@@ -512,7 +512,7 @@ func TestWriteFile(t *testing.T) {
 					ofMock.EXPECT().WriteAttachment("attachment1.heic"),
 					osMock.EXPECT().FileExist("attachment2.jpeg").Return(true, nil),
 					osMock.EXPECT().HEIC2JPG("attachment2.jpeg").Return("attachment2.jpeg", nil),
-					ofMock.EXPECT().WriteAttachment("attachment2.jpeg"),
+					ofMock.EXPECT().WriteAttachment("attachment2.jpeg").Return(true, nil),
 					ofMock.EXPECT().Name().Return("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf"),
 					ofMock.EXPECT().ReferenceAttachment("att3transfer.png"),
 					ofMock.EXPECT().Stage(),
@@ -521,6 +521,7 @@ func TestWriteFile(t *testing.T) {
 				)
 			},
 			wantJPGs:     1,
+			wantEmbedded: 1,
 			wantConvFail: 1,
 		},
 		{
