@@ -181,8 +181,7 @@ func (f *pdfFile) Stage() (int, error) {
 	if err := tmpl.Execute(&f.buf, f.contents); err != nil {
 		return 0, errors.Wrap(err, "execute HTML template")
 	}
-	htmlStr := template.HTML(f.buf.String())
-	return strings.Count(string(htmlStr), "<img"), nil
+	return strings.Count(f.buf.String(), "<img"), nil
 }
 
 func (f *pdfFile) Flush() error {
