@@ -13,15 +13,15 @@ require (
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/afero v1.11.0
+	github.com/spf13/afero v1.12.0
 	github.com/tagatac/goheif v0.0.0-20241113181057-cadf12bfedc3
 	github.com/tagatac/gorecurcopy v1.0.1
-	golang.org/x/net v0.31.0
+	golang.org/x/net v0.34.0
 	gotest.tools/v3 v3.5.1
 )
 
 require (
 	github.com/google/go-cmp v0.6.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 )
