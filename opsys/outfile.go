@@ -133,12 +133,12 @@ func (opSys) NewPDFOutFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includ
 }
 
 func (f *pdfFile) WriteMessage(msg string) error {
-	htmlMsg := template.HTML(strings.ReplaceAll(html.EscapeString(msg), "\n", "<br/>"))
+	msg = strings.ReplaceAll(html.EscapeString(msg), "\n", "<br/>")
 	// Remove object replacement characters (U+FFFC) from the message. These
 	// characters are used by the chat database to represent attachments, but
 	// they are not valid in HTML. https://en.wiktionary.org/wiki/%EF%BF%BC
-	htmlMsg = template.HTML(strings.ReplaceAll(string(htmlMsg), "￼", ""))
-	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: htmlMsg})
+	msg = strings.ReplaceAll(msg, "\uFFFC", "")
+	f.contents.Lines = append(f.contents.Lines, htmlFileLine{Element: template.HTML(msg)})
 	return nil
 }
 
