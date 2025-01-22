@@ -67,7 +67,7 @@ func TestWriteFile(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -96,7 +96,7 @@ func TestWriteFile(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -186,7 +186,7 @@ func TestWriteFile(t *testing.T) {
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().MkdirAll("messages-export/friend/attachments", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -289,7 +289,7 @@ func TestWriteFile(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -315,7 +315,7 @@ func TestWriteFile(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -341,7 +341,7 @@ func TestWriteFile(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -369,7 +369,7 @@ func TestWriteFile(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -501,7 +501,7 @@ func TestWriteFile(t *testing.T) {
 				gomock.InOrder(
 					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com;;;iMessage;-;friend@hotmail.com.pdf").Return(chatFile, nil),
-					osMock.EXPECT().NewPDFOutFile(chatFile, gomock.Any(), false).Return(ofMock),
+					osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile, gomock.Any(), false).Return(ofMock),
 					dbMock.EXPECT().GetMessage(1, nil).Return("message1", true, nil),
 					ofMock.EXPECT().WriteMessage("message1"),
 					dbMock.EXPECT().GetMessage(2, nil).Return("message2", true, nil),
@@ -664,7 +664,7 @@ func TestWriteFile(t *testing.T) {
 		mockCalls := []*gomock.Call{
 			osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 			osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com.1.pdf").Return(chatFile1, nil),
-			osMock.EXPECT().NewPDFOutFile(chatFile1, gomock.Any(), false).Return(ofMock1),
+			osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile1, gomock.Any(), false).Return(ofMock1),
 		}
 		for i := 0; i < 2048; i++ {
 			msgs = append(msgs, chatdb.DatedMessageID{ID: i, Date: i})
@@ -681,7 +681,7 @@ func TestWriteFile(t *testing.T) {
 			osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 			ofMock1.EXPECT().Flush(),
 			osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com.2.pdf").Return(chatFile2, nil),
-			osMock.EXPECT().NewPDFOutFile(chatFile2, gomock.Any(), false).Return(ofMock2),
+			osMock.EXPECT().NewWkhtmltopdfOutFile(chatFile2, gomock.Any(), false).Return(ofMock2),
 		)
 		for i := 2048; i < 4000; i++ {
 			msgs = append(msgs, chatdb.DatedMessageID{ID: i, Date: i})

@@ -304,8 +304,8 @@ func TestPDFFile(t *testing.T) {
 			if tt.setupMock != nil {
 				tt.setupMock(pMock)
 			}
-			of := opSys{}.NewPDFOutFile(chatFile, pMock, tt.includePPA)
-			pdf, ok := of.(*pdfFile)
+			of := opSys{}.NewWkhtmltopdfOutFile(chatFile, pMock, tt.includePPA)
+			pdf, ok := of.(*wkhtmltopdfFile)
 			assert.Equal(t, ok, true)
 			if tt.templatePath != "" {
 				pdf.templatePath = tt.templatePath

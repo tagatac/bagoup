@@ -65,7 +65,7 @@ func main() {
 			if err != nil {
 				log.Panic(errors.Wrap(err, "create PDF generator"))
 			}
-			of = s.NewPDFOutFile(chatFile, pdfg, false)
+			of = s.NewWkhtmltopdfOutFile(chatFile, pdfg, false)
 		} else {
 			chatFile, err := s.Create(chatFilePrefix + ".txt")
 			if err != nil {

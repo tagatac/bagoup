@@ -92,7 +92,7 @@ func (cfg *configuration) writePDFs(messageIDs []chatdb.DatedMessageID, chatPath
 		if err != nil {
 			return errors.Wrap(err, "create PDF generator")
 		}
-		outFile := cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.Options.IncludePPA)
+		outFile := cfg.OS.NewWkhtmltopdfOutFile(chatFile, pdfg, cfg.Options.IncludePPA)
 		if err := cfg.handleFileContents(outFile, idsAndPath.messageIDs, attDir); err != nil {
 			return err
 		}
