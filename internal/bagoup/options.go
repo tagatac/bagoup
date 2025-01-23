@@ -12,6 +12,7 @@ Options struct {
 	SelfHandle      string   `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
 	SeparateChats   bool     `long:"separate-chats" description:"Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file"`
 	OutputPDF       bool     `short:"p" long:"pdf" description:"Export text and images to PDF files (requires full disk access)"`
+	UseWkhtmltopdf  bool     `short:"w" long:"wkhtml" description:"Use wkhtmltopdf instead of weasyprint to generate PDFs" default:"true"`
 	IncludePPA      bool     `long:"include-ppa" description:"Include plugin payload attachments (e.g. link previews) in generated PDFs"`
 	CopyAttachments bool     `short:"a" long:"copy-attachments" description:"Copy attachments to the same folder as the chat which included them (requires full disk access)"`
 	PreservePaths   bool     `short:"r" long:"preserve-paths" description:"When copying attachments, preserve the full path instead of co-locating them with the chats which included them"`
@@ -21,6 +22,9 @@ Options struct {
 }
 
 func ValidateOptions(opts Options) error {
+	if opts.UseWkhtmltopdf && !opts.OutputPDF {
+		return errors.New("the --wkhtml flag requires the --pdf flag")
+	}
 	if opts.IncludePPA && !opts.OutputPDF {
 		return errors.New("the --include-ppa flag requires the --pdf flag")
 	}

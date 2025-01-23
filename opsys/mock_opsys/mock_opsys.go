@@ -257,6 +257,20 @@ func (mr *MockOSMockRecorder) NewTxtOutFile(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTxtOutFile", reflect.TypeOf((*MockOS)(nil).NewTxtOutFile), arg0)
 }
 
+// NewWeasyPrintOutFile mocks base method.
+func (m *MockOS) NewWeasyPrintOutFile(arg0 afero.File, arg1 bool) opsys.OutFile {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewWeasyPrintOutFile", arg0, arg1)
+	ret0, _ := ret[0].(opsys.OutFile)
+	return ret0
+}
+
+// NewWeasyPrintOutFile indicates an expected call of NewWeasyPrintOutFile.
+func (mr *MockOSMockRecorder) NewWeasyPrintOutFile(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewWeasyPrintOutFile", reflect.TypeOf((*MockOS)(nil).NewWeasyPrintOutFile), arg0, arg1)
+}
+
 // NewWkhtmltopdfOutFile mocks base method.
 func (m *MockOS) NewWkhtmltopdfOutFile(arg0 afero.File, arg1 pdfgen.PDFGenerator, arg2 bool) opsys.OutFile {
 	m.ctrl.T.Helper()

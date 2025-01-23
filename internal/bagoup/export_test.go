@@ -416,6 +416,7 @@ func TestExportChats(t *testing.T) {
 					ExportPath:      "messages-export",
 					SeparateChats:   tt.separateChats,
 					OutputPDF:       tt.pdf,
+					UseWkhtmltopdf:  true,
 					CopyAttachments: tt.copyAttachments,
 					Entities:        tt.entities,
 				},

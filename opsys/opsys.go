@@ -65,6 +65,7 @@ type (
 		// path is returned.
 		HEIC2JPG(src string) (string, error)
 		NewTxtOutFile(afero.File) OutFile
+		NewWeasyPrintOutFile(chatFile afero.File, includePPA bool) OutFile
 		NewWkhtmltopdfOutFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile
 	}
 

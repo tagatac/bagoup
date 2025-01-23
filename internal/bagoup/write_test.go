@@ -589,6 +589,7 @@ func TestWriteFile(t *testing.T) {
 				Options: Options{
 					ExportPath:      "messages-export",
 					OutputPDF:       tt.pdf,
+					UseWkhtmltopdf:  true,
 					CopyAttachments: tt.copyAttachments,
 					PreservePaths:   tt.preservePaths,
 				},
@@ -707,8 +708,9 @@ func TestWriteFile(t *testing.T) {
 		}
 		cfg := configuration{
 			Options: Options{
-				ExportPath: "messages-export",
-				OutputPDF:  true,
+				ExportPath:     "messages-export",
+				OutputPDF:      true,
+				UseWkhtmltopdf: true,
 			},
 			OS:              osMock,
 			ChatDB:          dbMock,
