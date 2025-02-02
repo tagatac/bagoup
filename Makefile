@@ -55,7 +55,6 @@ test-pdf: download
 	cd test-pdf && pdf-diff "../example-exports/messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" "messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" > output.txt
 	cat test-pdf/output.txt
 	@pdf_diff_result=$$(tail -n 1 test-pdf/output.txt); \
-	echo "Output: $$pdf_diff_result"; \
 	if [ "$$pdf_diff_result" != "The pages number 1 are the same." ]; then \
 		echo "The generated PDF differs from the example"; \
 		exit 1; \
