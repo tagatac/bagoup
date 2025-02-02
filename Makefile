@@ -54,7 +54,8 @@ test-pdf: download
 	cd example-exports && go run examplegen.go ../test-pdf
 	cd test-pdf && pdf-diff "../example-exports/messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" "messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" > output.txt
 	cat test-pdf/output.txt
-	$(eval pdf-diff-result := $(shell cat test-pdf/output.txt | tail -n 1))
+	$(eval pdf-diff-result := $(shell tail -n 1 test-pdf/output.txt))
+	@echo "Output: $(pdf-diff-result)"
 	@if [ "$(pdf-diff-result)" != "The pages number 1 are the same." ]; then \
 		echo "The generated PDF differs from the example"; \
 		exit 1; \
