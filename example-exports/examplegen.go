@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/opsys"
-	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 )
 
 type parameters struct {
@@ -61,11 +60,7 @@ func main() {
 				log.Panic(errors.Wrap(err, "create PDF chat file"))
 			}
 			defer chatFile.Close()
-			pdfg, err := pdfgen.NewPDFGenerator(chatFile)
-			if err != nil {
-				log.Panic(errors.Wrap(err, "create PDF generator"))
-			}
-			of = s.NewWkhtmltopdfOutFile(chatFile, pdfg, false)
+			of = s.NewWeasyPrintOutFile(chatFile, false)
 		} else {
 			chatFile, err := s.Create(chatFilePrefix + ".txt")
 			if err != nil {
