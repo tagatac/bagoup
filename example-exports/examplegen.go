@@ -32,11 +32,20 @@ func main() {
 		log.Panic(errors.Wrap(err, "get working directory"))
 	}
 	parentDir := filepath.Dir(wd)
-	attachmentPath := filepath.Join(parentDir, "opsys/testdata/tennisballs.jpeg")
+	attachmentPath := filepath.Join(
+		parentDir,
+		"opsys",
+		"testdata",
+		"tennisballs.jpeg",
+	)
 
+	exportRoot := ""
+	if len(os.Args) > 1 {
+		exportRoot = os.Args[1]
+	}
 	runs := []parameters{
-		{isPDF: false, exportPath: "messages-export"},
-		{isPDF: true, exportPath: "messages-export-pdf"},
+		{isPDF: false, exportPath: filepath.Join(exportRoot, "messages-export")},
+		{isPDF: true, exportPath: filepath.Join(exportRoot, "messages-export-pdf")},
 	}
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat)
 	for _, params := range runs {

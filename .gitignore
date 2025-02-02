@@ -3,3 +3,4 @@
 bin
 bagoup-*-*-*.zip
 coverage.out
+test-pdf
