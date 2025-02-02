@@ -24,7 +24,7 @@ bin/bagoup: $(SRC) $(TEMPLATES) download
 	mkdir -vp bin
 	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
 
-.PHONY: deps download from-archive generate test clean
+.PHONY: deps download from-archive generate test test-pdf clean
 
 deps:
 	go get -u -t -v ./...
@@ -48,7 +48,22 @@ test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
 	go tool cover -func=$(COVERAGE_FILE)
 
+test-pdf: download
+	rm -vrf test-pdf
+	mkdir -vp test-pdf
+	cd example-exports && go run examplegen.go ../test-pdf
+	cd test-pdf && pdf-diff "../example-exports/messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" "messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" > output.txt
+	cat test-pdf/output.txt
+	$(eval pdf-diff-result := $(shell cat test-pdf/output.txt | tail -n 1))
+	@if [ "$(pdf-diff-result)" != "The pages number 1 are the same." ]; then \
+		echo "The generated PDF differs from the example"; \
+		exit 1; \
+	else \
+		echo "The generated PDF is the same as the example"; \
+	fi
+
 clean:
 	rm -vrf \
 	bin \
-	$(COVERAGE_FILE)
+	$(COVERAGE_FILE) \
+	test-pdf
