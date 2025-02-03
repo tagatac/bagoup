@@ -16,6 +16,7 @@ import (
 
 type parameters struct {
 	isPDF      bool
+	wkhtml     bool
 	exportPath string
 }
 
@@ -46,6 +47,7 @@ func main() {
 	runs := []parameters{
 		{isPDF: false, exportPath: filepath.Join(exportRoot, "messages-export")},
 		{isPDF: true, exportPath: filepath.Join(exportRoot, "messages-export-pdf")},
+		{isPDF: true, wkhtml: true, exportPath: filepath.Join(exportRoot, "messages-export-wkhtmltopdf")},
 	}
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat)
 	for _, params := range runs {
@@ -61,11 +63,15 @@ func main() {
 				log.Panic(errors.Wrap(err, "create PDF chat file"))
 			}
 			defer chatFile.Close()
-			pdfg, err := pdfgen.NewPDFGenerator(chatFile)
-			if err != nil {
-				log.Panic(errors.Wrap(err, "create PDF generator"))
+			if params.wkhtml {
+				pdfg, err := pdfgen.NewPDFGenerator(chatFile)
+				if err != nil {
+					log.Panic(errors.Wrap(err, "create PDF generator"))
+				}
+				of = s.NewWkhtmltopdfFile(chatFile, pdfg, false)
+			} else {
+				of = s.NewWeasyPrintFile(chatFile, false)
 			}
-			of = s.NewPDFOutFile(chatFile, pdfg, false)
 		} else {
 			chatFile, err := s.Create(chatFilePrefix + ".txt")
 			if err != nil {

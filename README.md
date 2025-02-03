@@ -18,12 +18,6 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 ```
 ### PDF (--pdf flag)
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
-## Dependencies
-- [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for exports to plaintext)
-```
-wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
-sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
-```
 
 ## Installation
 ```
@@ -92,6 +86,9 @@ Application Options:
                           iMessage and SMS) into a single file
   -p, --pdf               Export text and images to PDF files (requires full
                           disk access)
+  -w, --wkhtml            Use wkhtmltopdf instead of weasyprint to generate
+                          PDFs (requires wkhtmltopdf executable to be on the
+                          system path - https://wkhtmltopdf.org/)
       --include-ppa       Include plugin payload attachments (e.g. link
                           previews) in generated PDFs
   -a, --copy-attachments  Copy attachments to the same folder as the chat which
@@ -128,7 +125,7 @@ Export to PDF is significantly slower, bottlenecked by PDF creation with
 **9m32s**, more than 30x slower than the export to plaintext.
 
 ## Author
-Copyright (C) 2020-2023  [David Tagatac](mailto:david@tagatac.net)  
+Copyright (C) 2020-2025  [David Tagatac](mailto:david@tagatac.net)  
 See cmd/bagoup/main.go for usage terms.
 
 [ci-img]: https://github.com/tagatac/bagoup/actions/workflows/makefile.yaml/badge.svg?branch=main

@@ -21,6 +21,15 @@ func TestValidateOptions(t *testing.T) {
 			wantErr: "",
 		},
 		{
+			msg: "use wkhtmltopdf without PDF output",
+			opts: bagoup.Options{
+				OutputPDF:       false,
+				UseWkhtmltopdf:  true,
+				AttachmentsPath: "/",
+			},
+			wantErr: "the --wkhtml flag requires the --pdf flag",
+		},
+		{
 			msg: "include plugin payload attachments without PDF output",
 			opts: bagoup.Options{
 				OutputPDF:       false,

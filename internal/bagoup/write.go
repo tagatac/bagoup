@@ -88,11 +88,16 @@ func (cfg *configuration) writePDFs(messageIDs []chatdb.DatedMessageID, chatPath
 			return errors.Wrapf(err, "create file %q", chatPath)
 		}
 		defer chatFile.Close()
-		pdfg, err := pdfgen.NewPDFGenerator(chatFile)
-		if err != nil {
-			return errors.Wrap(err, "create PDF generator")
+		var outFile opsys.OutFile
+		if cfg.Options.UseWkhtmltopdf {
+			pdfg, err := pdfgen.NewPDFGenerator(chatFile)
+			if err != nil {
+				return errors.Wrap(err, "create PDF generator")
+			}
+			outFile = cfg.OS.NewWkhtmltopdfFile(chatFile, pdfg, cfg.Options.IncludePPA)
+		} else {
+			outFile = cfg.OS.NewWeasyPrintFile(chatFile, cfg.Options.IncludePPA)
 		}
-		outFile := cfg.OS.NewPDFOutFile(chatFile, pdfg, cfg.Options.IncludePPA)
 		if err := cfg.handleFileContents(outFile, idsAndPath.messageIDs, attDir); err != nil {
 			return err
 		}

@@ -48,13 +48,29 @@ test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
 	go tool cover -func=$(COVERAGE_FILE)
 
-test-pdf: download
-	rm -vrf test-pdf
-	mkdir -vp test-pdf
-	cd example-exports && go run examplegen.go ../test-pdf
-	cd test-pdf && pdf-diff "../example-exports/messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" "messages-export-pdf/Novak Djokovic/iMessage,-,+3815555555555.pdf" > output.txt
-	cat test-pdf/output.txt
-	@pdf_diff_result=$$(tail -n 1 test-pdf/output.txt); \
+test-exports: download
+	rm -vrf test-exports
+	mkdir -vp test-exports
+	cd example-exports && go run examplegen.go ../test-exports
+	make compare-txt
+	EXPORTDIR="messages-export-pdf" make compare-pdf
+	EXPORTDIR="messages-export-wkhtmltopdf" make compare-pdf
+
+compare-txt:
+	cd test-exports && diff "../example-exports/messages-export/Novak Djokovic/iMessage,-,+3815555555555.txt" "messages-export/Novak Djokovic/iMessage,-,+3815555555555.txt" > output.txt
+	cat test-exports/output.txt
+	@diff_result=$$(tail -n 1 test-exports/output.txt); \
+	if [ "$$diff_result" != "" ]; then \
+		echo "The generated TXT differs from the example"; \
+		exit 1; \
+	else \
+		echo "The generated TXT is the same as the example"; \
+	fi
+
+compare-pdf:
+	cd test-exports && pdf-diff "../example-exports/$$EXPORTDIR/Novak Djokovic/iMessage,-,+3815555555555.pdf" "$$EXPORTDIR/Novak Djokovic/iMessage,-,+3815555555555.pdf" > output.txt
+	cat test-exports/output.txt
+	@pdf_diff_result=$$(tail -n 1 test-exports/output.txt); \
 	if [ "$$pdf_diff_result" != "The pages number 1 are the same." ]; then \
 		echo "The generated PDF differs from the example"; \
 		exit 1; \
@@ -66,4 +82,4 @@ clean:
 	rm -vrf \
 	bin \
 	$(COVERAGE_FILE) \
-	test-pdf
+	test-exports
