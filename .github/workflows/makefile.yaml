@@ -13,16 +13,15 @@ jobs:
 
     - uses: actions/checkout@v4
 
-    - name: Install WeasyPrint
-      run: brew install weasyprint
+    - name: Install WeasyPrint and pdf-diff
+      run: |
+        brew update
+        brew install weasyprint pdf-diff
 
     - name: Install wkhtmltopdf
       run: |
         wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
         sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
-
-    - name: Install pdf-diff
-      run: brew install pdf-diff
 
     - name: Set up Go
       uses: actions/setup-go@v5
