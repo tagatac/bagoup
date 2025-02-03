@@ -16,7 +16,6 @@ require (
 	github.com/spf13/afero v1.12.0
 	github.com/tagatac/goheif v0.0.0-20241113181057-cadf12bfedc3
 	github.com/tagatac/gorecurcopy v1.0.1
-	golang.org/x/net v0.34.0
 	gotest.tools/v3 v3.5.1
 )
 
