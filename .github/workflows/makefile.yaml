@@ -44,5 +44,5 @@ jobs:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Test PDF Creation
-      run: make test-pdf
+    - name: Test Exports
+      run: make test-exports

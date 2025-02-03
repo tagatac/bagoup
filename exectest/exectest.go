@@ -17,6 +17,7 @@ const (
 	_envvarOutput      = "EXECTEST_OUTPUT"
 	_envvarError       = "EXECTEST_ERROR"
 	_envvarExitCode    = "EXECTEST_EXITCODE"
+	_envvarGoCoverDir  = "GOCOVERDIR"
 )
 
 // GenFakeExecCommand generates a mock of exec.Command. When used to create and run an exec.Cmd,
@@ -51,6 +52,7 @@ func GenFakeExecCommand(testname, output, err string, exitCode int) func(string,
 			fmt.Sprintf("%s=%s", _envvarOutput, output),
 			fmt.Sprintf("%s=%s", _envvarError, err),
 			fmt.Sprintf("%s=%s", _envvarExitCode, strconv.Itoa(exitCode)),
+			fmt.Sprintf("%s=%s", _envvarGoCoverDir, os.TempDir()),
 		}
 		return cmd
 	}

@@ -1,8 +1,10 @@
 package opsys
 
 import (
+	"bytes"
 	"os/exec"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -22,5 +24,10 @@ func (f *weasyprintFile) Flush() error {
 	cmd := f.execCommand("weasyprint", "-", "-")
 	cmd.Stdin = &f.buf
 	cmd.Stdout = f.File
-	return cmd.Run()
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, stderr.String())
+	}
+	return nil
 }

@@ -15,12 +15,11 @@ func TestWeasyPrintFile(t *testing.T) {
 		includePPA              bool
 		includeProblematicPaths bool
 		templatePath            string
-		weasyOutput             string
-		weasyErr                string
-		weasyExitCode           int
 		wantHTML                template.HTML
 		wantImgCount            int
 		wantStageErr            string
+		weasyErr                string
+		weasyExitCode           int
 		wantFlushErr            string
 	}{
 		{
@@ -188,8 +187,10 @@ func TestWeasyPrintFile(t *testing.T) {
 </html>
 `,
 			),
-			wantImgCount: 1,
-			wantFlushErr: "this is a PDF creation error",
+			wantImgCount:  1,
+			weasyErr:      "this is a PDF creation error",
+			weasyExitCode: 1,
+			wantFlushErr:  "this is a PDF creation error: exit status 1",
 		},
 	}
 
@@ -198,7 +199,7 @@ func TestWeasyPrintFile(t *testing.T) {
 			// Create outfile
 			chatFile, err := afero.NewMemMapFs().Create("testfile.pdf")
 			assert.NilError(t, err)
-			s := &opSys{execCommand: exectest.GenFakeExecCommand("TestRunExecCmd", tt.weasyOutput, tt.weasyErr, tt.weasyExitCode)}
+			s := &opSys{execCommand: exectest.GenFakeExecCommand("TestRunExecCmd", "", tt.weasyErr, tt.weasyExitCode)}
 			of := s.NewWeasyPrintFile(chatFile, tt.includePPA)
 			pdf, ok := of.(*weasyprintFile)
 			assert.Equal(t, ok, true)
