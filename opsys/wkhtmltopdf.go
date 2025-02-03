@@ -13,7 +13,7 @@ type wkhtmltopdfFile struct {
 	pdfgen.PDFGenerator
 }
 
-func (opSys) NewWkhtmltopdfOutFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile {
+func (opSys) NewWkhtmltopdfFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile {
 	return &wkhtmltopdfFile{
 		pdfFile:      newPDFFile(chatFile, includePPA, "templates/wkhtmltopdf_html.tmpl"),
 		PDFGenerator: pdfg,

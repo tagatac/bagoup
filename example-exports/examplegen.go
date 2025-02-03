@@ -60,7 +60,7 @@ func main() {
 				log.Panic(errors.Wrap(err, "create PDF chat file"))
 			}
 			defer chatFile.Close()
-			of = s.NewWeasyPrintOutFile(chatFile, false)
+			of = s.NewWeasyPrintFile(chatFile, false)
 		} else {
 			chatFile, err := s.Create(chatFilePrefix + ".txt")
 			if err != nil {

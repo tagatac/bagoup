@@ -94,9 +94,9 @@ func (cfg *configuration) writePDFs(messageIDs []chatdb.DatedMessageID, chatPath
 			if err != nil {
 				return errors.Wrap(err, "create PDF generator")
 			}
-			outFile = cfg.OS.NewWkhtmltopdfOutFile(chatFile, pdfg, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWkhtmltopdfFile(chatFile, pdfg, cfg.Options.IncludePPA)
 		} else {
-			outFile = cfg.OS.NewWeasyPrintOutFile(chatFile, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWeasyPrintFile(chatFile, cfg.Options.IncludePPA)
 		}
 		if err := cfg.handleFileContents(outFile, idsAndPath.messageIDs, attDir); err != nil {
 			return err
