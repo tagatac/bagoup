@@ -19,6 +19,13 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 ### PDF (--pdf flag)
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
 
+## Dependencies
+- [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for exports to plaintext)
+```
+wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
+sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
+```
+
 ## Installation
 ```
 brew tap tagatac/bagoup
