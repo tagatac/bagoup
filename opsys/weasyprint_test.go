@@ -36,15 +36,16 @@ func TestWeasyPrintFile(t *testing.T) {
         <style>
             @page {
                 margin: 50px;
+                margin-top: 40px;
+                margin-bottom: 40px;
                 width: 900px;
             }
             body {
-                font-size: 12pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 880px;
-                max-height: 1010px;
+                max-width: 885px;
+                max-height: 1040px;
             }
         </style>
 
@@ -76,15 +77,16 @@ func TestWeasyPrintFile(t *testing.T) {
         <style>
             @page {
                 margin: 50px;
+                margin-top: 40px;
+                margin-bottom: 40px;
                 width: 900px;
             }
             body {
-                font-size: 12pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 880px;
-                max-height: 1010px;
+                max-width: 885px;
+                max-height: 1040px;
             }
         </style>
 
@@ -116,15 +118,16 @@ func TestWeasyPrintFile(t *testing.T) {
         <style>
             @page {
                 margin: 50px;
+                margin-top: 40px;
+                margin-bottom: 40px;
                 width: 900px;
             }
             body {
-                font-size: 12pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 880px;
-                max-height: 1010px;
+                max-width: 885px;
+                max-height: 1040px;
             }
         </style>
 
@@ -164,15 +167,16 @@ func TestWeasyPrintFile(t *testing.T) {
         <style>
             @page {
                 margin: 50px;
+                margin-top: 40px;
+                margin-bottom: 40px;
                 width: 900px;
             }
             body {
-                font-size: 12pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 880px;
-                max-height: 1010px;
+                max-width: 885px;
+                max-height: 1040px;
             }
         </style>
 

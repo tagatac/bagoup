@@ -8,10 +8,11 @@ conversations saved in Messages to readable, searchable text or PDF files.
 ## Example Exports
 ### Plaintext (default)
 ```
-$ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
+$ cat "messages-export/Novak Djokovic/iMessage,-,+3815555555555.txt"
 [2020-03-01 15:34:05] Me: Want to play tennis?
 <attached: tennisballs.jpeg>
 [2020-03-01 15:34:41] Novak: I can't today. I'm still at the Dubai Open
+[2020-03-01 15:34:43] Novak: https://dubaidutyfreetennischampionships.com/
 [2020-03-01 15:34:53] Me: Ah, okay. When are you back in SF?
 [2020-03-01 15:35:23] Novak: Possibly next month. I'll let you know
 [2020-03-01 15:35:50] Me: 👍

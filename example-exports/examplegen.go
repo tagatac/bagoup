@@ -24,6 +24,7 @@ func main() {
 	firstMsg := "[2020-03-01 15:34:05] Me: Want to play tennis?\n"
 	moreMsgs := []string{
 		"[2020-03-01 15:34:41] Novak: I can't today. I'm still at the Dubai Open\n",
+		"[2020-03-01 15:34:43] Novak: https://dubaidutyfreetennischampionships.com/\n",
 		"[2020-03-01 15:34:53] Me: Ah, okay. When are you back in SF?\n",
 		"[2020-03-01 15:35:23] Novak: Possibly next month. I'll let you know\n",
 		"[2020-03-01 15:35:50] Me: 👍\n",
