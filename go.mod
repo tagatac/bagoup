@@ -16,11 +16,11 @@ require (
 	github.com/spf13/afero v1.12.0
 	github.com/tagatac/goheif v0.0.0-20241113181057-cadf12bfedc3
 	github.com/tagatac/gorecurcopy v1.0.1
-	gotest.tools/v3 v3.5.1
+	gotest.tools/v3 v3.5.2
 )
 
 require (
 	github.com/google/go-cmp v0.6.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )
