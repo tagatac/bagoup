@@ -35,17 +35,18 @@ func TestWeasyPrintFile(t *testing.T) {
 
         <style>
             @page {
-                margin: 50px;
-                margin-top: 40px;
-                margin-bottom: 40px;
-                width: 900px;
+                margin: 0.35in;
+                margin-top: 0.3in;
+                margin-bottom: 0.3in;
             }
             body {
+                font-size: 9.5pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 885px;
-                max-height: 1040px;
+                image-resolution: 120dpi;
+                max-width: 7.4in;
+                max-height: 11.1in;
             }
         </style>
 
@@ -76,17 +77,18 @@ func TestWeasyPrintFile(t *testing.T) {
 
         <style>
             @page {
-                margin: 50px;
-                margin-top: 40px;
-                margin-bottom: 40px;
-                width: 900px;
+                margin: 0.35in;
+                margin-top: 0.3in;
+                margin-bottom: 0.3in;
             }
             body {
+                font-size: 9.5pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 885px;
-                max-height: 1040px;
+                image-resolution: 120dpi;
+                max-width: 7.4in;
+                max-height: 11.1in;
             }
         </style>
 
@@ -117,17 +119,18 @@ func TestWeasyPrintFile(t *testing.T) {
 
         <style>
             @page {
-                margin: 50px;
-                margin-top: 40px;
-                margin-bottom: 40px;
-                width: 900px;
+                margin: 0.35in;
+                margin-top: 0.3in;
+                margin-bottom: 0.3in;
             }
             body {
+                font-size: 9.5pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 885px;
-                max-height: 1040px;
+                image-resolution: 120dpi;
+                max-width: 7.4in;
+                max-height: 11.1in;
             }
         </style>
 
@@ -166,17 +169,18 @@ func TestWeasyPrintFile(t *testing.T) {
 
         <style>
             @page {
-                margin: 50px;
-                margin-top: 40px;
-                margin-bottom: 40px;
-                width: 900px;
+                margin: 0.35in;
+                margin-top: 0.3in;
+                margin-bottom: 0.3in;
             }
             body {
+                font-size: 9.5pt;
                 word-wrap: break-word;
             }
             img {
-                max-width: 885px;
-                max-height: 1040px;
+                image-resolution: 120dpi;
+                max-width: 7.4in;
+                max-height: 11.1in;
             }
         </style>
 
@@ -205,7 +209,7 @@ func TestWeasyPrintFile(t *testing.T) {
 			assert.NilError(t, err)
 			s := &opSys{execCommand: exectest.GenFakeExecCommand("TestRunExecCmd", "", tt.weasyErr, tt.weasyExitCode)}
 			of := s.NewWeasyPrintFile(chatFile, tt.includePPA)
-			pdf, ok := of.(*weasyprintFile)
+			pdf, ok := of.(*weasyPrintFile)
 			assert.Equal(t, ok, true)
 			if tt.templatePath != "" {
 				pdf.templatePath = tt.templatePath
