@@ -37,7 +37,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
 
         <style>
@@ -90,7 +90,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
 
         <style>
@@ -143,7 +143,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
 
         <style>
@@ -204,7 +204,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
 
         <style>
@@ -256,7 +256,8 @@ func TestWkhtmltopdfFile(t *testing.T) {
 			if tt.setupMock != nil {
 				tt.setupMock(pMock)
 			}
-			of := opSys{}.NewWkhtmltopdfFile(chatFile, pMock, tt.includePPA)
+			s := opSys{}
+			of := s.NewWkhtmltopdfFile("Test Entity", chatFile, pMock, tt.includePPA)
 			pdf, ok := of.(*wkhtmltopdfFile)
 			assert.Equal(t, ok, true)
 			if tt.templatePath != "" {

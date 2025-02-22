@@ -13,9 +13,9 @@ type wkhtmltopdfFile struct {
 	pdfgen.PDFGenerator
 }
 
-func (opSys) NewWkhtmltopdfFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile {
+func (s *opSys) NewWkhtmltopdfFile(entityName string, chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile {
 	return &wkhtmltopdfFile{
-		pdfFile:      newPDFFile(chatFile, includePPA, "templates/wkhtmltopdf_html.tmpl"),
+		pdfFile:      newPDFFile(chatFile, includePPA, "templates/wkhtmltopdf_html.tmpl", entityName, s.bagoupVersion),
 		PDFGenerator: pdfg,
 	}
 }

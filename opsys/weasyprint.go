@@ -13,9 +13,9 @@ type weasyPrintFile struct {
 	execCommand func(string, ...string) *exec.Cmd
 }
 
-func (s *opSys) NewWeasyPrintFile(chatFile afero.File, includePPA bool) OutFile {
+func (s *opSys) NewWeasyPrintFile(entityName string, chatFile afero.File, includePPA bool) OutFile {
 	return &weasyPrintFile{
-		pdfFile:     newPDFFile(chatFile, includePPA, "templates/weasyprint_html.tmpl"),
+		pdfFile:     newPDFFile(chatFile, includePPA, "templates/weasyprint_html.tmpl", entityName, s.bagoupVersion),
 		execCommand: s.execCommand,
 	}
 }

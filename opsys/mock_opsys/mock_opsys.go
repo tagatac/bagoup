@@ -258,31 +258,31 @@ func (mr *MockOSMockRecorder) NewTxtOutFile(arg0 interface{}) *gomock.Call {
 }
 
 // NewWeasyPrintFile mocks base method.
-func (m *MockOS) NewWeasyPrintFile(arg0 afero.File, arg1 bool) opsys.OutFile {
+func (m *MockOS) NewWeasyPrintFile(arg0 string, arg1 afero.File, arg2 bool) opsys.OutFile {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewWeasyPrintFile", arg0, arg1)
+	ret := m.ctrl.Call(m, "NewWeasyPrintFile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(opsys.OutFile)
 	return ret0
 }
 
 // NewWeasyPrintFile indicates an expected call of NewWeasyPrintFile.
-func (mr *MockOSMockRecorder) NewWeasyPrintFile(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOSMockRecorder) NewWeasyPrintFile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewWeasyPrintFile", reflect.TypeOf((*MockOS)(nil).NewWeasyPrintFile), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewWeasyPrintFile", reflect.TypeOf((*MockOS)(nil).NewWeasyPrintFile), arg0, arg1, arg2)
 }
 
 // NewWkhtmltopdfFile mocks base method.
-func (m *MockOS) NewWkhtmltopdfFile(arg0 afero.File, arg1 pdfgen.PDFGenerator, arg2 bool) opsys.OutFile {
+func (m *MockOS) NewWkhtmltopdfFile(arg0 string, arg1 afero.File, arg2 pdfgen.PDFGenerator, arg3 bool) opsys.OutFile {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewWkhtmltopdfFile", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "NewWkhtmltopdfFile", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(opsys.OutFile)
 	return ret0
 }
 
 // NewWkhtmltopdfFile indicates an expected call of NewWkhtmltopdfFile.
-func (mr *MockOSMockRecorder) NewWkhtmltopdfFile(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockOSMockRecorder) NewWkhtmltopdfFile(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewWkhtmltopdfFile", reflect.TypeOf((*MockOS)(nil).NewWkhtmltopdfFile), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewWkhtmltopdfFile", reflect.TypeOf((*MockOS)(nil).NewWkhtmltopdfFile), arg0, arg1, arg2, arg3)
 }
 
 // Open mocks base method.
