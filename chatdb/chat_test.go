@@ -96,6 +96,51 @@ func TestGetChats(t *testing.T) {
 			},
 		},
 		{
+			msg: "chat identifier sanitized",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"ROWID", "guid", "chat_identifier", "display_name"}).
+					AddRow(1, "testguid1", "testchatname1", "testdisplayname1. ")
+				query.WillReturnRows(rows)
+			},
+			wantChats: []EntityChats{
+				{
+					Name: "testdisplayname1",
+					Chats: []Chat{
+						{
+							ID:   1,
+							GUID: "testguid1",
+						},
+					},
+				},
+			},
+		},
+		{
+			msg: "contact map entry sanitized",
+			contactMap: map[string]*vcard.Card{
+				"testchatname2": {
+					"FN": []*vcard.Field{
+						{Value: "Contactgiven Contactsurname .", Params: vcard.Params{"TYPE": []string{"pref"}}},
+					},
+				},
+			},
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"ROWID", "guid", "chat_identifier", "display_name"}).
+					AddRow(2, "testguid2", "testchatname2", "testdisplayname2")
+				query.WillReturnRows(rows)
+			},
+			wantChats: []EntityChats{
+				{
+					Name: "Contactgiven Contactsurname",
+					Chats: []Chat{
+						{
+							ID:   2,
+							GUID: "testguid2",
+						},
+					},
+				},
+			},
+		},
+		{
 			msg: "DB error",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				query.WillReturnError(errors.New("this is a DB error"))
