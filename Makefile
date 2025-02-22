@@ -35,7 +35,7 @@ download:
 
 example: example-exports/examplegen.go download
 	rm -vrf example-exports/messages-export*
-	cd example-exports && go run examplegen.go
+	cd example-exports && go run $(LDFLAGS) examplegen.go
 
 from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make build
@@ -51,7 +51,7 @@ test: download
 test-exports: download
 	rm -vrf test-exports
 	mkdir -vp test-exports
-	cd example-exports && go run examplegen.go ../test-exports
+	cd example-exports && go run $(LDFLAGS) examplegen.go ../test-exports
 	make compare-txt
 	EXPORTDIR="messages-export-pdf" make compare-pdf
 	EXPORTDIR="messages-export-wkhtmltopdf" make compare-pdf

@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -99,17 +100,17 @@ type (
 	}
 
 	htmlFileData struct {
-		Title string
-		Lines []htmlFileLine
+		Title     string
+		Generator string
+		Created   string
+		Lines     []htmlFileLine
 	}
 	htmlFileLine struct {
 		Element template.HTML
 	}
 )
 
-func newPDFFile(chatFile afero.File, includePPA bool, templatePath string) *pdfFile {
-	chatFilename := chatFile.Name()
-	title := strings.TrimSuffix(filepath.Base(chatFilename), filepath.Ext(chatFilename))
+func newPDFFile(chatFile afero.File, includePPA bool, templatePath, entityName, bagoupVersion string) *pdfFile {
 	embeddableImageTypes := _embeddableImageTypes
 	if includePPA {
 		embeddableImageTypes = append(embeddableImageTypes, ".pluginpayloadattachment")
@@ -117,8 +118,10 @@ func newPDFFile(chatFile afero.File, includePPA bool, templatePath string) *pdfF
 	return &pdfFile{
 		File: chatFile,
 		contents: htmlFileData{
-			Title: title,
-			Lines: []htmlFileLine{},
+			Title:     fmt.Sprintf("Messages with %s", entityName),
+			Generator: fmt.Sprintf("bagoup %s", bagoupVersion),
+			Created:   time.Now().Format(time.RFC3339),
+			Lines:     []htmlFileLine{},
 		},
 		embeddableImageTypes: embeddableImageTypes,
 		templatePath:         templatePath,

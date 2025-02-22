@@ -24,7 +24,7 @@ const (
 )
 
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
-	chatDirPath := strings.TrimRight(filepath.Join(cfg.Options.ExportPath, entityName), ". ")
+	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "create directory %q", chatDirPath)
 	}
@@ -41,7 +41,7 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	}
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
 	if cfg.Options.OutputPDF {
-		return cfg.writePDFs(messageIDs, chatPathNoExt, attDir)
+		return cfg.writePDFs(entityName, messageIDs, chatPathNoExt, attDir)
 	}
 	return cfg.writeTxt(messageIDs, chatPathNoExt, attDir)
 }
@@ -57,7 +57,7 @@ func (cfg *configuration) writeTxt(messageIDs []chatdb.DatedMessageID, chatPathN
 	return cfg.handleFileContents(outFile, messageIDs, attDir)
 }
 
-func (cfg *configuration) writePDFs(messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
+func (cfg *configuration) writePDFs(entityName string, messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
 	type messageIDsAndChatPath struct {
 		messageIDs []chatdb.DatedMessageID
 		chatPath   string
@@ -94,9 +94,9 @@ func (cfg *configuration) writePDFs(messageIDs []chatdb.DatedMessageID, chatPath
 			if err != nil {
 				return errors.Wrap(err, "create PDF generator")
 			}
-			outFile = cfg.OS.NewWkhtmltopdfFile(chatFile, pdfg, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWkhtmltopdfFile(entityName, chatFile, pdfg, cfg.Options.IncludePPA)
 		} else {
-			outFile = cfg.OS.NewWeasyPrintFile(chatFile, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWeasyPrintFile(entityName, chatFile, cfg.Options.IncludePPA)
 		}
 		if err := cfg.handleFileContents(outFile, idsAndPath.messageIDs, attDir); err != nil {
 			return err

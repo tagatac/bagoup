@@ -5,6 +5,7 @@ package chatdb
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
@@ -36,22 +37,22 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 	addressChats := map[string]EntityChats{}
 	for chatRows.Next() {
 		var id int
-		var guid, name, displayName string
-		if err := chatRows.Scan(&id, &guid, &name, &displayName); err != nil {
+		var guid, chatIdentifier, displayName string
+		if err := chatRows.Scan(&id, &guid, &chatIdentifier, &displayName); err != nil {
 			return nil, errors.Wrap(err, "read chat")
 		}
 		if displayName == "" {
-			displayName = name
+			displayName = chatIdentifier
 		}
 		chat := Chat{
 			ID:   id,
 			GUID: guid,
 		}
-		if card, ok := contactMap[name]; ok {
+		if card, ok := contactMap[chatIdentifier]; ok {
 			addContactChat(card, displayName, chat, contactChats)
-		} else {
-			addAddressChat(name, displayName, chat, addressChats)
+			continue
 		}
+		addAddressChat(chatIdentifier, displayName, chat, addressChats)
 	}
 	chats := []EntityChats{}
 	for _, entityChats := range contactChats {
@@ -77,7 +78,7 @@ func addContactChat(card *vcard.Card, displayName string, chat Chat, contactChat
 		displayName = contactName
 	}
 	contactChats[card] = EntityChats{
-		Name:  displayName,
+		Name:  strings.TrimRight(displayName, ". "),
 		Chats: []Chat{chat},
 	}
 }
@@ -92,7 +93,7 @@ func addAddressChat(address, displayName string, chat Chat, addressChats map[str
 	}
 	// We don't have contact info, and this is a new address.
 	addressChats[address] = EntityChats{
-		Name:  displayName,
+		Name:  strings.TrimRight(displayName, ". "),
 		Chats: []Chat{chat},
 	}
 }

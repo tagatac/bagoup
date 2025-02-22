@@ -3,6 +3,7 @@ package opsys
 import (
 	"html/template"
 	"testing"
+	"time"
 
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/exectest"
@@ -30,8 +31,10 @@ func TestWeasyPrintFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
+        <meta name="generator" content="bagoup test version">
+        <meta name="DCTERMS.created" content="2006-01-02T15:04:05Z07:00">
 
         <style>
             @page {
@@ -72,8 +75,10 @@ func TestWeasyPrintFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
+        <meta name="generator" content="bagoup test version">
+        <meta name="DCTERMS.created" content="2006-01-02T15:04:05Z07:00">
 
         <style>
             @page {
@@ -114,8 +119,10 @@ func TestWeasyPrintFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
+        <meta name="generator" content="bagoup test version">
+        <meta name="DCTERMS.created" content="2006-01-02T15:04:05Z07:00">
 
         <style>
             @page {
@@ -164,8 +171,10 @@ func TestWeasyPrintFile(t *testing.T) {
 <!doctype html>
 <html>
     <head>
-        <title>testfile</title>
+        <title>Messages with Test Entity</title>
         <meta charset="utf-8">
+        <meta name="generator" content="bagoup test version">
+        <meta name="DCTERMS.created" content="2006-01-02T15:04:05Z07:00">
 
         <style>
             @page {
@@ -207,10 +216,14 @@ func TestWeasyPrintFile(t *testing.T) {
 			// Create outfile
 			chatFile, err := afero.NewMemMapFs().Create("testfile.pdf")
 			assert.NilError(t, err)
-			s := &opSys{execCommand: exectest.GenFakeExecCommand("TestRunExecCmd", "", tt.weasyErr, tt.weasyExitCode)}
-			of := s.NewWeasyPrintFile(chatFile, tt.includePPA)
+			s := &opSys{
+				execCommand:   exectest.GenFakeExecCommand("TestRunExecCmd", "", tt.weasyErr, tt.weasyExitCode),
+				bagoupVersion: "test version",
+			}
+			of := s.NewWeasyPrintFile("Test Entity", chatFile, tt.includePPA)
 			pdf, ok := of.(*weasyPrintFile)
 			assert.Equal(t, ok, true)
+			pdf.contents.Created = time.RFC3339
 			if tt.templatePath != "" {
 				pdf.templatePath = tt.templatePath
 			}

@@ -14,6 +14,10 @@ import (
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 )
 
+const _entityName = "Novak Djokovic"
+
+var _version string
+
 type parameters struct {
 	isPDF      bool
 	wkhtml     bool
@@ -50,9 +54,9 @@ func main() {
 		{isPDF: true, exportPath: filepath.Join(exportRoot, "messages-export-pdf")},
 		{isPDF: true, wkhtml: true, exportPath: filepath.Join(exportRoot, "messages-export-wkhtmltopdf")},
 	}
-	s := opsys.NewOS(afero.NewOsFs(), os.Stat)
+	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	for _, params := range runs {
-		chatPath := filepath.Join(params.exportPath, "Novak Djokovic")
+		chatPath := filepath.Join(params.exportPath, _entityName)
 		if err := s.MkdirAll(chatPath, os.ModePerm); err != nil {
 			log.Panic(errors.Wrap(err, "create export directory"))
 		}
@@ -69,9 +73,9 @@ func main() {
 				if err != nil {
 					log.Panic(errors.Wrap(err, "create PDF generator"))
 				}
-				of = s.NewWkhtmltopdfFile(chatFile, pdfg, false)
+				of = s.NewWkhtmltopdfFile(_entityName, chatFile, pdfg, false)
 			} else {
-				of = s.NewWeasyPrintFile(chatFile, false)
+				of = s.NewWeasyPrintFile(_entityName, chatFile, false)
 			}
 		} else {
 			chatFile, err := s.Create(chatFilePrefix + ".txt")

@@ -65,8 +65,8 @@ type (
 		// path is returned.
 		HEIC2JPG(src string) (string, error)
 		NewTxtOutFile(afero.File) OutFile
-		NewWeasyPrintFile(chatFile afero.File, includePPA bool) OutFile
-		NewWkhtmltopdfFile(chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile
+		NewWeasyPrintFile(entityName string, chatFile afero.File, includePPA bool) OutFile
+		NewWkhtmltopdfFile(entityName string, chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile
 	}
 
 	opSys struct {
@@ -78,17 +78,19 @@ type (
 		tempDir            string
 		openFilesLimitHard uint64
 		openFilesLimitSoft int
+		bagoupVersion      string
 	}
 )
 
 // NewOS returns an OS from a given filesystem, os Stat, and exec Command.
-func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error)) OS {
+func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), bagoupVersion string) OS {
 	return &opSys{
-		Fs:          fs,
-		Converter:   heic2jpg.NewConverter(),
-		osStat:      osStat,
-		execCommand: exec.Command,
-		Syscall:     scall.NewSyscall(),
+		Fs:            fs,
+		Converter:     heic2jpg.NewConverter(),
+		osStat:        osStat,
+		execCommand:   exec.Command,
+		Syscall:       scall.NewSyscall(),
+		bagoupVersion: bagoupVersion,
 	}
 }
 
