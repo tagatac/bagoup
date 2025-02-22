@@ -100,10 +100,10 @@ type (
 	}
 
 	htmlFileData struct {
-		Title   string
-		Creator string
-		Created string
-		Lines   []htmlFileLine
+		Title     string
+		Generator string
+		Created   string
+		Lines     []htmlFileLine
 	}
 	htmlFileLine struct {
 		Element template.HTML
@@ -118,10 +118,10 @@ func newPDFFile(chatFile afero.File, includePPA bool, templatePath, entityName, 
 	return &pdfFile{
 		File: chatFile,
 		contents: htmlFileData{
-			Title:   fmt.Sprintf("Messages with %s", entityName),
-			Creator: fmt.Sprintf("bagoup %s", bagoupVersion),
-			Created: time.Now().Format(time.RFC3339),
-			Lines:   []htmlFileLine{},
+			Title:     fmt.Sprintf("Messages with %s", entityName),
+			Generator: fmt.Sprintf("bagoup %s", bagoupVersion),
+			Created:   time.Now().Format(time.RFC3339),
+			Lines:     []htmlFileLine{},
 		},
 		embeddableImageTypes: embeddableImageTypes,
 		templatePath:         templatePath,
