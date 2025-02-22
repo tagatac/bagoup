@@ -21,7 +21,8 @@ $ cat "messages-export/Novak Djokovic/iMessage,-,+3815555555555.txt"
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
 
 ## Dependencies
-- [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for exports to plaintext)
+- [wkhtmltopdf](https://wkhtmltopdf.org/) (for exporting to PDF; not needed for
+exports to plaintext)
 ```
 wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
 sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
@@ -40,8 +41,8 @@ for more details. Additionally, attachments can be located in various protected
 places on your filesystem.
 
 To to backup your messages, you have two options. If you wish to export to PDFs
-with images (`--pdf` flag), or to copy attachments (`--copy-attachments` flag), you must use
-the first option.
+with images (`--pdf` flag), or to copy attachments (`--copy-attachments` flag),
+you must use the first option.
 ### Option 1 (required for attachments): Give your terminal emulator full disk access
 From [osxdaily.com](https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/):
 1. Pull down the Apple menu and choose "System Preferences"
@@ -118,19 +119,19 @@ Application Options:
 Help Options:
   -h, --help              Show this help message
 ```
-All conversations will be exported as text (default) or PDF files (`--pdf` flag) to the specified export
-path. See [example-exports](example-exports) for
-an example export directory structure for each option.
+All conversations will be exported as text (default) or PDF files (`--pdf` flag)
+to the specified export path. See [example-exports](example-exports) for an
+example export directory structure for each option.
 
 ## Performance
 ### Plaintext
-Export to plaintext is fast. For example, on an M2 MacBook Air, exporting
-**19,621 messages** from 144 chats to 138 files, as well as copying
-**1,214 attachments**, took **17.2s**.
+Export to plaintext is fast. For example, on an M3 MacBook Pro, exporting
+**4,591 messages** from 63 chats to 60 files, as well as copying
+**410MB of attachments**, took **17.3s**.
 ### PDF
-Export to PDF is significantly slower, bottlenecked by PDF creation with
-`wkhtmltopdf`. Exporting the same data from above on the same MacBook took
-**9m32s**, more than 30x slower than the export to plaintext.
+Export to PDF is slower, bottlenecked by PDF creation with `weasyprint`.
+Exporting the same data from above on the same MacBook took **1m44s**, about 6x
+slower than the export to plaintext.
 
 ## Author
 Copyright (C) 2020-2025  [David Tagatac](mailto:david@tagatac.net)  
