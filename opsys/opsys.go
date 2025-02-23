@@ -151,10 +151,24 @@ func (s opSys) GetContactMap(contactsFilePath string) (map[string]*vcard.Card, e
 		}
 		phonesAndEmails := append(phones, card.Values(vcard.FieldEmail)...)
 		for _, phoneOrEmail := range phonesAndEmails {
-			if c, ok := contactMap[phoneOrEmail]; ok {
-				log.Printf("WARN: multiple contacts %q and %q share the same phone or email %q", c.PreferredValue(vcard.FieldFormattedName), card.PreferredValue(vcard.FieldFormattedName), phoneOrEmail)
+			c, ok := contactMap[phoneOrEmail]
+			if !ok {
+				contactMap[phoneOrEmail] = &card
+				continue
 			}
-			contactMap[phoneOrEmail] = &card
+			combinedCard := vcard.Card{}
+			combinedName := vcard.Name{
+				GivenName: fmt.Sprintf("%s or %s", c.Name().GivenName, card.Name().GivenName),
+			}
+			combinedCard.SetName(&combinedName)
+			combinedFormattedName := vcard.Field{Value: fmt.Sprintf(
+				"%s and %s",
+				c.PreferredValue(vcard.FieldFormattedName),
+				card.PreferredValue(vcard.FieldFormattedName),
+			)}
+			combinedCard.Set(vcard.FieldFormattedName, &combinedFormattedName)
+			contactMap[phoneOrEmail] = &combinedCard
+			continue
 		}
 	}
 	return contactMap, nil

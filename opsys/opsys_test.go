@@ -191,15 +191,12 @@ func TestGetContactMap(t *testing.T) {
 			{Value: "myContacts"},
 		},
 	}
-	jelenaCard := &vcard.Card{
+	combinedCard := &vcard.Card{
 		"FN": []*vcard.Field{
-			{Value: "Jelena Djokovic"},
+			{Value: "Novak Djokovic and Jelena Djokovic"},
 		},
 		"N": []*vcard.Field{
-			{Value: "Djokovic;Jelena;;;"},
-		},
-		"EMAIL": []*vcard.Field{
-			{Value: "info@novakdjokovic.com", Params: vcard.Params{"TYPE": []string{"INTERNET"}}},
+			{Value: ";Novak or Jelena;;;"},
 		},
 	}
 
@@ -270,7 +267,7 @@ END:VCARD
 			},
 			wantMap: map[string]*vcard.Card{
 				"+3815555555":            noleCard,
-				"info@novakdjokovic.com": jelenaCard,
+				"info@novakdjokovic.com": combinedCard,
 			},
 		},
 	}
