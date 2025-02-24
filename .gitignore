@@ -1,7 +1,7 @@
-.DS_Store
+.direnv/
+.envrc
 .vscode/
+.DS_Store
 bin
-bagoup-*-*-*.zip
 coverage.out
 test-exports
-
