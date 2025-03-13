@@ -4,7 +4,7 @@ OS=$(shell uname -s)
 HW=$(shell uname -m)
 
 SRC=$(shell find . -type f -name '*.go' -not -name '*_test.go' -not -name 'mock_*.go')
-TEMPLATES=$(shell find . -type f -name '*.tmpl')
+TEMPLATES=$(shell find . -type f -wholename './opsys/templates/*.tmpl')
 LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
 PKGS=$(shell go list ./... | grep --invert-match '/mock_' | tr '\n' ' ')
