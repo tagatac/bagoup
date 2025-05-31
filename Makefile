@@ -18,7 +18,7 @@ EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage,-,+3815555555555'
 TXT_FILE=messages-export/$(EXAMPLE_EXPORT_FILE).txt
 PDF_FILE=messages-export-pdf/$(EXAMPLE_EXPORT_FILE).pdf
 PDF_FILE_WKHTML=messages-export-wkhtmltopdf/$(EXAMPLE_EXPORT_FILE).pdf
-PDFINFO_IGNORE_CMD=grep -Ev 'Creator|CreationDate|File size'
+PDFINFO_IGNORE_CMD=grep -Ev 'Creator|CreationDate|File size|Producer'
 EXAMPLE_EXPORTS_DIR=example-exports
 TEST_EXPORTS_DIR=test-exports
 
