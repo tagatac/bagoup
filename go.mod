@@ -11,7 +11,7 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20241024213814-c9703dde27ff
 	github.com/golang/mock v1.6.0
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/mattn/go-sqlite3 v1.14.28
+	github.com/mattn/go-sqlite3 v1.14.30
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.14.0
 	github.com/tagatac/goheif v0.0.0-20241113181057-cadf12bfedc3
@@ -21,6 +21,6 @@ require (
 
 require (
 	github.com/google/go-cmp v0.7.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 )
