@@ -23,7 +23,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 	"github.com/tagatac/bagoup/v2/opsys/scall"
-	"github.com/tagatac/goheif/heic2jpg"
 	"github.com/tagatac/gorecurcopy"
 )
 
@@ -60,10 +59,10 @@ type (
 		// accommodate wkhtmltopdf:
 		// https://github.com/wkhtmltopdf/wkhtmltopdf/issues/3081#issue-172083214
 		SetOpenFilesLimit(n int) error
-		// HEIC2JPG converts the src file to a JPEG image if the src file is an
+		// ConvertHEIC converts the src file to a JPEG image if the src file is an
 		// HEIC image, returning the path to the JPEG image. Otherwise the src
 		// path is returned.
-		HEIC2JPG(src string) (string, error)
+		ConvertHEIC(src string) (string, error)
 		NewTxtOutFile(afero.File) OutFile
 		NewWeasyPrintFile(entityName string, chatFile afero.File, includePPA bool) OutFile
 		NewWkhtmltopdfFile(entityName string, chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile
@@ -71,7 +70,6 @@ type (
 
 	opSys struct {
 		afero.Fs
-		heic2jpg.Converter
 		osStat      func(string) (os.FileInfo, error)
 		execCommand func(string, ...string) *exec.Cmd
 		scall.Syscall
@@ -86,7 +84,6 @@ type (
 func NewOS(fs afero.Fs, osStat func(string) (os.FileInfo, error), bagoupVersion string) OS {
 	return &opSys{
 		Fs:            fs,
-		Converter:     heic2jpg.NewConverter(),
 		osStat:        osStat,
 		execCommand:   exec.Command,
 		Syscall:       scall.NewSyscall(),

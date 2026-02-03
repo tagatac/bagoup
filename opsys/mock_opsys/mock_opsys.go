@@ -82,6 +82,21 @@ func (mr *MockOSMockRecorder) Chtimes(arg0, arg1, arg2 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Chtimes", reflect.TypeOf((*MockOS)(nil).Chtimes), arg0, arg1, arg2)
 }
 
+// ConvertHEIC mocks base method.
+func (m *MockOS) ConvertHEIC(arg0 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConvertHEIC", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ConvertHEIC indicates an expected call of ConvertHEIC.
+func (mr *MockOSMockRecorder) ConvertHEIC(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConvertHEIC", reflect.TypeOf((*MockOS)(nil).ConvertHEIC), arg0)
+}
+
 // CopyFile mocks base method.
 func (m *MockOS) CopyFile(arg0, arg1 string, arg2 bool) (string, error) {
 	m.ctrl.T.Helper()
@@ -184,21 +199,6 @@ func (m *MockOS) GetOpenFilesLimit() (int, error) {
 func (mr *MockOSMockRecorder) GetOpenFilesLimit() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenFilesLimit", reflect.TypeOf((*MockOS)(nil).GetOpenFilesLimit))
-}
-
-// HEIC2JPG mocks base method.
-func (m *MockOS) HEIC2JPG(arg0 string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HEIC2JPG", arg0)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HEIC2JPG indicates an expected call of HEIC2JPG.
-func (mr *MockOSMockRecorder) HEIC2JPG(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HEIC2JPG", reflect.TypeOf((*MockOS)(nil).HEIC2JPG), arg0)
 }
 
 // Mkdir mocks base method.

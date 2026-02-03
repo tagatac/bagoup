@@ -14,7 +14,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.15.0
-	github.com/tagatac/goheif v0.0.0-20241113181057-cadf12bfedc3
 	github.com/tagatac/gorecurcopy v1.0.1
 	gotest.tools/v3 v3.5.2
 )
