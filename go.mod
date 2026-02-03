@@ -1,8 +1,6 @@
 module github.com/tagatac/bagoup/v2
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.25
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -19,6 +17,7 @@ require (
 )
 
 require (
+	github.com/elulcao/progress-bar v0.1.4
 	github.com/google/go-cmp v0.7.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
