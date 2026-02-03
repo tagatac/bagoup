@@ -5,7 +5,9 @@ package bagoup
 
 import (
 	"path/filepath"
+	"time"
 
+	progressbar "github.com/elulcao/progress-bar/cmd"
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/chatdb"
@@ -21,11 +23,20 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 	}
 	chats = filterEntities(cfg.Options.Entities, chats)
 
-	for _, entityChats := range chats {
+	bar := progressbar.NewPBar()
+	bar.SignalHandler()
+	bar.Total = uint16(len(chats))
+	lastRender := time.Time{}
+	for i, entityChats := range chats {
+		if time.Since(lastRender) > time.Second {
+			bar.RenderPBar(i)
+			lastRender = time.Now()
+		}
 		if err := cfg.exportEntityChats(entityChats); err != nil {
 			return err
 		}
 	}
+	bar.CleanUp()
 	return nil
 }
 
