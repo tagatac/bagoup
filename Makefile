@@ -71,3 +71,4 @@ clean:
 	bin \
 	$(COVERAGE_FILE) \
 	$(TEST_EXPORTS_DIR)
+	go clean -testcache

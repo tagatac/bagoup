@@ -10,9 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// HEIC2JPG is a thin wrapper on goheif.Converter.HEIC2JPG that creates a
-// temporary directory for the converted image.
-func (s *opSys) HEIC2JPG(src string) (string, error) {
+func (s *opSys) ConvertHEIC(src string) (string, error) {
 	if strings.ToLower(filepath.Ext(src)) != ".heic" {
 		return src, nil
 	}
@@ -22,8 +20,19 @@ func (s *opSys) HEIC2JPG(src string) (string, error) {
 	}
 	jpgFilename := strings.TrimRight(filepath.Base(src), "HEICheic") + "jpeg"
 	dst := filepath.Join(tempDir, jpgFilename)
-	if err := s.Converter.HEIC2JPG(src, dst); err != nil {
+	if err := s.sipsConvert(src, dst); err != nil {
 		return src, errors.Wrapf(err, "convert HEIC file to JPG file %q", dst)
 	}
 	return dst, nil
+}
+
+func (s opSys) sipsConvert(src, dst string) error {
+	cmd := s.execCommand(
+		"sips",
+		"--setProperty", "format", "jpeg",
+		"--setProperty", "formatOptions", "best",
+		"--out", dst,
+		src,
+	)
+	return cmd.Run()
 }
