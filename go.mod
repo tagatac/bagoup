@@ -11,7 +11,7 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20241024213814-c9703dde27ff
 	github.com/golang/mock v1.6.0
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/mattn/go-sqlite3 v1.14.33
+	github.com/mattn/go-sqlite3 v1.14.34
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.15.0
 	github.com/tagatac/gorecurcopy v1.0.1
