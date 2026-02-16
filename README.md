@@ -1,9 +1,9 @@
 # bagoup [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][card-img]][card] [![Release][release-img]][release]
 
-bagoup *(pronounced BAAGoop)* is an export utility for Mac OS Messages,
-implemented in Go, inspired by
-[Baskup](https://github.com/PeterKaminski09/baskup). It exports all of the
-conversations saved in Messages to readable, searchable text or PDF files.
+bagoup is an export utility for Mac OS Messages, implemented in Go, inspired by
+[Baskup](https://github.com/PeterKaminski09/baskup).
+It exports all of the conversations saved in Messages to readable, searchable
+text or PDF files.
 
 ## Example Exports
 ### Plaintext (default)
@@ -27,14 +27,16 @@ brew install bagoup
 ```
 
 ## Protected File Access
-The Messages database is a protected file in Mac OS. See
+The Messages database is a protected file in Mac OS.
+See
 [this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
-for more details. Additionally, attachments can be located in various protected
-places on your filesystem.
+for more details.
+Additionally, attachments can be located in various protected places on your
+filesystem.
 
-To to backup your messages, you have two options. If you wish to export to PDFs
-with images (`--pdf` flag), or to copy attachments (`--copy-attachments` flag),
-you must use the first option.
+To to backup your messages, you have two options.
+If you wish to export to PDFs with images (`--pdf` flag), or to copy attachments
+(`--copy-attachments` flag), you must use the first option.
 ### Option 1 (required for attachments): Give your terminal emulator full disk access
 From [osxdaily.com](https://osxdaily.com/2018/10/09/fix-operation-not-permitted-terminal-error-macos/):
 1. Pull down the Apple menu and choose "System Preferences"
@@ -62,10 +64,11 @@ context menu.
 If you provide your contacts via the `--contacts-path` flag, bagoup will attempt
 to match the handles from the Messages database with full names from your
 contacts list, labeling the folders with full names and each message with first
-names. Otherwise, phone numbers and email addresses will be used.
+names.
+Otherwise, phone numbers and email addresses will be used.
 
-The contacts file must be in vCard format and can be obtained,
-e.g., from the Contacts app or Google Contacts.
+The contacts file must be in vCard format and can be obtained, e.g., from the
+Contacts app or Google Contacts.
 
 ## Usage
 ```
@@ -112,17 +115,18 @@ Help Options:
   -h, --help              Show this help message
 ```
 All conversations will be exported as text (default) or PDF files (`--pdf` flag)
-to the specified export path. See [example-exports](example-exports) for an
-example export directory structure for each option.
+to the specified export path.
+See [example-exports](example-exports) for an example export directory structure
+for each option.
 
 ## Performance
 ### Plaintext
-Export to plaintext is fast. For example, on an M3 MacBook Pro, exporting
-**4,591 messages** from 63 chats to 60 files, as well as copying
-**410MB of attachments**, took **17.3s**.
+Export to plaintext is fast. For example, on an M2 MacBook Air, exporting
+**52,484 messages** from 308 chats to 298 files, as well as copying
+**3.6GB of attachments**, took **1m29s**.
 ### PDF
 Export to PDF is slower, bottlenecked by PDF creation with `weasyprint`.
-Exporting the same data from above on the same MacBook took **1m44s**, about 6x
+Exporting the same data from above on the same MacBook took **16m3s**, over 10x
 slower than the export to plaintext.
 
 ## Author
