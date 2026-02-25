@@ -1,6 +1,6 @@
 # bagoup [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][card-img]][card] [![Release][release-img]][release]
 
-bagoup is an export utility for Mac OS Messages, implemented in Go, inspired by
+bagoup is an export utility for macOS Messages, implemented in Go, inspired by
 [Baskup](https://github.com/PeterKaminski09/baskup).
 It exports all of the conversations saved in Messages to readable, searchable
 text or PDF files.
@@ -27,7 +27,7 @@ brew install bagoup
 ```
 
 ## Protected File Access
-The Messages database is a protected file in Mac OS.
+The Messages database is a protected file in macOS.
 See
 [this article](https://appletoolbox.com/seeing-error-operation-not-permitted-in-macos-mojave/)
 for more details.
@@ -80,7 +80,7 @@ Application Options:
                           ~/Library/Messages/chat.db)
   -o, --export-path=      Path to which the Messages will be exported (default:
                           messages-export)
-  -m, --mac-os-version=   Version of Mac OS, e.g. '10.15', from which the
+  -m, --mac-os-version=   Version of macOS, e.g. '10.15', from which the
                           Messages chat database file was copied (not needed if
                           bagoup is running on the same Mac)
   -c, --contacts-path=    Path to the contacts vCard file
@@ -139,5 +139,5 @@ See cmd/bagoup/main.go for usage terms.
 [cov]: https://codecov.io/gh/tagatac/bagoup
 [card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup/v2
 [card]: https://goreportcard.com/report/github.com/tagatac/bagoup/v2
-[release-img]: https://img.shields.io/github/release/tagatac/bagoup.svg
+[release-img]: https://img.shields.io/github/v/release/tagatac/bagoup?cache_seconds=3600
 [release]: https://github.com/tagatac/bagoup/releases/latest

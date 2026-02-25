@@ -122,7 +122,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().GetMacOSVersion().Return(nil, errors.New("this is an exec error")),
 				)
 			},
-			wantErr: "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option: this is an exec error",
+			wantErr: "get macOS version - FIX: specify the macOS version from which chat.db was copied with the --mac-os-version option: this is an exec error",
 		},
 		{
 			msg:  "export path exists",
@@ -211,7 +211,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 				)
 			},
-			wantErr: `parse Mac OS version "10.10.10.10": Invalid Semantic Version`,
+			wantErr: `parse macOS version "10.10.10.10": Invalid Semantic Version`,
 		},
 		{
 			msg: "contacts file specified",
@@ -272,7 +272,7 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().Init(semver.MustParse("12.4")).Return(errors.New("this is a DB error")),
 				)
 			},
-			wantErr: "initialize the database for reading on Mac OS version 12.4.0: this is a DB error",
+			wantErr: "initialize the database for reading on macOS version 12.4.0: this is a DB error",
 		},
 		{
 			msg:  "error getting handle map",

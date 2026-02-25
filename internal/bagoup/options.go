@@ -7,7 +7,7 @@ type // Options are the commandline options that can be passed to the bagoup
 Options struct {
 	DBPath          string   `short:"i" long:"db-path" description:"Path to the Messages chat database file" default:"~/Library/Messages/chat.db"`
 	ExportPath      string   `short:"o" long:"export-path" description:"Path to which the Messages will be exported" default:"messages-export"`
-	MacOSVersion    *string  `short:"m" long:"mac-os-version" description:"Version of Mac OS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
+	MacOSVersion    *string  `short:"m" long:"mac-os-version" description:"Version of macOS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
 	ContactsPath    *string  `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
 	SelfHandle      string   `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
 	SeparateChats   bool     `long:"separate-chats" description:"Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file"`

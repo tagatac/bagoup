@@ -1,7 +1,7 @@
 // Copyright (C) 2020  David Tagatac <david@tagatac.net>
 // See cmd/bagoup/main.go for usage terms.
 
-// Package chatdb provides an interface ChatDB for interacting with the Mac OS
+// Package chatdb provides an interface ChatDB for interacting with the macOS
 // Messages database typically located at $HOME/Library/Messages/chat.db. See
 // [this Medium post](https://towardsdatascience.com/heres-how-you-can-access-your-entire-imessage-history-on-your-mac-f8878276c6e9)
 // for a decent primer on navigating the database. Specifically, this package is
@@ -22,7 +22,7 @@ import (
 
 const _githubIssueMsg = "open an issue at https://github.com/tagatac/bagoup/issues"
 
-// The modern version of Mac OS as it pertains to date representation in chat.db
+// The modern version of macOS as it pertains to date representation in chat.db
 var _modernVersion = semver.MustParse("10.13")
 
 const _modernVersionDateDivisor = 1_000_000_000
@@ -30,7 +30,7 @@ const _modernVersionDateDivisor = 1_000_000_000
 //go:generate mockgen -destination=mock_chatdb/mock_chatdb.go github.com/tagatac/bagoup/v2/chatdb ChatDB
 
 type (
-	// ChatDB extracts data from a Mac OS Messages database on disk.
+	// ChatDB extracts data from a macOS Messages database on disk.
 	ChatDB interface {
 		// Init determines the version of the database, preparing it to make the
 		// appropriate queries.

@@ -1,4 +1,4 @@
-// bagoup - An export utility for Mac OS Messages.
+// bagoup - An export utility for macOS Messages.
 // Copyright (C) 2020-2022  David Tagatac <david@tagatac.net>
 
 // This program is free software: you can redistribute it and/or modify

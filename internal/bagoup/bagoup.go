@@ -1,7 +1,7 @@
 // Copyright (C) 2020  David Tagatac <david@tagatac.net>
 // See cmd/bagoup/main.go for usage terms.
 
-// Package bagoup reads data from a Mac OS messsages chat database and exports
+// Package bagoup reads data from a macOS messsages chat database and exports
 // it to text or PDF.
 package bagoup
 
@@ -110,10 +110,10 @@ func (cfg *configuration) Run() error {
 	if cfg.Options.MacOSVersion != nil {
 		cfg.macOSVersion, err = semver.NewVersion(*cfg.Options.MacOSVersion)
 		if err != nil {
-			return errors.Wrapf(err, "parse Mac OS version %q", *cfg.Options.MacOSVersion)
+			return errors.Wrapf(err, "parse macOS version %q", *cfg.Options.MacOSVersion)
 		}
 	} else if cfg.macOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
-		return errors.Wrap(err, "get Mac OS version - FIX: specify the Mac OS version from which chat.db was copied with the --mac-os-version option")
+		return errors.Wrap(err, "get macOS version - FIX: specify the macOS version from which chat.db was copied with the --mac-os-version option")
 	}
 
 	var contactMap map[string]*vcard.Card
@@ -125,7 +125,7 @@ func (cfg *configuration) Run() error {
 	}
 
 	if err := cfg.ChatDB.Init(cfg.macOSVersion); err != nil {
-		return errors.Wrapf(err, "initialize the database for reading on Mac OS version %s", cfg.macOSVersion.String())
+		return errors.Wrapf(err, "initialize the database for reading on macOS version %s", cfg.macOSVersion.String())
 	}
 
 	cfg.handleMap, err = cfg.ChatDB.GetHandleMap(contactMap)

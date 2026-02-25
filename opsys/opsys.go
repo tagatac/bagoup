@@ -2,7 +2,7 @@
 // See cmd/bagoup/main.go for usage terms.
 
 // Package opsys provides an interface OS for interacting with the running
-// operating system, both with the filesystem and with Mac OS commands.
+// operating system, both with the filesystem and with macOS commands.
 package opsys
 
 import (
@@ -37,7 +37,7 @@ type (
 		// FileExist checks if the given path already exists.
 		FileExist(fp string) (bool, error)
 		// GetMacOSVersion checks the version of the current operating system,
-		// assuming it is Mac OS.
+		// assuming it is macOS.
 		GetMacOSVersion() (*semver.Version, error)
 		// GetContactMap gets a map of vcards indexed by phone numbers and email
 		// addresses specified in those cards, from the vcard file at the given
