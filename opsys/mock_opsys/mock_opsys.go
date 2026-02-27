@@ -15,7 +15,7 @@ import (
 	time "time"
 
 	semver "github.com/Masterminds/semver"
-	go_vcard "github.com/emersion/go-vcard"
+	vcard "github.com/emersion/go-vcard"
 	afero "github.com/spf13/afero"
 	opsys "github.com/tagatac/bagoup/v2/opsys"
 	pdfgen "github.com/tagatac/bagoup/v2/opsys/pdfgen"
@@ -163,10 +163,10 @@ func (mr *MockOSMockRecorder) FileExist(fp any) *gomock.Call {
 }
 
 // GetContactMap mocks base method.
-func (m *MockOS) GetContactMap(path string) (map[string]*go_vcard.Card, error) {
+func (m *MockOS) GetContactMap(path string) (map[string]*vcard.Card, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContactMap", path)
-	ret0, _ := ret[0].(map[string]*go_vcard.Card)
+	ret0, _ := ret[0].(map[string]*vcard.Card)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

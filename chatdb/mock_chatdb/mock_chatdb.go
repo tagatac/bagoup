@@ -13,7 +13,7 @@ import (
 	reflect "reflect"
 
 	semver "github.com/Masterminds/semver"
-	go_vcard "github.com/emersion/go-vcard"
+	vcard "github.com/emersion/go-vcard"
 	chatdb "github.com/tagatac/bagoup/v2/chatdb"
 	pathtools "github.com/tagatac/bagoup/v2/pathtools"
 	gomock "go.uber.org/mock/gomock"
@@ -59,7 +59,7 @@ func (mr *MockChatDBMockRecorder) GetAttachmentPaths(ptools any) *gomock.Call {
 }
 
 // GetChats mocks base method.
-func (m *MockChatDB) GetChats(contactMap map[string]*go_vcard.Card) ([]chatdb.EntityChats, error) {
+func (m *MockChatDB) GetChats(contactMap map[string]*vcard.Card) ([]chatdb.EntityChats, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetChats", contactMap)
 	ret0, _ := ret[0].([]chatdb.EntityChats)
@@ -74,7 +74,7 @@ func (mr *MockChatDBMockRecorder) GetChats(contactMap any) *gomock.Call {
 }
 
 // GetHandleMap mocks base method.
-func (m *MockChatDB) GetHandleMap(contactMap map[string]*go_vcard.Card) (map[int]string, error) {
+func (m *MockChatDB) GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHandleMap", contactMap)
 	ret0, _ := ret[0].(map[int]string)

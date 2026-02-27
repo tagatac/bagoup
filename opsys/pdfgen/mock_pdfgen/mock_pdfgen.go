@@ -12,7 +12,7 @@ package mock_pdfgen
 import (
 	reflect "reflect"
 
-	go_wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
+	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,7 +41,7 @@ func (m *MockPDFGenerator) EXPECT() *MockPDFGeneratorMockRecorder {
 }
 
 // AddPage mocks base method.
-func (m *MockPDFGenerator) AddPage(p go_wkhtmltopdf.PageProvider) {
+func (m *MockPDFGenerator) AddPage(p wkhtmltopdf.PageProvider) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddPage", p)
 }
