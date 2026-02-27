@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"go.uber.org/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"
 	"github.com/tagatac/bagoup/v2/pathtools/mock_pathtools"
+	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
 

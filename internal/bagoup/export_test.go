@@ -7,12 +7,12 @@ import (
 	"os"
 	"testing"
 
-	"go.uber.org/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"
+	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
 

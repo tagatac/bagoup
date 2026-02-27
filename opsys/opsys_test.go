@@ -14,10 +14,10 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
-	"go.uber.org/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/exectest"
 	"github.com/tagatac/bagoup/v2/opsys/scall/mock_scall"
+	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
 
