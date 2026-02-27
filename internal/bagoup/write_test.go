@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"
+	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
 
@@ -693,7 +693,7 @@ func TestWriteFile(t *testing.T) {
 		ofMock2 := mock_opsys.NewMockOutFile(ctrl)
 
 		msgs := []chatdb.DatedMessageID{}
-		mockCalls := []*gomock.Call{
+		mockCalls := []any{
 			osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
 			osMock.EXPECT().Create("messages-export/friend/iMessage;-;friend@gmail.com.1.pdf").Return(chatFile1, nil),
 			osMock.EXPECT().NewWeasyPrintFile("friend", chatFile1, false).Return(ofMock1),

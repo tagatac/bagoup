@@ -49,7 +49,7 @@ from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make build
 
 generate:
-	go install github.com/golang/mock/mockgen@latest
+	go install go.uber.org/mock/mockgen@latest
 	go generate ./...
 
 test: download

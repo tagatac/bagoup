@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"

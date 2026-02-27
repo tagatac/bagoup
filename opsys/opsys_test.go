@@ -14,7 +14,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/exectest"
 	"github.com/tagatac/bagoup/v2/opsys/scall/mock_scall"
