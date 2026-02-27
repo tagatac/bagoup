@@ -62,29 +62,13 @@ func main() {
 		}
 		chatFilePrefix := filepath.Join(chatPath, "iMessage,-,+3815555555555")
 		var of opsys.OutFile
+		var cf afero.File
 		if params.isPDF {
-			chatFile, err := s.Create(chatFilePrefix + ".pdf")
-			if err != nil {
-				log.Panic(errors.Wrap(err, "create PDF chat file"))
-			}
-			defer chatFile.Close()
-			if params.wkhtml {
-				pdfg, err := pdfgen.NewPDFGenerator(chatFile)
-				if err != nil {
-					log.Panic(errors.Wrap(err, "create PDF generator"))
-				}
-				of = s.NewWkhtmltopdfFile(_entityName, chatFile, pdfg, false)
-			} else {
-				of = s.NewWeasyPrintFile(_entityName, chatFile, false)
-			}
+			of, cf = createPDFFile(chatFilePrefix, s, params.wkhtml)
 		} else {
-			chatFile, err := s.Create(chatFilePrefix + ".txt")
-			if err != nil {
-				log.Panic(errors.Wrap(err, "create text chat file"))
-			}
-			defer chatFile.Close()
-			of = s.NewTxtOutFile(chatFile)
+			of, cf = createTxtFile(chatFilePrefix, s)
 		}
+		defer cf.Close()
 		if err := of.WriteMessage(firstMsg); err != nil {
 			log.Panic(errors.Wrapf(err, "write message %q", firstMsg))
 		}
@@ -103,4 +87,34 @@ func main() {
 			log.Panic(errors.Wrap(err, "flush outfile"))
 		}
 	}
+}
+
+func createPDFFile(
+	chatFilePrefix string,
+	s opsys.OS,
+	wkhtml bool,
+) (opsys.OutFile, afero.File) {
+	cf, err := s.Create(chatFilePrefix + ".pdf")
+	if err != nil {
+		log.Panic(errors.Wrap(err, "create PDF chat file"))
+	}
+	if wkhtml {
+		pdfg, err := pdfgen.NewPDFGenerator(cf)
+		if err != nil {
+			log.Panic(errors.Wrap(err, "create PDF generator"))
+		}
+		return s.NewWkhtmltopdfFile(_entityName, cf, pdfg, false), cf
+	}
+	return s.NewWeasyPrintFile(_entityName, cf, false), cf
+}
+
+func createTxtFile(
+	chatFilePrefix string,
+	s opsys.OS,
+) (opsys.OutFile, afero.File) {
+	cf, err := s.Create(chatFilePrefix + ".txt")
+	if err != nil {
+		log.Panic(errors.Wrap(err, "create text chat file"))
+	}
+	return s.NewTxtOutFile(cf), cf
 }
