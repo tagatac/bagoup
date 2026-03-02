@@ -4,11 +4,11 @@
 package chatdb
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/pkg/errors"
-	"github.com/tagatac/bagoup/v2/exectest"
 	"gotest.tools/v3/assert"
 )
 
@@ -158,13 +158,12 @@ func TestGetMessage(t *testing.T) {
 	}
 
 	tests := []struct {
-		msg         string
-		setupQuery  func(*sqlmock.ExpectedQuery)
-		ptsOutput   string
-		ptsErr      string
-		wantMessage string
-		wantValid   bool
-		wantErr     string
+		msg          string
+		setupQuery   func(*sqlmock.ExpectedQuery)
+		attributedBody []byte
+		wantMessage  string
+		wantValid    bool
+		wantErr      string
 	}{
 		{
 			msg: "message to me",
@@ -190,20 +189,9 @@ func TestGetMessage(t *testing.T) {
 			msg: "2FA code encoded in attributedBody",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, buildTestAttributedString("Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: 555555"), "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
-			ptsOutput: `Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: {
-    "__kIMMessagePartAttributeName" = 0;
-}555555{
-    "__kIMDataDetectedAttributeName" = {length = 553, bytes = 0x62706c69 73743030 d4010203 04050607 ... 00000000 00000193 };
-    "__kIMMessagePartAttributeName" = 0;
-    "__kIMOneTimeCodeAttributeName" =     {
-        code = 555555;
-        displayCode = 555555;
-    };
-}
-`,
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: 555555\n",
 			wantValid:   true,
 		},
@@ -211,20 +199,9 @@ func TestGetMessage(t *testing.T) {
 			msg: "Google 2FA code encoded in attributedBody",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2023-12-17 21:27:07")
+					AddRow(0, 10, nil, buildTestAttributedString("G-123456 is your Google verification code."), "2023-12-17 21:27:07")
 				query.WillReturnRows(rows)
 			},
-			ptsOutput: `G-123456{
-    "__kIMDataDetectedAttributeName" = {length = 537, bytes = 0x62706c69 73743030 d4010203 04050607 ... 00000000 00000185 };
-    "__kIMMessagePartAttributeName" = 0;
-    "__kIMOneTimeCodeAttributeName" =     {
-        code = 123456;
-        displayCode = "G-123456";
-    };
-} is your Google verification code.{
-    "__kIMMessagePartAttributeName" = 0;
-}
-`,
 			wantMessage: "[2023-12-17 21:27:07] testhandle1: G-123456 is your Google verification code.\n",
 			wantValid:   true,
 		},
@@ -258,10 +235,9 @@ func TestGetMessage(t *testing.T) {
 			msg: "error decoding attributedBody",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, "\x00", "2019-10-04 18:26:31")
 				query.WillReturnRows(rows)
 			},
-			ptsErr:      "this is a typedstream-decode error",
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
 		},
 		{
@@ -282,16 +258,11 @@ func TestGetMessage(t *testing.T) {
 			defer db.Close()
 			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, text, attributedBody, DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
-			exitCode := 0
-			if tt.ptsErr != "" {
-				exitCode = 1
-			}
 			cdb := &chatDB{
 				DB:             db,
 				selfHandle:     "Me",
 				dateDivisor:    _modernVersionDateDivisor,
 				cmJoinHasDates: true,
-				execCommand:    exectest.GenFakeExecCommand("TestRunExecCmd", tt.ptsOutput, tt.ptsErr, exitCode),
 			}
 
 			message, ok, err := cdb.GetMessage(42, handleMap)
@@ -306,4 +277,71 @@ func TestGetMessage(t *testing.T) {
 	}
 }
 
-func TestRunExecCmd(t *testing.T) { exectest.RunExecCmd() }
+// buildTestAttributedString constructs a minimal NSMutableAttributedString
+// typedstream binary encoding the given plain text, for use in test fixtures.
+// Shared string cache order during parse:
+//
+//	[0]: "NSMutableAttributedString", [1]: "NSAttributedString", [2]: "NSObject"
+//	[3]: "@", [4]: "NSMutableString", [5]: "NSString", [6]: "+"
+func buildTestAttributedString(text string) []byte {
+	newStr := func(s string) []byte {
+		result := []byte{0x84}
+		result = append(result, tsTypedUint(uint64(len(s)))...)
+		result = append(result, []byte(s)...)
+		return result
+	}
+
+	var buf []byte
+	// Header: version=4, magic="streamtyped", system_version=1000
+	buf = append(buf, 0x04, 0x0b)
+	buf = append(buf, []byte("streamtyped")...)
+	buf = append(buf, tsTypedUint(1000)...)
+
+	buf = append(buf, 0x84) // root object TAG_NEW
+
+	// Class chain: NSMutableAttributedString → NSAttributedString → NSObject
+	for _, name := range []string{"NSMutableAttributedString", "NSAttributedString", "NSObject"} {
+		buf = append(buf, 0x84)             // class entry head TAG_NEW
+		buf = append(buf, newStr(name)...)  // class name as new shared string
+		buf = append(buf, tsTypedUint(0)...) // class version
+	}
+	buf = append(buf, 0x85) // TAG_NIL: end class chain
+
+	// Instance data: type "@" → embedded NSMutableString
+	buf = append(buf, newStr("@")...) // type encoding; strCache[3]
+	buf = append(buf, 0x84)           // TAG_NEW for NSMutableString object
+
+	// Class chain: NSMutableString → NSString → NSObject (class ref 2 = 0x94)
+	for _, name := range []string{"NSMutableString", "NSString"} {
+		buf = append(buf, 0x84)             // class entry head TAG_NEW
+		buf = append(buf, newStr(name)...)  // class name
+		buf = append(buf, tsTypedUint(0)...) // class version
+	}
+	buf = append(buf, 0x94) // class object reference to NSObject (class index 2)
+
+	// NSMutableString instance data: type "+" → the text
+	buf = append(buf, newStr("+")...)                   // type encoding; strCache[6]
+	buf = append(buf, tsTypedUint(uint64(len(text)))...) // string length
+	buf = append(buf, []byte(text)...)                   // string bytes
+	buf = append(buf, 0x86)                              // TAG_END_OF_OBJECT for NSMutableString
+
+	buf = append(buf, 0x86) // TAG_END_OF_OBJECT for NSMutableAttributedString (not read)
+	return buf
+}
+
+// tsTypedUint encodes v as a typedstream variable-length unsigned integer.
+func tsTypedUint(v uint64) []byte {
+	if v < 0x81 {
+		return []byte{byte(v)}
+	}
+	if v <= 0xffff {
+		b := make([]byte, 3)
+		b[0] = 0x81
+		binary.LittleEndian.PutUint16(b[1:], uint16(v))
+		return b
+	}
+	b := make([]byte, 5)
+	b[0] = 0x82
+	binary.LittleEndian.PutUint32(b[1:], uint32(v))
+	return b
+}

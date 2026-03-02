@@ -4,20 +4,14 @@
 package chatdb
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
-	"regexp"
-	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/tagatac/bagoup/v2/chatdb/typedstream"
 )
 
-var (
-	_TypedStreamAttributeRE          = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = ([^\n]+);\n\}?`)
-	_TypedStreamMultilineAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = {5}\{\n( {8}[[:alpha:]]+ = [\w-"]+;\n)+ {4}\};\n\}?`)
-)
 
 // DatedMessageID pairs a message ID and its date, in the legacy date format.
 type DatedMessageID struct {
@@ -127,14 +121,9 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bo
 }
 
 func (d *chatDB) decodeTypedStream(s string) (string, error) {
-	cmd := d.execCommand("typedstream-decode")
-	cmd.Stdin = bytes.NewReader([]byte(s))
-	decodedBodyBytes, err := cmd.Output()
+	text, err := typedstream.DecodeAttributedBody([]byte(s))
 	if err != nil {
-		return "", errors.Wrap(err, "decode attributedBody - POSSIBLE FIX: Add typedstream-decode to your system path (installed with bagoup)")
+		return "", errors.Wrap(err, "decode attributedBody")
 	}
-	decodedBody := string(decodedBodyBytes)
-	decodedBody = _TypedStreamAttributeRE.ReplaceAllString(decodedBody, "")
-	decodedBody = _TypedStreamMultilineAttributeRE.ReplaceAllString(decodedBody, "")
-	return strings.TrimSuffix(decodedBody, "\n"), nil
+	return text, nil
 }

@@ -12,7 +12,6 @@ package chatdb
 import (
 	"database/sql"
 	"fmt"
-	"os/exec"
 
 	"github.com/Masterminds/semver"
 	"github.com/emersion/go-vcard"
@@ -59,7 +58,6 @@ type (
 		selfHandle     string
 		dateDivisor    int
 		cmJoinHasDates bool
-		execCommand    func(string, ...string) *exec.Cmd
 	}
 )
 
@@ -67,9 +65,8 @@ type (
 // on it before use.
 func NewChatDB(db *sql.DB, selfHandle string) ChatDB {
 	return &chatDB{
-		DB:          db,
-		selfHandle:  selfHandle,
-		execCommand: exec.Command,
+		DB:         db,
+		selfHandle: selfHandle,
 	}
 }
 

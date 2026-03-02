@@ -22,11 +22,7 @@ PDFINFO_IGNORE_CMD=grep -Ev 'Creator|CreationDate|File size|Producer'
 EXAMPLE_EXPORTS_DIR=example-exports
 TEST_EXPORTS_DIR=test-exports
 
-build: bin/typedstream-decode bin/bagoup
-
-bin/typedstream-decode: cmd/typedstream-decode/typedstream-decode.m
-	mkdir -vp bin
-	clang -framework Foundation -o $@ $<
+build: bin/bagoup
 
 bin/bagoup: $(SRC) $(TEMPLATES) download
 	mkdir -vp bin
