@@ -5,7 +5,6 @@ package pdfgen
 
 import (
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -30,7 +29,7 @@ type (
 func NewPDFGenerator(chatFile afero.File) (PDFGenerator, error) {
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		return nil, errors.Wrap(err, "create PDF generator")
+		return nil, err
 	}
 	pdfg.SetOutput(chatFile)
 	return pdfGenerator{PDFGenerator: pdfg}, nil
