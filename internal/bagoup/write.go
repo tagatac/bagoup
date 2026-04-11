@@ -5,7 +5,7 @@ package bagoup
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -157,7 +157,14 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 		if _, ok := err.(errorMissingAttachment); ok {
 			// Attachment is missing. Just reference it, and skip copying/embedding.
 			cfg.counts.attachmentsMissing++
-			log.Printf("WARN: chat file %q - message %d - %s attachment %q (ID %d) - %s", outFile.Name(), msgID, att.MIMEType, att.TransferName, att.ID, err)
+			slog.Warn(err.Error(),
+				"chat file", outFile.Name(),
+				"message ID", msgID,
+				slog.Group("attachment",
+					"type", att.MIMEType,
+					"name", att.TransferName,
+					"ID", att.ID,
+				))
 			if err := outFile.ReferenceAttachment(att.TransferName); err != nil {
 				return errors.Wrapf(err, "reference attachment %q", att.TransferName)
 			}
@@ -218,7 +225,11 @@ func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Atta
 	if cfg.Options.OutputPDF {
 		if jpgPath, err := cfg.OS.ConvertHEIC(attPath); err != nil {
 			cfg.counts.conversionsFailed++
-			log.Printf("WARN: chat file %q - convert HEIC file %q to JPG: %s", outFile.Name(), attPath, err)
+			slog.Warn("failed to convert HEIC file to JPEG",
+				"err", err,
+				"chat file", outFile.Name(),
+				"HEIC file", attPath,
+			)
 		} else if jpgPath != attPath {
 			cfg.counts.conversions++
 			attPath, mimeType = jpgPath, "image/jpeg"

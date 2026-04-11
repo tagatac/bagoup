@@ -20,7 +20,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -40,49 +40,57 @@ const _license = "Copyright (C) 2020-2023  David Tagatac <david@tagatac.net>\nSe
 var _version string
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				slog.Error(e.Error())
+			}
+		}
+	}()
+
 	startTime := time.Now()
 	var opts bagoup.Options
 	_, err := flags.Parse(&opts)
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
-		os.Exit(0)
+		return
 	}
-	logFatalOnErr(errors.Wrap(err, "parse flags"))
-	logFatalOnErr(errors.Wrap(bagoup.ValidateOptions(opts), "validate options"))
+	panicOnErr(errors.Wrap(err, "parse flags"))
+	panicOnErr(errors.Wrap(bagoup.ValidateOptions(opts), "validate options"))
 	if opts.PrintVersion {
 		fmt.Printf("bagoup version %s\n%s\n", _version, _license)
 		return
 	}
 
 	ptools, err := pathtools.NewPathTools()
-	logFatalOnErr(errors.Wrap(err, "create pathtools"))
+	panicOnErr(errors.Wrap(err, "create pathtools"))
 	opts.DBPath = ptools.ReplaceTilde(opts.DBPath)
 
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	db, err := sql.Open("sqlite3", opts.DBPath)
-	logFatalOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
+	panicOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
 	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, logDir, startTime, _version)
-	logFatalOnErr(errors.Wrap(err, "create bagoup configuration"))
-	logFatalOnErr(cfg.Run())
-	logFatalOnErr(errors.Wrapf(db.Close(), "close DB file %q", opts.DBPath))
+	panicOnErr(errors.Wrap(err, "create bagoup configuration"))
+	panicOnErr(cfg.Run())
+	panicOnErr(errors.Wrapf(db.Close(), "close DB file %q", opts.DBPath))
 	dbf, err := os.Open(opts.DBPath)
-	logFatalOnErr(errors.Wrapf(err, "open DB file %q for copying", opts.DBPath))
+	panicOnErr(errors.Wrapf(err, "open DB file %q for copying", opts.DBPath))
 	defer dbf.Close()
 	dbfNewPath := filepath.Join(logDir, filepath.Base(opts.DBPath))
 	dbfNew, err := os.Create(dbfNewPath)
-	logFatalOnErr(errors.Wrapf(err, "create file %q to copy chat DB into", dbfNewPath))
+	panicOnErr(errors.Wrapf(err, "create file %q to copy chat DB into", dbfNewPath))
 	defer dbfNew.Close()
 	_, err = io.Copy(dbfNew, dbf)
-	logFatalOnErr(errors.Wrapf(err, "copy DB file from %q to %q", opts.DBPath, dbfNewPath))
-	logFatalOnErr(errors.Wrapf(dbf.Close(), "close DB file %q after copying", opts.DBPath))
-	logFatalOnErr(errors.Wrapf(dbfNew.Close(), "close DB copy %q", dbfNewPath))
+	panicOnErr(errors.Wrapf(err, "copy DB file from %q to %q", opts.DBPath, dbfNewPath))
+	panicOnErr(errors.Wrapf(dbf.Close(), "close DB file %q after copying", opts.DBPath))
+	panicOnErr(errors.Wrapf(dbfNew.Close(), "close DB copy %q", dbfNewPath))
 }
 
-func logFatalOnErr(err error) {
+func panicOnErr(err error) {
 	if err != nil {
-		log.Fatalf("ERROR: %s", err)
+		panic(err)
 	}
 }
