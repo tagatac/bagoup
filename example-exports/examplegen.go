@@ -4,7 +4,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 
@@ -35,7 +34,7 @@ func main() {
 	}
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Panic(errors.Wrap(err, "get working directory"))
+		panic(errors.Wrap(err, "get working directory"))
 	}
 	parentDir := filepath.Dir(wd)
 	attachmentPath := filepath.Join(
@@ -58,7 +57,7 @@ func main() {
 	for _, params := range runs {
 		chatPath := filepath.Join(params.exportPath, _entityName)
 		if err := s.MkdirAll(chatPath, os.ModePerm); err != nil {
-			log.Panic(errors.Wrap(err, "create export directory"))
+			panic(errors.Wrap(err, "create export directory"))
 		}
 		chatFilePrefix := filepath.Join(chatPath, "iMessage,-,+3815555555555")
 		var of opsys.OutFile
@@ -70,21 +69,21 @@ func main() {
 		}
 		defer cf.Close()
 		if err := of.WriteMessage(firstMsg); err != nil {
-			log.Panic(errors.Wrapf(err, "write message %q", firstMsg))
+			panic(errors.Wrapf(err, "write message %q", firstMsg))
 		}
 		if _, err := of.WriteAttachment(attachmentPath); err != nil {
-			log.Panic(errors.Wrap(err, "include attachment"))
+			panic(errors.Wrap(err, "include attachment"))
 		}
 		for _, msg := range moreMsgs {
 			if err := of.WriteMessage(msg); err != nil {
-				log.Panic(errors.Wrapf(err, "write message %q", msg))
+				panic(errors.Wrapf(err, "write message %q", msg))
 			}
 		}
 		if _, err := of.Stage(); err != nil {
-			log.Panic(errors.Wrap(err, "stage outfile"))
+			panic(errors.Wrap(err, "stage outfile"))
 		}
 		if err := of.Flush(); err != nil {
-			log.Panic(errors.Wrap(err, "flush outfile"))
+			panic(errors.Wrap(err, "flush outfile"))
 		}
 	}
 }
@@ -96,12 +95,12 @@ func createPDFFile(
 ) (opsys.OutFile, afero.File) {
 	cf, err := s.Create(chatFilePrefix + ".pdf")
 	if err != nil {
-		log.Panic(errors.Wrap(err, "create PDF chat file"))
+		panic(errors.Wrap(err, "create PDF chat file"))
 	}
 	if wkhtml {
 		pdfg, err := pdfgen.NewPDFGenerator(cf)
 		if err != nil {
-			log.Panic(errors.Wrap(err, "create PDF generator"))
+			panic(errors.Wrap(err, "create PDF generator"))
 		}
 		return s.NewWkhtmltopdfFile(_entityName, cf, pdfg, false), cf
 	}
@@ -114,7 +113,7 @@ func createTxtFile(
 ) (opsys.OutFile, afero.File) {
 	cf, err := s.Create(chatFilePrefix + ".txt")
 	if err != nil {
-		log.Panic(errors.Wrap(err, "create text chat file"))
+		panic(errors.Wrap(err, "create text chat file"))
 	}
 	return s.NewTxtOutFile(cf), cf
 }

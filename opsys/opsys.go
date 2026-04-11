@@ -8,7 +8,7 @@ package opsys
 import (
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -209,7 +209,12 @@ func (s opSys) CopyFile(src, dstDir string, unique bool) (string, error) {
 		dst = fmt.Sprintf("%s-%d%s", dstPrefix, i, dstExt)
 	}
 	if suffixInserted {
-		log.Printf("WARN: copy %q to %q - %q already exists; using %q instead", src, dstDir, filepath.Base(src), filepath.Base(dst))
+		slog.Warn("copy file collision; using a unique name instead",
+			"source file", src,
+			"destination dir", dstDir,
+			"existing name", filepath.Base(src),
+			"unique name", filepath.Base(dst),
+		)
 	}
 
 	copier := gorecurcopy.NewCopierWithFs(s.Fs)
@@ -242,7 +247,10 @@ func (s *opSys) RmTempDir() error {
 		return nil
 	}
 	if err := s.Fs.RemoveAll(s.tempDir); err != nil {
-		log.Printf("ERROR: failed to remove temporary directory %q: %s\n", s.tempDir, err)
+		slog.Error("failed to remove temporary directory",
+			"tempDir", s.tempDir,
+			"err", err,
+		)
 		return errors.Wrapf(err, "remove temporary directory %q", s.tempDir)
 	}
 	s.tempDir = ""

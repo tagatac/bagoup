@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"regexp"
 	"strings"
 
@@ -117,11 +117,14 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bo
 		msg, err = d.decodeTypedStream(attributedBody.String)
 		if err != nil {
 			valid = false
-			log.Printf("WARN: get plain text for message %d: %s", messageID, err)
+			slog.Warn("failed to get plain text for message",
+				"messageID", messageID,
+				"err", err,
+			)
 		}
 	} else {
 		valid = false
-		log.Printf("WARN: no valid text or attributedBody for message %d", messageID)
+		slog.Warn("no valid text or attributedBody for message", "messageID", messageID)
 	}
 	return fmt.Sprintf("[%s] %s: %s\n", date, handle, msg), valid, nil
 }
