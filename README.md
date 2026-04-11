@@ -135,7 +135,7 @@ See cmd/bagoup/main.go for usage terms.
 
 [ci-img]: https://github.com/tagatac/bagoup/actions/workflows/makefile.yaml/badge.svg?branch=main
 [ci]: https://github.com/tagatac/bagoup/actions?query=branch%3Amain
-[cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/main/graph/badge.svg
+[cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/main/graph/badge.svg?token=BADYXN4Z5D
 [cov]: https://codecov.io/gh/tagatac/bagoup
 [card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup/v2
 [card]: https://goreportcard.com/report/github.com/tagatac/bagoup/v2
