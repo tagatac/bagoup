@@ -43,6 +43,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
         <style>
             body {
                 word-wrap: break-word;
+                font-family: Helvetica;
             }
             img {
                 max-width: 875px;
@@ -96,6 +97,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
         <style>
             body {
                 word-wrap: break-word;
+                font-family: Helvetica;
             }
             img {
                 max-width: 875px;
@@ -149,6 +151,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
         <style>
             body {
                 word-wrap: break-word;
+                font-family: Helvetica;
             }
             img {
                 max-width: 875px;
@@ -210,6 +213,7 @@ func TestWkhtmltopdfFile(t *testing.T) {
         <style>
             body {
                 word-wrap: break-word;
+                font-family: Helvetica;
             }
             img {
                 max-width: 875px;
