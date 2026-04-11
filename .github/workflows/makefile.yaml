@@ -16,16 +16,6 @@ jobs:
 
     - uses: actions/checkout@v6
 
-    - name: Install WeasyPrint and diff-pdf
-      run: |
-        brew update
-        brew install weasyprint diff-pdf
-
-    - name: Install wkhtmltopdf
-      run: |
-        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
-        sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
-
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
@@ -33,6 +23,11 @@ jobs:
 
     - name: Build
       run: make
+
+    - name: Install wkhtmltopdf
+      run: |
+        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
+        sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
 
     - name: Test
       run: make test
@@ -42,6 +37,11 @@ jobs:
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Install WeasyPrint and diff-pdf
+      run: |
+        brew update
+        brew install weasyprint diff-pdf
 
     - name: Test Exports
       run: make test-exports
