@@ -72,7 +72,6 @@ func NewConfiguration(
 	s opsys.OS,
 	cdb chatdb.ChatDB,
 	ptools pathtools.PathTools,
-	imgConverter imgconvert.ImgConverter,
 	logDir string,
 	startTime time.Time,
 	version string,
@@ -86,12 +85,11 @@ func NewConfiguration(
 		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
 	}
 	return &configuration{
-		Options:      opts,
-		OS:           s,
-		ChatDB:       cdb,
-		PathTools:    ptools,
-		ImgConverter: imgConverter,
-		logDir:       logDir,
+		Options:   opts,
+		OS:        s,
+		ChatDB:    cdb,
+		PathTools: ptools,
+		logDir:    logDir,
 		counts: counts{
 			attachments:         map[string]int{},
 			attachmentsCopied:   map[string]int{},
@@ -145,7 +143,15 @@ func (cfg *configuration) Run() error {
 		return errors.Wrap(err, "get handle map")
 	}
 
-	defer cfg.OS.RmTempDir()
+	if cfg.Options.OutputPDF {
+		tempDir, err := cfg.OS.GetTempDir()
+		if err != nil {
+			return errors.Wrap(err, "get temporary directory")
+		}
+		defer cfg.OS.RmTempDir()
+		cfg.ImgConverter = imgconvert.NewImgConverter(tempDir)
+	}
+
 	err = cfg.exportChats(contactMap)
 	printResults(cfg.version, cfg.Options.ExportPath, cfg.counts, time.Since(cfg.startTime))
 	if err != nil {
