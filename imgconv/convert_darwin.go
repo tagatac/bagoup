@@ -1,4 +1,4 @@
-package imgconvert
+package imgconv
 
 import "os/exec"
 

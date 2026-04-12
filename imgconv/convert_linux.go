@@ -1,4 +1,4 @@
-package imgconvert
+package imgconv
 
 import "github.com/tagatac/goheif/heic2jpg"
 

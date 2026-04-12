@@ -1,4 +1,4 @@
-package imgconvert
+package imgconv
 
 import (
 	"path/filepath"
@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate mockgen -destination=mock_imgconvert/mock_imgconvert.go github.com/tagatac/bagoup/v2/imgconvert ImgConverter
+//go:generate mockgen -destination=mock_imgconv/mock_imgconv.go github.com/tagatac/bagoup/v2/imgconv ImgConverter
 
 type ImgConverter interface {
 	// ConvertHEIC converts the src file to a JPEG image if the src file is an

@@ -18,7 +18,7 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/chatdb"
-	"github.com/tagatac/bagoup/v2/imgconvert"
+	"github.com/tagatac/bagoup/v2/imgconv"
 	"github.com/tagatac/bagoup/v2/opsys"
 	"github.com/tagatac/bagoup/v2/pathtools"
 )
@@ -36,7 +36,7 @@ type (
 		opsys.OS
 		chatdb.ChatDB
 		pathtools.PathTools
-		imgconvert.ImgConverter
+		imgconv.ImgConverter
 		logDir          string
 		macOSVersion    *semver.Version
 		handleMap       map[int]string
@@ -149,7 +149,7 @@ func (cfg *configuration) Run() error {
 			return errors.Wrap(err, "get temporary directory")
 		}
 		defer cfg.OS.RmTempDir()
-		cfg.ImgConverter = imgconvert.NewImgConverter(tempDir)
+		cfg.ImgConverter = imgconv.NewImgConverter(tempDir)
 	}
 
 	err = cfg.exportChats(contactMap)
