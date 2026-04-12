@@ -80,11 +80,12 @@ jobs:
         sudo make install
 
     - name: Test Exports
+      id: test-exports
       run: make test-exports
 
     - name: Upload export artifacts
-      if: always()   # upload even on failure, useful for debugging diffs
-      uses: actions/upload-artifact@v4
+      if: always() && steps.test-exports.outcome == 'failure'
+      uses: actions/upload-artifact@v7
       with:
         name: test-exports-${{ matrix.os }}
         path: |
