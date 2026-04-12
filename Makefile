@@ -14,12 +14,12 @@ EXCLUDE_PKGS=\
 PKGS_TO_TEST=$(filter-out $(EXCLUDE_PKGS),$(PKGS))
 PKGS_TO_COVER=$(shell echo "$(PKGS_TO_TEST)" | tr ' ' ',')
 
-EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage,-,+3815555555555'
+EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage;-;+3815555555555'
 TXT_FILE=messages-export/$(EXAMPLE_EXPORT_FILE).txt
 PDF_FILE=messages-export-pdf/$(EXAMPLE_EXPORT_FILE).pdf
 PDF_FILE_WKHTML=messages-export-wkhtmltopdf/$(EXAMPLE_EXPORT_FILE).pdf
 PDFINFO_IGNORE_CMD=grep -Ev 'Creator|CreationDate|File size|Producer'
-EXAMPLE_EXPORTS_DIR=example-exports
+EXAMPLE_EXPORTS_DIR=example-exports/$(OS)
 TEST_EXPORTS_DIR=test-exports
 
 build: bin/typedstream-decode bin/bagoup
@@ -32,7 +32,7 @@ bin/bagoup: $(SRC) $(TEMPLATES) download
 	mkdir -vp bin
 	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
 
-.PHONY: deps download from-archive generate test test-exports clean
+.PHONY: deps download from-archive generate vet test test-exports clean
 
 deps:
 	go get -u -t -v ./...
@@ -42,8 +42,8 @@ download:
 	go mod download
 
 example: example-exports/examplegen.go download
-	rm -vrf example-exports/messages-export*
-	cd example-exports && go run $(LDFLAGS) examplegen.go
+	rm -vrf $(EXAMPLE_EXPORTS_DIR)
+	cd example-exports && go run examplegen.go $(OS)
 
 from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make build
@@ -52,6 +52,9 @@ generate:
 	go install go.uber.org/mock/mockgen@latest
 	go generate ./...
 
+vet:
+	go vet ./...
+
 test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
 	go tool cover -func=$(COVERAGE_FILE)
@@ -59,7 +62,7 @@ test: download
 test-exports: download
 	rm -vrf $(TEST_EXPORTS_DIR)
 	mkdir -vp $(TEST_EXPORTS_DIR)
-	cd $(EXAMPLE_EXPORTS_DIR) && go run $(LDFLAGS) examplegen.go ../$(TEST_EXPORTS_DIR)
+	cd example-exports && go run examplegen.go ../$(TEST_EXPORTS_DIR)
 	diff $(EXAMPLE_EXPORTS_DIR)/$(TXT_FILE) $(TEST_EXPORTS_DIR)/$(TXT_FILE)
 	bash -c "diff <(pdfinfo $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE) | $(PDFINFO_IGNORE_CMD)) <(pdfinfo $(TEST_EXPORTS_DIR)/$(PDF_FILE) | $(PDFINFO_IGNORE_CMD))"
 	diff-pdf -v $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE) $(TEST_EXPORTS_DIR)/$(PDF_FILE)

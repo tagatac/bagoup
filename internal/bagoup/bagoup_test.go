@@ -61,7 +61,7 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir().Times(2),
+					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -85,7 +85,7 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir().Times(2),
+					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -190,7 +190,7 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir().Times(2),
+					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -234,7 +234,7 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir().Times(2),
+					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -291,6 +291,54 @@ func TestBagoup(t *testing.T) {
 			wantErr: "get handle map: this is a DB error",
 		},
 		{
+			msg: "pdf output",
+			opts: Options{
+				DBPath:          "~/Library/Messages/chat.db",
+				ExportPath:      "messages-export",
+				SelfHandle:      "Me",
+				OutputPDF:       true,
+				AttachmentsPath: "/",
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
+				gomock.InOrder(
+					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
+					osMock.EXPECT().FileExist(exportPathAbs),
+					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
+					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
+					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
+					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().GetHandleMap(nil),
+					osMock.EXPECT().GetTempDir(),
+					dbMock.EXPECT().GetAttachmentPaths(ptMock),
+					dbMock.EXPECT().GetChats(nil),
+					osMock.EXPECT().RmTempDir().Times(2),
+				)
+			},
+		},
+		{
+			msg: "error getting temp dir",
+			opts: Options{
+				DBPath:          "~/Library/Messages/chat.db",
+				ExportPath:      "messages-export",
+				SelfHandle:      "Me",
+				OutputPDF:       true,
+				AttachmentsPath: "/",
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
+				gomock.InOrder(
+					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
+					osMock.EXPECT().FileExist(exportPathAbs),
+					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
+					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
+					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
+					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().GetHandleMap(nil),
+					osMock.EXPECT().GetTempDir().Return("", errors.New("this is a tempdir error")),
+				)
+			},
+			wantErr: "get temporary directory: this is a tempdir error",
+		},
+		{
 			msg:  "export chats error",
 			opts: defaultOpts,
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
@@ -304,7 +352,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil).Return(nil, errors.New("this is a DB error")),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 			wantErr: "export chats: get chats: this is a DB error",
@@ -332,7 +379,7 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetChats(nil),
 					ptMock.EXPECT().GetHomeDir(),
 					osMock.EXPECT().Create(tildeexpansionAbs).Return(afero.NewMemMapFs().Create("dummy")),
-					osMock.EXPECT().RmTempDir().Times(2),
+					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -359,7 +406,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetChats(nil),
 					ptMock.EXPECT().GetHomeDir(),
 					osMock.EXPECT().Create(tildeexpansionAbs).Return(nil, errors.New("this is a permissions error")),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 			wantErr: "write out tilde expansion file: this is a permissions error",
@@ -391,7 +437,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetChats(nil),
 					ptMock.EXPECT().GetHomeDir(),
 					osMock.EXPECT().Create(tildeexpansionAbs).Return(rofs.Open("dummy")),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 			wantErr: "write out tilde expansion file: write dummy: file handle is read only",

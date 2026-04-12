@@ -44,7 +44,11 @@ func TestWeasyPrintFile(t *testing.T) {
             }
             body {
                 font-size: 9.5pt;
+                font-family: "Times New Roman", "Liberation Serif", serif;
                 word-wrap: break-word;
+            }
+            .emoji {
+                font-family: "Apple Color Emoji", "Noto Color Emoji";
             }
             img {
                 image-resolution: 120dpi;
@@ -88,7 +92,11 @@ func TestWeasyPrintFile(t *testing.T) {
             }
             body {
                 font-size: 9.5pt;
+                font-family: "Times New Roman", "Liberation Serif", serif;
                 word-wrap: break-word;
+            }
+            .emoji {
+                font-family: "Apple Color Emoji", "Noto Color Emoji";
             }
             img {
                 image-resolution: 120dpi;
@@ -132,7 +140,11 @@ func TestWeasyPrintFile(t *testing.T) {
             }
             body {
                 font-size: 9.5pt;
+                font-family: "Times New Roman", "Liberation Serif", serif;
                 word-wrap: break-word;
+            }
+            .emoji {
+                font-family: "Apple Color Emoji", "Noto Color Emoji";
             }
             img {
                 image-resolution: 120dpi;
@@ -184,7 +196,11 @@ func TestWeasyPrintFile(t *testing.T) {
             }
             body {
                 font-size: 9.5pt;
+                font-family: "Times New Roman", "Liberation Serif", serif;
                 word-wrap: break-word;
+            }
+            .emoji {
+                font-family: "Apple Color Emoji", "Noto Color Emoji";
             }
             img {
                 image-resolution: 120dpi;

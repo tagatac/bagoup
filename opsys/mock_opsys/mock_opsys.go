@@ -88,21 +88,6 @@ func (mr *MockOSMockRecorder) Chtimes(name, atime, mtime any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Chtimes", reflect.TypeOf((*MockOS)(nil).Chtimes), name, atime, mtime)
 }
 
-// ConvertHEIC mocks base method.
-func (m *MockOS) ConvertHEIC(src string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConvertHEIC", src)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ConvertHEIC indicates an expected call of ConvertHEIC.
-func (mr *MockOSMockRecorder) ConvertHEIC(src any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConvertHEIC", reflect.TypeOf((*MockOS)(nil).ConvertHEIC), src)
-}
-
 // CopyFile mocks base method.
 func (m *MockOS) CopyFile(src, dstDir string, unique bool) (string, error) {
 	m.ctrl.T.Helper()
@@ -205,6 +190,21 @@ func (m *MockOS) GetOpenFilesLimit() (int, error) {
 func (mr *MockOSMockRecorder) GetOpenFilesLimit() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenFilesLimit", reflect.TypeOf((*MockOS)(nil).GetOpenFilesLimit))
+}
+
+// GetTempDir mocks base method.
+func (m *MockOS) GetTempDir() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTempDir")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTempDir indicates an expected call of GetTempDir.
+func (mr *MockOSMockRecorder) GetTempDir() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTempDir", reflect.TypeOf((*MockOS)(nil).GetTempDir))
 }
 
 // Mkdir mocks base method.

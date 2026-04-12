@@ -11,7 +11,12 @@ on:
 jobs:
 
   build-and-test:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os:
+        - macos-latest
+        - ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
 
     - uses: actions/checkout@v6
@@ -21,13 +26,29 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - name: Build
+    - name: Vet
+      run: make vet
+
+    - name: Build (macOS)
+      if: runner.os == 'macOS'
       run: make
 
-    - name: Install wkhtmltopdf
+    - name: Build (Linux)
+      if: runner.os == 'Linux'
+      run: make bin/bagoup
+
+    - name: Install wkhtmltopdf (macOS)
+      if: runner.os == 'macOS'
       run: |
         wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
         sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
+
+    - name: Install wkhtmltopdf (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb
+        sudo apt-get update -y
+        sudo apt-get install -y ./wkhtmltox_0.12.6.1-2.jammy_amd64.deb
 
     - name: Test
       run: make test
@@ -37,11 +58,26 @@ jobs:
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: ${{ matrix.os }}
 
-    - name: Install WeasyPrint and diff-pdf
+    - name: Install WeasyPrint and diff-pdf (macOS)
+      if: runner.os == 'macOS'
       run: |
         brew update
         brew install weasyprint diff-pdf
+
+    - name: Install WeasyPrint, emojis, and diff-pdf (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        pipx install weasyprint
+        sudo apt-get install -y fonts-noto-color-emoji make automake g++ libpoppler-glib-dev poppler-utils libwxgtk3.2-dev
+        wget https://github.com/vslavik/diff-pdf/releases/download/v0.5.3/diff-pdf-0.5.3.tar.gz
+        tar xzf diff-pdf-0.5.3.tar.gz
+        cd diff-pdf-0.5.3
+        ./bootstrap
+        ./configure
+        make
+        sudo make install
 
     - name: Test Exports
       run: make test-exports

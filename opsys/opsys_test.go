@@ -500,7 +500,7 @@ func TestGetTempDir(t *testing.T) {
 				tempDir: tt.prevTempDir,
 			}
 
-			tempDir, err := s.getTempDir()
+			tempDir, err := s.GetTempDir()
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return
