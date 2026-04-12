@@ -412,6 +412,7 @@ func TestBagoup(t *testing.T) {
 				osMock,
 				dbMock,
 				ptMock,
+				nil,
 				logDirAbs,
 				time.Now(),
 				"",

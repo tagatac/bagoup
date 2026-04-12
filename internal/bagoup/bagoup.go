@@ -18,6 +18,7 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/chatdb"
+	"github.com/tagatac/bagoup/v2/imgconvert"
 	"github.com/tagatac/bagoup/v2/opsys"
 	"github.com/tagatac/bagoup/v2/pathtools"
 )
@@ -35,6 +36,7 @@ type (
 		opsys.OS
 		chatdb.ChatDB
 		pathtools.PathTools
+		imgconvert.ImgConverter
 		logDir          string
 		macOSVersion    *semver.Version
 		handleMap       map[int]string
@@ -65,7 +67,16 @@ type (
 )
 
 // NewConfiguration returns an intitialized bagoup configuration.
-func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, ptools pathtools.PathTools, logDir string, startTime time.Time, version string) (Configuration, error) {
+func NewConfiguration(
+	opts Options,
+	s opsys.OS,
+	cdb chatdb.ChatDB,
+	ptools pathtools.PathTools,
+	imgConverter imgconvert.ImgConverter,
+	logDir string,
+	startTime time.Time,
+	version string,
+) (Configuration, error) {
 	if opts.AttachmentsPath != "/" {
 		tef := filepath.Join(opts.AttachmentsPath, PreservedPathTildeExpansionFile)
 		homeDir, err := s.ReadFile(tef)
@@ -75,11 +86,12 @@ func NewConfiguration(opts Options, s opsys.OS, cdb chatdb.ChatDB, ptools pathto
 		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
 	}
 	return &configuration{
-		Options:   opts,
-		OS:        s,
-		ChatDB:    cdb,
-		PathTools: ptools,
-		logDir:    logDir,
+		Options:      opts,
+		OS:           s,
+		ChatDB:       cdb,
+		PathTools:    ptools,
+		ImgConverter: imgConverter,
+		logDir:       logDir,
 		counts: counts{
 			attachments:         map[string]int{},
 			attachmentsCopied:   map[string]int{},

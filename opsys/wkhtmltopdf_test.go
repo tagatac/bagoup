@@ -42,8 +42,8 @@ func TestWkhtmltopdfFile(t *testing.T) {
 
         <style>
             body {
+                font-family: Helvetica, "Liberation Sans", sans-serif;
                 word-wrap: break-word;
-                font-family: Helvetica;
             }
             img {
                 max-width: 875px;
@@ -96,8 +96,8 @@ func TestWkhtmltopdfFile(t *testing.T) {
 
         <style>
             body {
+                font-family: Helvetica, "Liberation Sans", sans-serif;
                 word-wrap: break-word;
-                font-family: Helvetica;
             }
             img {
                 max-width: 875px;
@@ -150,8 +150,8 @@ func TestWkhtmltopdfFile(t *testing.T) {
 
         <style>
             body {
+                font-family: Helvetica, "Liberation Sans", sans-serif;
                 word-wrap: break-word;
-                font-family: Helvetica;
             }
             img {
                 max-width: 875px;
@@ -212,8 +212,8 @@ func TestWkhtmltopdfFile(t *testing.T) {
 
         <style>
             body {
+                font-family: Helvetica, "Liberation Sans", sans-serif;
                 word-wrap: break-word;
-                font-family: Helvetica;
             }
             img {
                 max-width: 875px;

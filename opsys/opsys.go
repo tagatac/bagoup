@@ -50,8 +50,9 @@ type (
 		// a numbered suffix will be added to the copied file name. The path of the
 		// copied file is returned.
 		CopyFile(src, dstDir string, unique bool) (string, error)
-		// RmTempDir removes the temporary directory used by this package for
-		// staging converted images for inclusion in PDF files.
+		// GetTempDir gets the temporary directory to be used for ephemeral files.
+		GetTempDir() (string, error)
+		// RmTempDir removes the temporary directory.
 		RmTempDir() error
 		// GetOpenFilesLimit gets the current limit on the number of open files.
 		GetOpenFilesLimit() (int, error)
@@ -59,10 +60,6 @@ type (
 		// accommodate wkhtmltopdf:
 		// https://github.com/wkhtmltopdf/wkhtmltopdf/issues/3081#issue-172083214
 		SetOpenFilesLimit(n int) error
-		// ConvertHEIC converts the src file to a JPEG image if the src file is an
-		// HEIC image, returning the path to the JPEG image. Otherwise the src
-		// path is returned.
-		ConvertHEIC(src string) (string, error)
 		NewTxtOutFile(afero.File) OutFile
 		NewWeasyPrintFile(entityName string, chatFile afero.File, includePPA bool) OutFile
 		NewWkhtmltopdfFile(entityName string, chatFile afero.File, pdfg pdfgen.PDFGenerator, includePPA bool) OutFile
@@ -230,7 +227,7 @@ func (s opSys) CopyFile(src, dstDir string, unique bool) (string, error) {
 	}
 }
 
-func (s *opSys) getTempDir() (string, error) {
+func (s *opSys) GetTempDir() (string, error) {
 	if s.tempDir != "" {
 		return s.tempDir, nil
 	}

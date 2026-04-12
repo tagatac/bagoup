@@ -30,6 +30,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb"
+	"github.com/tagatac/bagoup/v2/imgconvert"
 	"github.com/tagatac/bagoup/v2/internal/bagoup"
 	"github.com/tagatac/bagoup/v2/opsys"
 	"github.com/tagatac/bagoup/v2/pathtools"
@@ -70,9 +71,15 @@ func main() {
 	panicOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
+	tempDir, err := s.GetTempDir()
+	panicOnErr(err)
+	var imgConverter imgconvert.ImgConverter
+	if opts.OutputPDF {
+		imgConverter = imgconvert.NewImgConverter(tempDir)
+	}
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
-	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, logDir, startTime, _version)
+	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, imgConverter, logDir, startTime, _version)
 	panicOnErr(errors.Wrap(err, "create bagoup configuration"))
 	panicOnErr(cfg.Run())
 	panicOnErr(errors.Wrapf(db.Close(), "close DB file %q", opts.DBPath))

@@ -20,6 +20,22 @@ $ cat "messages-export/Novak Djokovic/iMessage,-,+3815555555555.txt"
 ### PDF (--pdf flag)
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
 
+## Prerequisites
+- [weasyprint](https://weasyprint.org/) (only needed for PDF export)
+```
+brew install weasyprint
+```
+- [python-typedstream](https://github.com/dgelessus/python-typedstream) (only needed to run on Linux)
+```
+git clone git@github.com:dgelessus/python-typedstream.git
+cd python-typedstream
+python3 -m pip install .
+```
+- [Noto Color Emoji Font](https://fonts.google.com/noto/specimen/Noto+Color+Emoji) (only needed for export to PDF on Linux)
+```
+sudo apt install fonts-noto-color-emoji
+```
+
 ## Installation
 ```
 brew tap tagatac/bagoup

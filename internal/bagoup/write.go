@@ -223,7 +223,7 @@ func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string) 
 func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
 	attPath, mimeType := att.Filepath, att.MIMEType
 	if cfg.Options.OutputPDF {
-		if jpgPath, err := cfg.OS.ConvertHEIC(attPath); err != nil {
+		if jpgPath, err := cfg.ImgConverter.ConvertHEIC(attPath); err != nil {
 			cfg.counts.conversionsFailed++
 			slog.Warn("failed to convert HEIC file to JPEG",
 				"err", err,
