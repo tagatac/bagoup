@@ -59,15 +59,31 @@ test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
 	go tool cover -func=$(COVERAGE_FILE)
 
+define compare-pdf
+	bash -c " \
+		pdfinfo $(EXAMPLE_EXPORTS_DIR)/$(1) | $(PDFINFO_IGNORE_CMD) > $(TEST_EXPORTS_DIR)/$(1).expected.info && \
+		pdfinfo $(TEST_EXPORTS_DIR)/$(1) | $(PDFINFO_IGNORE_CMD) > $(TEST_EXPORTS_DIR)/$(1).actual.info && \
+		diff $(TEST_EXPORTS_DIR)/$(1).expected.info $(TEST_EXPORTS_DIR)/$(1).actual.info"
+	magick compare -verbose -metric SSIM \
+	  \( -density 300 $(EXAMPLE_EXPORTS_DIR)/$(1) -background white -alpha remove \) \
+	  \( -density 300 $(TEST_EXPORTS_DIR)/$(1) -background white -alpha remove \) \
+	  null: 2>&1 \
+		| tee /dev/stderr \
+		| grep -i "all" \
+		| awk 'BEGIN { found=0 } { found=1; val=$$2 } END { \
+			if (!found) exit 1; \
+	    if (val > 0.5) { exit (val >= 0.999 ? 0 : 1) } \
+	    else { exit (val <= 0.001 ? 0 : 1) } \
+		}'
+endef
+
 test-exports: download
 	rm -vrf $(TEST_EXPORTS_DIR)
 	mkdir -vp $(TEST_EXPORTS_DIR)
 	cd example-exports && go run examplegen.go ../$(TEST_EXPORTS_DIR)
 	diff $(EXAMPLE_EXPORTS_DIR)/$(TXT_FILE) $(TEST_EXPORTS_DIR)/$(TXT_FILE)
-	bash -c "diff <(pdfinfo $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE) | $(PDFINFO_IGNORE_CMD)) <(pdfinfo $(TEST_EXPORTS_DIR)/$(PDF_FILE) | $(PDFINFO_IGNORE_CMD))"
-	diff-pdf -v $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE) $(TEST_EXPORTS_DIR)/$(PDF_FILE)
-	bash -c "diff <(pdfinfo $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE_WKHTML) | $(PDFINFO_IGNORE_CMD)) <(pdfinfo $(TEST_EXPORTS_DIR)/$(PDF_FILE_WKHTML) | $(PDFINFO_IGNORE_CMD))"
-	diff-pdf -v $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE_WKHTML) $(TEST_EXPORTS_DIR)/$(PDF_FILE_WKHTML)
+	$(call compare-pdf,$(PDF_FILE))
+	$(call compare-pdf,$(PDF_FILE_WKHTML))
 
 clean:
 	rm -vrf \

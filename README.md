@@ -21,7 +21,7 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
 
 ## Prerequisites
-- [weasyprint](https://weasyprint.org/) (only needed for PDF export)
+- [WeasyPrint](https://weasyprint.org/) (only needed for PDF export)
 ```
 brew install weasyprint
 ```
