@@ -79,7 +79,7 @@ jobs:
       id: test-exports
       run: make test-exports
 
-    - name: Upload export artifacts
+    - name: Upload Test Export Artifacts
       if: always() && steps.test-exports.outcome == 'failure'
       uses: actions/upload-artifact@v7
       with:
