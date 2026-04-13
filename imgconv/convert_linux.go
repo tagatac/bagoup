@@ -9,7 +9,7 @@ type imgConverter struct {
 
 func NewImgConverter(tempDir string) ImgConverter {
 	return &imgConverter{
-		Converter: heic2jpg.NewConverter(),
+		Converter: heic2jpg.NewConverter(heic2jpg.WithQuality(100)),
 		tempDir:   tempDir,
 	}
 }

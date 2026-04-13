@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"github.com/tagatac/bagoup/v2/imgconv"
 	"github.com/tagatac/bagoup/v2/opsys"
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 )
@@ -18,9 +19,10 @@ const _entityName = "Novak Djokovic"
 var _version string
 
 type parameters struct {
-	isPDF      bool
-	wkhtml     bool
-	exportPath string
+	isPDF          bool
+	wkhtml         bool
+	exportPath     string
+	attachmentPath string
 }
 
 func main() {
@@ -41,19 +43,41 @@ func main() {
 		parentDir,
 		"opsys",
 		"testdata",
-		"tennisballs.jpeg",
+		"tennisballs.heic",
 	)
 
 	exportRoot := ""
 	if len(os.Args) > 1 {
 		exportRoot = os.Args[1]
 	}
-	runs := []parameters{
-		{isPDF: false, exportPath: filepath.Join(exportRoot, "messages-export")},
-		{isPDF: true, exportPath: filepath.Join(exportRoot, "messages-export-pdf")},
-		{isPDF: true, wkhtml: true, exportPath: filepath.Join(exportRoot, "messages-export-wkhtmltopdf")},
-	}
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
+	tempDir, err := s.GetTempDir()
+	if err != nil {
+		panic(errors.Wrap(err, "get temporary directory"))
+	}
+	defer s.RmTempDir()
+	ic := imgconv.NewImgConverter(tempDir)
+	convertedImagePath, err := ic.ConvertHEIC(attachmentPath)
+	runs := []parameters{
+		{
+			exportPath:     filepath.Join(exportRoot, "messages-export"),
+			attachmentPath: attachmentPath,
+		},
+		{
+			isPDF:          true,
+			exportPath:     filepath.Join(exportRoot, "messages-export-pdf"),
+			attachmentPath: convertedImagePath,
+		},
+		{
+			isPDF:          true,
+			wkhtml:         true,
+			exportPath:     filepath.Join(exportRoot, "messages-export-wkhtmltopdf"),
+			attachmentPath: convertedImagePath,
+		},
+	}
+	if err != nil {
+		panic(errors.Wrap(err, "convert HEIC image"))
+	}
 	for _, params := range runs {
 		chatPath := filepath.Join(params.exportPath, _entityName)
 		if err := s.MkdirAll(chatPath, os.ModePerm); err != nil {
@@ -71,7 +95,7 @@ func main() {
 		if err := of.WriteMessage(firstMsg); err != nil {
 			panic(errors.Wrapf(err, "write message %q", firstMsg))
 		}
-		if _, err := of.WriteAttachment(attachmentPath); err != nil {
+		if _, err := of.WriteAttachment(params.attachmentPath); err != nil {
 			panic(errors.Wrap(err, "include attachment"))
 		}
 		for _, msg := range moreMsgs {
@@ -85,6 +109,10 @@ func main() {
 		if err := of.Flush(); err != nil {
 			panic(errors.Wrap(err, "flush outfile"))
 		}
+	}
+	err = s.RmTempDir()
+	if err != nil {
+		panic(errors.Wrap(err, "remove temporary directory"))
 	}
 }
 

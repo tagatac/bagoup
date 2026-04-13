@@ -80,4 +80,14 @@ jobs:
         sudo make install
 
     - name: Test Exports
+      id: test-exports
       run: make test-exports
+
+    - name: Upload export artifacts
+      if: always() && steps.test-exports.outcome == 'failure'
+      uses: actions/upload-artifact@v7
+      with:
+        name: test-exports-${{ matrix.os }}
+        path: |
+          test-exports/**
+        if-no-files-found: error
