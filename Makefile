@@ -14,11 +14,6 @@ EXCLUDE_PKGS=\
 PKGS_TO_TEST=$(filter-out $(EXCLUDE_PKGS),$(PKGS))
 PKGS_TO_COVER=$(shell echo "$(PKGS_TO_TEST)" | tr ' ' ',')
 
-EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage;-;+3815555555555'
-TXT_FILE=messages-export/$(EXAMPLE_EXPORT_FILE).txt
-PDF_FILE=messages-export-pdf/$(EXAMPLE_EXPORT_FILE).pdf
-PDF_FILE_WKHTML=messages-export-wkhtmltopdf/$(EXAMPLE_EXPORT_FILE).pdf
-PDFINFO_IGNORE_CMD=grep -Ev 'Creator|CreationDate|File size|Producer'
 EXAMPLE_EXPORTS_DIR=example-exports/$(OS)
 TEST_EXPORTS_DIR=test-exports
 
@@ -60,14 +55,7 @@ test: download
 	go tool cover -func=$(COVERAGE_FILE)
 
 test-exports: download
-	rm -vrf $(TEST_EXPORTS_DIR)
-	mkdir -vp $(TEST_EXPORTS_DIR)
-	cd example-exports && go run examplegen.go ../$(TEST_EXPORTS_DIR)
-	diff $(EXAMPLE_EXPORTS_DIR)/$(TXT_FILE) $(TEST_EXPORTS_DIR)/$(TXT_FILE)
-	bash -c "diff <(pdfinfo $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE) | $(PDFINFO_IGNORE_CMD)) <(pdfinfo $(TEST_EXPORTS_DIR)/$(PDF_FILE) | $(PDFINFO_IGNORE_CMD))"
-	diff-pdf -v $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE) $(TEST_EXPORTS_DIR)/$(PDF_FILE)
-	bash -c "diff <(pdfinfo $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE_WKHTML) | $(PDFINFO_IGNORE_CMD)) <(pdfinfo $(TEST_EXPORTS_DIR)/$(PDF_FILE_WKHTML) | $(PDFINFO_IGNORE_CMD))"
-	diff-pdf -v $(EXAMPLE_EXPORTS_DIR)/$(PDF_FILE_WKHTML) $(TEST_EXPORTS_DIR)/$(PDF_FILE_WKHTML)
+	bash scripts/test-exports.sh
 
 clean:
 	rm -vrf \

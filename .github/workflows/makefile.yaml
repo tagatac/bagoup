@@ -60,24 +60,20 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: ${{ matrix.os }}
 
-    - name: Install WeasyPrint and diff-pdf (macOS)
+    - name: Install WeasyPrint, poppler, and imagemagick (macOS)
       if: runner.os == 'macOS'
       run: |
         brew update
-        brew install weasyprint diff-pdf
+        brew install weasyprint poppler imagemagick ghostscript
 
-    - name: Install WeasyPrint, emojis, and diff-pdf (Linux)
+    - name: Install WeasyPrint, emojis, poppler, and imagemagick (Linux)
       if: runner.os == 'Linux'
       run: |
         pipx install weasyprint
-        sudo apt-get install -y fonts-noto-color-emoji make automake g++ libpoppler-glib-dev poppler-utils libwxgtk3.2-dev
-        wget https://github.com/vslavik/diff-pdf/releases/download/v0.5.3/diff-pdf-0.5.3.tar.gz
-        tar xzf diff-pdf-0.5.3.tar.gz
-        cd diff-pdf-0.5.3
-        ./bootstrap
-        ./configure
-        make
-        sudo make install
+        sudo apt-get install -y fonts-noto-color-emoji poppler-utils ghostscript
+        wget https://imagemagick.org/archive/binaries/magick
+        chmod +x magick
+        sudo mv magick /usr/local/bin/magick
 
     - name: Test Exports
       id: test-exports
