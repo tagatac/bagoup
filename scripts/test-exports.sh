@@ -6,7 +6,6 @@ EXAMPLE_EXPORTS_DIR="example-exports/$OS"
 TEST_EXPORTS_DIR="test-exports"
 EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage;-;+3815555555555'
 PDFINFO_IGNORE_PATTERN='Creator|CreationDate|File size|Producer'
-MAGICK_MAJOR=$(compare --version | awk 'NR==1 { split($3, v, "."); print v[1] }')
 
 TMPDIR_SCRIPT=$(mktemp -d)
 trap 'rm -rf "$TMPDIR_SCRIPT"' EXIT
@@ -27,12 +26,14 @@ compare_pdf() {
     # not installed).
     (
         set +o pipefail
-        compare -verbose -metric SSIM -density 300 -background white -alpha remove \
+        magick compare -verbose -metric SSIM -density 300 -background white -alpha remove \
             "$expected" "$actual" null: 2>&1 \
             | tee /dev/stderr \
             | grep -i "all" \
-            | awk -v major="$MAGICK_MAJOR" \
-                'BEGIN { found=0 } { found=1; val=$2 } END { if (!found) exit 1; exit (major+0 >= 7 ? val <= 0.001 : val >= 0.999) ? 0 : 1 }'
+            | awk 'BEGIN { found=0 } { found=1; val=$2 } END { \
+                if (!found) exit 1; \
+                exit (val <= 0.001) ? 0 : 1 \
+            }'
     )
 }
 

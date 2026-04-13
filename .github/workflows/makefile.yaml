@@ -70,7 +70,10 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         pipx install weasyprint
-        sudo apt-get install -y fonts-noto-color-emoji poppler-utils imagemagick ghostscript
+        sudo apt-get install -y fonts-noto-color-emoji poppler-utils ghostscript
+        wget https://imagemagick.org/archive/binaries/magick
+        chmod +x magick
+        sudo mv magick /usr/local/bin/magick
 
     - name: Test Exports
       id: test-exports
