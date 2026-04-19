@@ -16,7 +16,7 @@ func (d *chatDB) decodeTypedStream(s string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "decode all")
 	}
-	// Top-level group has one value: the NSMutableAttributedString object.
+	// The top-level group has one value: the NSMutableAttributedString object.
 	if len(groups) == 0 || len(groups[0].Values) == 0 {
 		return "", fmt.Errorf("empty stream")
 	}
@@ -24,7 +24,7 @@ func (d *chatDB) decodeTypedStream(s string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unexpected top-level type %T", groups[0].Values[0])
 	}
-	// First content group holds the NSMutableString / NSString.
+	// The first content group holds the NSMutableString / NSString.
 	if len(obj.Contents) == 0 || len(obj.Contents[0].Values) == 0 {
 		return "", fmt.Errorf("no string content")
 	}

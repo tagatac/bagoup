@@ -187,48 +187,6 @@ func TestGetMessage(t *testing.T) {
 			wantValid:   true,
 		},
 		{
-			msg: "2FA code encoded in attributedBody",
-			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
-				query.WillReturnRows(rows)
-			},
-			ptsOutput: `Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: {
-    "__kIMMessagePartAttributeName" = 0;
-}555555{
-    "__kIMDataDetectedAttributeName" = {length = 553, bytes = 0x62706c69 73743030 d4010203 04050607 ... 00000000 00000193 };
-    "__kIMMessagePartAttributeName" = 0;
-    "__kIMOneTimeCodeAttributeName" =     {
-        code = 555555;
-        displayCode = 555555;
-    };
-}
-`,
-			wantMessage: "[2019-10-04 18:26:31] testhandle1: Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: 555555\n",
-			wantValid:   true,
-		},
-		{
-			msg: "Google 2FA code encoded in attributedBody",
-			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2023-12-17 21:27:07")
-				query.WillReturnRows(rows)
-			},
-			ptsOutput: `G-123456{
-    "__kIMDataDetectedAttributeName" = {length = 537, bytes = 0x62706c69 73743030 d4010203 04050607 ... 00000000 00000185 };
-    "__kIMMessagePartAttributeName" = 0;
-    "__kIMOneTimeCodeAttributeName" =     {
-        code = 123456;
-        displayCode = "G-123456";
-    };
-} is your Google verification code.{
-    "__kIMMessagePartAttributeName" = 0;
-}
-`,
-			wantMessage: "[2023-12-17 21:27:07] testhandle1: G-123456 is your Google verification code.\n",
-			wantValid:   true,
-		},
-		{
 			msg: "DB error",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				query.WillReturnError(errors.New("this is a DB error"))
@@ -253,16 +211,6 @@ func TestGetMessage(t *testing.T) {
 				query.WillReturnRows(rows)
 			},
 			wantErr: "multiple messages with the same ID: 42 - message ID uniqueness assumption violated - open an issue at https://github.com/tagatac/bagoup/issues",
-		},
-		{
-			msg: "error decoding attributedBody",
-			setupQuery: func(query *sqlmock.ExpectedQuery) {
-				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
-				query.WillReturnRows(rows)
-			},
-			ptsErr:      "this is a typedstream-decode error",
-			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
 		},
 		{
 			msg: "no valid text or attributedBody",
@@ -305,5 +253,3 @@ func TestGetMessage(t *testing.T) {
 		})
 	}
 }
-
-func TestRunExecCmd(t *testing.T) { exectest.RunExecCmd() }

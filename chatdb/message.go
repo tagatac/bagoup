@@ -7,14 +7,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"regexp"
 
 	"github.com/pkg/errors"
-)
-
-var (
-	_TypedStreamAttributeRE          = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = ([^\n]+);\n\}?`)
-	_TypedStreamMultilineAttributeRE = regexp.MustCompile(`(\{\n)? {4}"__kIM[[:alpha:]]+" = {5}\{\n( {8}[[:alpha:]]+ = [\w-"]+;\n)+ {4}\};\n\}?`)
 )
 
 // DatedMessageID pairs a message ID and its date, in the legacy date format.
@@ -117,7 +111,7 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bo
 			valid = false
 			slog.Warn("failed to get plain text for message",
 				"messageID", messageID,
-				"err", err,
+				"err", errors.Wrap(err, "decode typedstream"),
 			)
 		}
 	} else {

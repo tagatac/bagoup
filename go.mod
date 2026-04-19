@@ -8,7 +8,6 @@ require (
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/elulcao/progress-bar v0.1.6
 	github.com/emersion/go-vcard v0.0.0-20241024213814-c9703dde27ff
-	github.com/golang/mock v1.6.0
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/pkg/errors v0.9.1

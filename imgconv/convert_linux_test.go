@@ -6,9 +6,9 @@ package imgconv
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/tagatac/goheif/heic2jpg/mock_heic2jpg"
+	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
 
