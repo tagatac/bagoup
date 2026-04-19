@@ -5,8 +5,7 @@ permissions:
 
 on:
   push: {}
-  pull_request:
-    branches: [ $default-branch ]
+  pull_request: {}
 
 jobs:
 
