@@ -13,9 +13,9 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.15.0
-	github.com/tagatac/goheif v0.0.0-20260412163053-5b0930b0f9bc
+	github.com/tagatac/goheif v0.0.0-20260419130429-f87270e9cc43
 	github.com/tagatac/gorecurcopy v1.0.1
-	github.com/tagatac/typedstream-go v0.0.0-20260419050448-016ee577c0c7
+	github.com/tagatac/typedstream-go v0.0.0-20260419125731-cd361d54cae6
 	go.uber.org/mock v0.6.0
 	gotest.tools/v3 v3.5.2
 )
