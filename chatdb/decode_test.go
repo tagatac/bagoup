@@ -17,6 +17,9 @@ var _attributedBodyVenmo []byte
 //go:embed testdata/google.bin
 var _attributedBodyGoogle []byte
 
+//go:embed testdata/audio.bin
+var _attributedBodyAudio []byte
+
 func TestDecode(t *testing.T) {
 	handleMap := map[int]string{
 		10: "testhandle1",
@@ -57,6 +60,16 @@ func TestDecode(t *testing.T) {
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2023-12-17 21:27:07] testhandle1: G-913121 is your Google verification code.\n",
+			wantValid:   true,
+		},
+		{
+			msg: "audio transcription",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
+					AddRow(0, 10, nil, string(_attributedBodyAudio), "2024-01-01 12:00:00")
+				query.WillReturnRows(rows)
+			},
+			wantMessage: "[2024-01-01 12:00:00] testhandle1: \ufffc{\n    IMAudioTranscription = \"I don't think it's correct that I have the option to buy whatever number shares at the same price as the other doesn't make any sense How am I winning here? Am I getting those chairs?\"\n}\n",
 			wantValid:   true,
 		},
 		{

@@ -2,6 +2,7 @@ package chatdb
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	ts "github.com/tagatac/typedstream-go"
@@ -28,12 +29,40 @@ func (d *chatDB) decodeTypedStream(s string) (string, error) {
 	if len(obj.Contents) == 0 || len(obj.Contents[0].Values) == 0 {
 		return "", fmt.Errorf("no string content")
 	}
-	switch s := obj.Contents[0].Values[0].(type) {
+	var baseStr string
+	switch v := obj.Contents[0].Values[0].(type) {
 	case *ts.NSMutableString:
-		return s.Value, nil
+		baseStr = v.Value
 	case *ts.NSString:
-		return s.Value, nil
+		baseStr = v.Value
 	default:
 		return "", fmt.Errorf("unexpected string type %T", obj.Contents[0].Values[0])
 	}
+
+	// Scan remaining content groups for an NSDictionary containing attributes.
+	// Collect key=value pairs for keys that do NOT start with "__kIM", mirroring
+	// the Darwin regex that strips __kIM* keys and keeps the rest (e.g. IMAudioTranscription).
+	// Format in ObjC description style for cross-platform consistency.
+	var extras []string
+	for _, group := range obj.Contents[1:] {
+		for _, val := range group.Values {
+			dict, ok := val.(*ts.NSDictionary)
+			if !ok {
+				continue
+			}
+			for _, kv := range dict.Contents {
+				k, ok := kv.Key.(*ts.NSString)
+				if !ok || strings.HasPrefix(k.Value, "__kIM") {
+					continue
+				}
+				if v, ok := kv.Value.(*ts.NSString); ok {
+					extras = append(extras, fmt.Sprintf(`    %s = "%s"`, k.Value, v.Value))
+				}
+			}
+		}
+	}
+	if len(extras) > 0 {
+		return baseStr + "{\n" + strings.Join(extras, "\n") + "\n}", nil
+	}
+	return baseStr, nil
 }

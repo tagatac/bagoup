@@ -25,15 +25,9 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 ```
 brew install weasyprint
 ```
-- [python-typedstream](https://github.com/dgelessus/python-typedstream) (only needed to run on Linux)
+- [Noto Color Emoji Font](https://fonts.google.com/noto/specimen/Noto+Color+Emoji) (only needed for PDF export on Linux)
 ```
-git clone git@github.com:dgelessus/python-typedstream.git
-cd python-typedstream
-python3 -m pip install .
-```
-- [Noto Color Emoji Font](https://fonts.google.com/noto/specimen/Noto+Color+Emoji) (only needed for export to PDF on Linux)
-```
-sudo apt install fonts-noto-color-emoji
+sudo apt install weasyprint fonts-noto-color-emoji
 ```
 
 ## Installation
@@ -137,9 +131,8 @@ for each option.
 
 ## Performance
 ### Plaintext
-Export to plaintext is fast. For example, on an M2 MacBook Air, exporting
-**52,484 messages** from 308 chats to 298 files, as well as copying
-**3.6GB of attachments**, took **1m29s**.
+Export to plaintext is very fast. For example, on an M2 MacBook Air, exporting
+**52,484 messages** from 308 chats to 298 files took **2.11s**.
 ### PDF
 Export to PDF is slower, bottlenecked by PDF creation with `weasyprint`.
 Exporting the same data from above on the same MacBook took **16m3s**, over 10x
