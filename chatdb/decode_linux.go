@@ -1,20 +1,20 @@
 package chatdb
 
 import (
-	"bytes"
 	"fmt"
 
+	"github.com/pkg/errors"
 	ts "github.com/tagatac/typedstream-go"
 )
 
 func (d *chatDB) decodeTypedStream(s string) (string, error) {
-	u, err := ts.OpenUnarchiverFromReader(bytes.NewReader([]byte(s)))
+	u, err := ts.NewUnarchiverFromData([]byte(s))
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "create unarchiver")
 	}
 	groups, err := u.DecodeAll()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "decode all")
 	}
 	// Top-level group has one value: the NSMutableAttributedString object.
 	if len(groups) == 0 || len(groups[0].Values) == 0 {
@@ -24,7 +24,6 @@ func (d *chatDB) decodeTypedStream(s string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unexpected top-level type %T", groups[0].Values[0])
 	}
-
 	// First content group holds the NSMutableString / NSString.
 	if len(obj.Contents) == 0 || len(obj.Contents[0].Values) == 0 {
 		return "", fmt.Errorf("no string content")
