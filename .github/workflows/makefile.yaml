@@ -17,6 +17,8 @@ jobs:
         - macos-latest
         - ubuntu-latest
     runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
 
     - uses: actions/checkout@v6
