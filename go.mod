@@ -21,6 +21,7 @@ require (
 require (
 	github.com/elulcao/progress-bar v0.1.6
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/tagatac/typedstream-go v0.0.0-20260419040738-244b7db0f479
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 )
