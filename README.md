@@ -135,8 +135,8 @@ Export to plaintext is very fast. For example, on an M2 MacBook Air, exporting
 **52,484 messages** from 308 chats to 298 files took **2.11s**.
 ### PDF
 Export to PDF is slower, bottlenecked by PDF creation with `weasyprint`.
-Exporting the same data from above on the same MacBook took **16m3s**, over 10x
-slower than the export to plaintext.
+Exporting the same data from above on the same MacBook took **14m48s**, over
+400x slower than the export to plaintext.
 
 ## Author
 Copyright (C) 2020-2025  [David Tagatac](mailto:david@tagatac.net)  
