@@ -40,13 +40,13 @@ jobs:
     - name: Install wkhtmltopdf (macOS)
       if: runner.os == 'macOS'
       run: |
-        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg
+        gh release download 0.12.6-2 --repo wkhtmltopdf/packaging --pattern "wkhtmltox-0.12.6-2.macos-cocoa.pkg"
         sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
 
     - name: Install wkhtmltopdf (Linux)
       if: runner.os == 'Linux'
       run: |
-        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.jammy_amd64.deb
+        gh release download 0.12.6.1-3 --repo wkhtmltopdf/packaging --pattern "wkhtmltox_0.12.6.1-3.jammy_amd64.deb"
         sudo apt-get update -y
         sudo apt-get install -y ./wkhtmltox_0.12.6.1-3.jammy_amd64.deb
 
@@ -71,7 +71,7 @@ jobs:
       run: |
         pipx install weasyprint
         sudo apt-get install -y fonts-noto-color-emoji poppler-utils ghostscript
-        wget https://imagemagick.org/archive/binaries/magick
+        gh release download --latest --repo ImageMagick/ImageMagick --pattern "ImageMagick-*-gcc-x86_64.AppImage" --output magick
         chmod +x magick
         sudo mv magick /usr/local/bin/magick
 
