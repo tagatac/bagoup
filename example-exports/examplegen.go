@@ -83,7 +83,7 @@ func main() {
 		if err := s.MkdirAll(chatPath, os.ModePerm); err != nil {
 			panic(errors.Wrap(err, "create export directory"))
 		}
-		chatFilePrefix := filepath.Join(chatPath, "iMessage;-;+3815555555555")
+		chatFilePrefix := filepath.Join(chatPath, "iMessage,-,+3815555555555")
 		var of opsys.OutFile
 		var cf afero.File
 		if params.isPDF {

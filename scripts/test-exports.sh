@@ -4,7 +4,7 @@ set -e -o pipefail
 OS=$(uname -s)
 EXAMPLE_EXPORTS_DIR="example-exports/$OS"
 TEST_EXPORTS_DIR="test-exports"
-EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage;-;+3815555555555'
+EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage,-,+3815555555555'
 PDFINFO_IGNORE_PATTERN='Creator|CreationDate|File size|Producer'
 
 TMPDIR_SCRIPT=$(mktemp -d)
