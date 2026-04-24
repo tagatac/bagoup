@@ -4,11 +4,11 @@
 package bagoup
 
 import (
+	"fmt"
 	"path/filepath"
 
 	progressbar "github.com/elulcao/progress-bar/cmd"
 	"github.com/emersion/go-vcard"
-	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/chatdb"
 )
 
@@ -18,7 +18,7 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 	}
 	chats, err := cfg.ChatDB.GetChats(contactMap)
 	if err != nil {
-		return errors.Wrap(err, "get chats")
+		return fmt.Errorf("get chats: %w", err)
 	}
 	chats = filterEntities(cfg.Options.Entities, chats)
 
@@ -37,7 +37,7 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 func getAttachmentPaths(cfg *configuration) error {
 	attPaths, err := cfg.ChatDB.GetAttachmentPaths(cfg.PathTools)
 	if err != nil {
-		return errors.Wrap(err, "get attachment paths")
+		return fmt.Errorf("get attachment paths: %w", err)
 	}
 	cfg.attachmentPaths = attPaths
 	if cfg.Options.OutputPDF || cfg.Options.CopyAttachments {
@@ -50,7 +50,7 @@ func getAttachmentPaths(cfg *configuration) error {
 			}
 			attPath := filepath.Join(cfg.Options.AttachmentsPath, msgPaths[0].Filename)
 			if err := cfg.OS.FileAccess(attPath); err != nil {
-				return errors.Wrapf(err, "access to attachments - FIX: %s", _readmeURL)
+				return fmt.Errorf("access to attachments - FIX: %s: %w", _readmeURL, err)
 			}
 			break
 		}
@@ -80,7 +80,7 @@ func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) erro
 	for _, chat := range entityChats.Chats {
 		messageIDs, err := cfg.ChatDB.GetMessageIDs(chat.ID)
 		if err != nil {
-			return errors.Wrapf(err, "get message IDs for chat ID %d", chat.ID)
+			return fmt.Errorf("get message IDs for chat ID %d: %w", chat.ID, err)
 		}
 		if mergeChats {
 			guids = append(guids, chat.GUID)

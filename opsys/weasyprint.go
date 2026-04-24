@@ -2,9 +2,9 @@ package opsys
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -27,7 +27,7 @@ func (f *weasyPrintFile) Flush() error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, stderr.String())
+		return fmt.Errorf("%s: %w", stderr.String(), err)
 	}
 	return nil
 }

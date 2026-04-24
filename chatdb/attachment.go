@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/pathtools"
 )
 
@@ -25,7 +24,7 @@ type Attachment struct {
 func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error) {
 	attachmentJoins, err := d.DB.Query("SELECT message_id, attachment_id FROM message_attachment_join")
 	if err != nil {
-		return nil, errors.Wrapf(err, "scan message_attachment_join table")
+		return nil, fmt.Errorf("scan message_attachment_join table: %w", err)
 	}
 	defer attachmentJoins.Close()
 
@@ -33,11 +32,11 @@ func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attac
 	for attachmentJoins.Next() {
 		var msgID, attID int
 		if err := attachmentJoins.Scan(&msgID, &attID); err != nil {
-			return atts, errors.Wrap(err, "read data from message_attachment_join table")
+			return atts, fmt.Errorf("read data from message_attachment_join table: %w", err)
 		}
 		att, err := d.getAttachmentPath(attID, ptools)
 		if err != nil {
-			return atts, errors.Wrapf(err, "get path for attachment %d to message %d", attID, msgID)
+			return atts, fmt.Errorf("get path for attachment %d to message %d: %w", attID, msgID, err)
 		}
 		atts[msgID] = append(atts[msgID], att)
 	}
@@ -47,13 +46,13 @@ func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attac
 func (d *chatDB) getAttachmentPath(attachmentID int, ptools pathtools.PathTools) (Attachment, error) {
 	attachments, err := d.DB.Query(fmt.Sprintf("SELECT filename, mime_type, transfer_name FROM attachment WHERE ROWID=%d", attachmentID))
 	if err != nil {
-		return Attachment{}, errors.Wrapf(err, "query attachment table for ID %d", attachmentID)
+		return Attachment{}, fmt.Errorf("query attachment table for ID %d: %w", attachmentID, err)
 	}
 	defer attachments.Close()
 	attachments.Next()
 	var filenameOrNull, mimeTypeOrNull, transferNameOrNull sql.NullString
 	if err := attachments.Scan(&filenameOrNull, &mimeTypeOrNull, &transferNameOrNull); err != nil {
-		return Attachment{}, errors.Wrapf(err, "read data for attachment ID %d", attachmentID)
+		return Attachment{}, fmt.Errorf("read data for attachment ID %d: %w", attachmentID, err)
 	}
 	if attachments.Next() {
 		return Attachment{}, fmt.Errorf("multiple attachments with the same ID: %d - attachment ID uniqueness assumption violated - %s", attachmentID, _githubIssueMsg)

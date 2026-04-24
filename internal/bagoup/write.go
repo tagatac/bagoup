@@ -4,6 +4,7 @@
 package bagoup
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/opsys"
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
@@ -26,7 +26,7 @@ const (
 func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
 	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-		return errors.Wrapf(err, "create directory %q", chatDirPath)
+		return fmt.Errorf("create directory %q: %w", chatDirPath, err)
 	}
 	filename := strings.Join(guids, ";;;")
 	if len(filename) > _filenamePrefixMaxLength {
@@ -36,7 +36,7 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	attDir := filepath.Join(chatDirPath, "attachments")
 	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
-			return errors.Wrapf(err, "create directory %q", attDir)
+			return fmt.Errorf("create directory %q: %w", attDir, err)
 		}
 	}
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
@@ -50,7 +50,7 @@ func (cfg *configuration) writeTxt(messageIDs []chatdb.DatedMessageID, chatPathN
 	chatPath := chatPathNoExt + ".txt"
 	chatFile, err := cfg.OS.Create(chatPath)
 	if err != nil {
-		return errors.Wrapf(err, "create file %q", chatPath)
+		return fmt.Errorf("create file %q: %w", chatPath, err)
 	}
 	defer chatFile.Close()
 	outFile := cfg.OS.NewTxtOutFile(chatFile)
@@ -85,14 +85,14 @@ func (cfg *configuration) writePDFs(entityName string, messageIDs []chatdb.Dated
 		chatPath := idsAndPath.chatPath
 		chatFile, err := cfg.OS.Create(chatPath)
 		if err != nil {
-			return errors.Wrapf(err, "create file %q", chatPath)
+			return fmt.Errorf("create file %q: %w", chatPath, err)
 		}
 		defer chatFile.Close()
 		var outFile opsys.OutFile
 		if cfg.Options.UseWkhtmltopdf {
 			pdfg, err := pdfgen.NewPDFGenerator(chatFile)
 			if err != nil {
-				return errors.Wrap(err, "create PDF generator")
+				return fmt.Errorf("create PDF generator: %w", err)
 			}
 			outFile = cfg.OS.NewWkhtmltopdfFile(entityName, chatFile, pdfg, cfg.Options.IncludePPA)
 		} else {
@@ -110,13 +110,13 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 	for _, messageID := range messageIDs {
 		msg, ok, err := cfg.ChatDB.GetMessage(messageID.ID, cfg.handleMap)
 		if err != nil {
-			return errors.Wrapf(err, "get message with ID %d", messageID.ID)
+			return fmt.Errorf("get message with ID %d: %w", messageID.ID, err)
 		}
 		if err := outFile.WriteMessage(msg); err != nil {
-			return errors.Wrapf(err, "write message %q to file %q", msg, outFile.Name())
+			return fmt.Errorf("write message %q to file %q: %w", msg, outFile.Name(), err)
 		}
 		if err := cfg.handleAttachments(outFile, messageID.ID, attDir); err != nil {
-			return errors.Wrapf(err, "chat file %q - message %d", outFile.Name(), messageID.ID)
+			return fmt.Errorf("chat file %q - message %d: %w", outFile.Name(), messageID.ID, err)
 		}
 		if ok {
 			msgCount++
@@ -126,7 +126,7 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 	}
 	imgCount, err := outFile.Stage()
 	if err != nil {
-		return errors.Wrapf(err, "stage chat file %q for writing", outFile.Name())
+		return fmt.Errorf("stage chat file %q for writing: %w", outFile.Name(), err)
 	}
 	openFilesLimit, err := cfg.OS.GetOpenFilesLimit()
 	if err != nil {
@@ -134,11 +134,11 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 	}
 	if imgCount*2 > openFilesLimit {
 		if err := cfg.OS.SetOpenFilesLimit(imgCount * 2); err != nil {
-			return errors.Wrapf(err, "chat file %q - increase the open file limit from %d to %d to support %d embedded images", outFile.Name(), openFilesLimit, imgCount*2, imgCount)
+			return fmt.Errorf("chat file %q - increase the open file limit from %d to %d to support %d embedded images: %w", outFile.Name(), openFilesLimit, imgCount*2, imgCount, err)
 		}
 	}
 	if err := outFile.Flush(); err != nil {
-		return errors.Wrapf(err, "flush chat file %q to disk", outFile.Name())
+		return fmt.Errorf("flush chat file %q to disk: %w", outFile.Name(), err)
 	}
 	cfg.counts.files++
 	cfg.counts.messages += msgCount
@@ -166,7 +166,7 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 					"ID", att.ID,
 				))
 			if err := outFile.ReferenceAttachment(att.TransferName); err != nil {
-				return errors.Wrapf(err, "reference attachment %q", att.TransferName)
+				return fmt.Errorf("reference attachment %q: %w", att.TransferName, err)
 			}
 			cfg.counts.attachments[att.MIMEType]++
 			continue
@@ -192,7 +192,7 @@ func (cfg configuration) validateAttachmentPath(att chatdb.Attachment) error {
 		return errorMissingAttachment{err: errors.New("attachment has no local filename")}
 	}
 	if ok, err := cfg.OS.FileExist(att.Filepath); err != nil {
-		return errors.Wrapf(err, "check existence of file %q - POSSIBLE FIX: %s", att.Filepath, _readmeURL)
+		return fmt.Errorf("check existence of file %q - POSSIBLE FIX: %s: %w", att.Filepath, _readmeURL, err)
 	} else if !ok {
 		return errorMissingAttachment{err: errors.New("attachment does not exist locally")}
 	}
@@ -208,12 +208,12 @@ func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string) 
 		unique = false
 		attDir = filepath.Join(cfg.Options.ExportPath, PreservedPathDir, filepath.Dir(att.Filename))
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
-			return errors.Wrapf(err, "create directory %q", attDir)
+			return fmt.Errorf("create directory %q: %w", attDir, err)
 		}
 	}
 	dstPath, err := cfg.OS.CopyFile(att.Filepath, attDir, unique)
 	if err != nil {
-		return errors.Wrapf(err, "copy attachment %q to %q", att.Filepath, attDir)
+		return fmt.Errorf("copy attachment %q to %q: %w", att.Filepath, attDir, err)
 	}
 	att.Filepath = dstPath
 	cfg.counts.attachmentsCopied[att.MIMEType]++
@@ -237,7 +237,7 @@ func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Atta
 	}
 	embedded, err := outFile.WriteAttachment(attPath)
 	if err != nil {
-		return errors.Wrapf(err, "include attachment %q", attPath)
+		return fmt.Errorf("include attachment %q: %w", attPath, err)
 	}
 	if embedded {
 		cfg.counts.attachmentsEmbedded[mimeType]++

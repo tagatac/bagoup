@@ -4,10 +4,10 @@
 package bagoup
 
 import (
+	"errors"
 	"os"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"

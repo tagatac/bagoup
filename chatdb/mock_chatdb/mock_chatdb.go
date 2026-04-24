@@ -12,7 +12,7 @@ package mock_chatdb
 import (
 	reflect "reflect"
 
-	semver "github.com/Masterminds/semver"
+	semver "github.com/Masterminds/semver/v3"
 	vcard "github.com/emersion/go-vcard"
 	chatdb "github.com/tagatac/bagoup/v2/chatdb"
 	pathtools "github.com/tagatac/bagoup/v2/pathtools"

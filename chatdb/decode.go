@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	ts "github.com/tagatac/typedstream-go"
 )
 
 func (d *chatDB) decodeTypedStream(s string) (string, error) {
 	u, err := ts.NewUnarchiverFromData([]byte(s))
 	if err != nil {
-		return "", errors.Wrap(err, "create unarchiver")
+		return "", fmt.Errorf("create unarchiver: %w", err)
 	}
 	groups, err := u.DecodeAll()
 	if err != nil {
-		return "", errors.Wrap(err, "decode all")
+		return "", fmt.Errorf("decode all: %w", err)
 	}
 	// The top-level group has one value: the NSMutableAttributedString object.
 	if len(groups) == 0 || len(groups[0].Values) == 0 {

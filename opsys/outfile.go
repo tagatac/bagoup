@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -176,10 +175,10 @@ func (f *pdfFile) ReferenceAttachment(filename string) error {
 func (f *pdfFile) Stage() (int, error) {
 	tmpl, err := template.ParseFS(_embedFS, f.templatePath)
 	if err != nil {
-		return 0, errors.Wrap(err, "parse HTML template")
+		return 0, fmt.Errorf("parse HTML template: %w", err)
 	}
 	if err := tmpl.Execute(&f.buf, f.contents); err != nil {
-		return 0, errors.Wrap(err, "execute HTML template")
+		return 0, fmt.Errorf("execute HTML template: %w", err)
 	}
 	return strings.Count(f.buf.String(), "<img"), nil
 }

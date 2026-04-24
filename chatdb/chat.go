@@ -4,11 +4,11 @@
 package chatdb
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/emersion/go-vcard"
-	"github.com/pkg/errors"
 )
 
 type (
@@ -30,7 +30,7 @@ type (
 func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, error) {
 	chatRows, err := d.DB.Query("SELECT ROWID, guid, chat_identifier, COALESCE(display_name, '') FROM chat")
 	if err != nil {
-		return nil, errors.Wrap(err, "query chats table")
+		return nil, fmt.Errorf("query chats table: %w", err)
 	}
 	defer chatRows.Close()
 	contactChats := map[*vcard.Card]EntityChats{}
@@ -39,7 +39,7 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 		var id int
 		var guid, chatIdentifier, displayName string
 		if err := chatRows.Scan(&id, &guid, &chatIdentifier, &displayName); err != nil {
-			return nil, errors.Wrap(err, "read chat")
+			return nil, fmt.Errorf("read chat: %w", err)
 		}
 		if displayName == "" {
 			displayName = chatIdentifier

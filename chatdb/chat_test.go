@@ -4,11 +4,11 @@
 package chatdb
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/emersion/go-vcard"
-	"github.com/pkg/errors"
 	"gotest.tools/v3/assert"
 )
 

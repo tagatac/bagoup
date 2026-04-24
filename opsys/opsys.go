@@ -17,9 +17,8 @@ import (
 	"syscall"
 	"unicode"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/emersion/go-vcard"
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 	"github.com/tagatac/bagoup/v2/opsys/scall"
@@ -105,19 +104,19 @@ func (s opSys) FileExist(fp string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
-	return false, errors.Wrapf(err, "check existence of file %q", fp)
+	return false, fmt.Errorf("check existence of file %q: %w", fp, err)
 }
 
 func (s opSys) GetMacOSVersion() (*semver.Version, error) {
 	cmd := s.execCommand("sw_vers", "-productVersion")
 	o, err := cmd.Output()
 	if err != nil {
-		return nil, errors.Wrap(err, "call sw_vers")
+		return nil, fmt.Errorf("call sw_vers: %w", err)
 	}
 	vstr := strings.TrimSuffix(string(o), "\n")
 	v, err := semver.NewVersion(vstr)
 	if err != nil {
-		return nil, errors.Wrapf(err, "parse semantic version %q", vstr)
+		return nil, fmt.Errorf("parse semantic version %q: %w", vstr, err)
 	}
 	return v, nil
 }
@@ -137,7 +136,7 @@ func (s opSys) GetContactMap(contactsFilePath string) (map[string]*vcard.Card, e
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrapf(err, "decode vcard")
+			return nil, fmt.Errorf("decode vcard: %w", err)
 		}
 		phones := card.Values(vcard.FieldTelephone)
 		for i, phone := range phones {
@@ -233,7 +232,7 @@ func (s *opSys) GetTempDir() (string, error) {
 	}
 	p, err := afero.TempDir(s, "", "bagoup")
 	if err != nil {
-		return "", errors.Wrapf(err, "create temporary directory %q", p)
+		return "", fmt.Errorf("create temporary directory %q: %w", p, err)
 	}
 	s.tempDir = p
 	return p, nil
@@ -248,7 +247,7 @@ func (s *opSys) RmTempDir() error {
 			"tempDir", s.tempDir,
 			"err", err,
 		)
-		return errors.Wrapf(err, "remove temporary directory %q", s.tempDir)
+		return fmt.Errorf("remove temporary directory %q: %w", s.tempDir, err)
 	}
 	s.tempDir = ""
 	return nil
@@ -263,16 +262,16 @@ func (s *opSys) GetOpenFilesLimit() (int, error) {
 	cmd := s.execCommand("ulimit", "-n")
 	o, err := cmd.Output()
 	if err != nil {
-		return 0, errors.Wrap(err, "call ulimit")
+		return 0, fmt.Errorf("call ulimit: %w", err)
 	}
 	softLimit, err := strconv.Atoi(strings.TrimSuffix(string(o), "\n"))
 	if err != nil {
-		return 0, errors.Wrap(err, "parse open files soft limit")
+		return 0, fmt.Errorf("parse open files soft limit: %w", err)
 	}
 	s.openFilesLimitSoft = softLimit
 	var openFilesLimit syscall.Rlimit
 	if err := s.Syscall.Getrlimit(syscall.RLIMIT_NOFILE, &openFilesLimit); err != nil {
-		return 0, errors.Wrap(err, "get open files hard limit")
+		return 0, fmt.Errorf("get open files hard limit: %w", err)
 	}
 	s.openFilesLimitHard = openFilesLimit.Max
 	return s.openFilesLimitSoft, nil

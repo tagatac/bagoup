@@ -14,9 +14,8 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/emersion/go-vcard"
-	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/pathtools"
 )
 
@@ -85,14 +84,14 @@ func (d *chatDB) Init(macOSVersion *semver.Version) error {
 	// https://github.com/tagatac/bagoup/issues/24.
 	columns, err := d.DB.Query("PRAGMA table_info(chat_message_join)")
 	if err != nil {
-		return errors.Wrap(err, "get chat_message_join table info")
+		return fmt.Errorf("get chat_message_join table info: %w", err)
 	}
 	defer columns.Close()
 	for columns.Next() {
 		var cid, notnull, pk int
 		var name, typ, dflt_value sql.NullString
 		if err := columns.Scan(&cid, &name, &typ, &notnull, &dflt_value, &pk); err != nil {
-			return errors.Wrap(err, "read chat_message_join column info")
+			return fmt.Errorf("read chat_message_join column info: %w", err)
 		}
 		if name.String == "message_date" {
 			d.cmJoinHasDates = true
@@ -107,14 +106,14 @@ func (d chatDB) GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string,
 	handleMap := make(map[int]string)
 	handles, err := d.DB.Query("SELECT ROWID, id FROM handle")
 	if err != nil {
-		return nil, errors.Wrap(err, "get handles from DB")
+		return nil, fmt.Errorf("get handles from DB: %w", err)
 	}
 	defer handles.Close()
 	for handles.Next() {
 		var handleID int
 		var handle string
 		if err := handles.Scan(&handleID, &handle); err != nil {
-			return nil, errors.Wrap(err, "read handle")
+			return nil, fmt.Errorf("read handle: %w", err)
 		}
 		if _, ok := handleMap[handleID]; ok {
 			return nil, fmt.Errorf("multiple handles with the same ID: %d - handle ID uniqueness assumption violated - %s", handleID, _githubIssueMsg)

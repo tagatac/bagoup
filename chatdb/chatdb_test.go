@@ -7,7 +7,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/emersion/go-vcard"

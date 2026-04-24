@@ -7,8 +7,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-
-	"github.com/pkg/errors"
 )
 
 // DatedMessageID pairs a message ID and its date, in the legacy date format.
@@ -23,7 +21,7 @@ func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
 	}
 	rows, err := d.DB.Query(fmt.Sprintf("SELECT message_id, message_date FROM chat_message_join WHERE chat_id=%d", chatID))
 	if err != nil {
-		return nil, errors.Wrapf(err, "query chat_message_join table for chat ID %d", chatID)
+		return nil, fmt.Errorf("query chat_message_join table for chat ID %d: %w", chatID, err)
 	}
 	defer rows.Close()
 	msgIDs := []DatedMessageID{}
@@ -31,7 +29,7 @@ func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
 		var id int
 		var date int
 		if err := rows.Scan(&id, &date); err != nil {
-			return nil, errors.Wrapf(err, "read message ID for chat ID %d", chatID)
+			return nil, fmt.Errorf("read message ID for chat ID %d: %w", chatID, err)
 		}
 		// We can't trust that all of the dates in the chat_message_join table have
 		// been converted (see https://github.com/tagatac/bagoup/issues/40).
@@ -48,14 +46,14 @@ func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
 func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 	rows, err := d.DB.Query(fmt.Sprintf("SELECT message_id FROM chat_message_join WHERE chat_id=%d", chatID))
 	if err != nil {
-		return nil, errors.Wrapf(err, "query chat_message_join table for chat ID %d", chatID)
+		return nil, fmt.Errorf("query chat_message_join table for chat ID %d: %w", chatID, err)
 	}
 	defer rows.Close()
 	msgIDs := []DatedMessageID{}
 	for rows.Next() {
 		var id int
 		if err := rows.Scan(&id); err != nil {
-			return nil, errors.Wrapf(err, "read message ID for chat ID %d", chatID)
+			return nil, fmt.Errorf("read message ID for chat ID %d: %w", chatID, err)
 		}
 		msgIDs = append(msgIDs, DatedMessageID{ID: id})
 	}
@@ -63,13 +61,13 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 	for i, msgID := range msgIDs {
 		messages, err := d.DB.Query(fmt.Sprintf("SELECT date FROM message WHERE ROWID=%d", msgID.ID))
 		if err != nil {
-			return nil, errors.Wrapf(err, "query message table for ID %d", msgID.ID)
+			return nil, fmt.Errorf("query message table for ID %d: %w", msgID.ID, err)
 		}
 		defer messages.Close()
 		messages.Next()
 		var date int
 		if err := messages.Scan(&date); err != nil {
-			return nil, errors.Wrapf(err, "read date for message ID %d", msgID.ID)
+			return nil, fmt.Errorf("read date for message ID %d: %w", msgID.ID, err)
 		}
 		if messages.Next() {
 			return nil, fmt.Errorf("multiple messages with the same ID: %d - message ID uniqueness assumption violated - %s", msgID.ID, _githubIssueMsg)
@@ -84,7 +82,7 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bo
 	datetimeFormula := fmt.Sprintf("(date/%d) + STRFTIME('%%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'", d.dateDivisor)
 	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, attributedBody, DATETIME(%s) FROM message WHERE ROWID=%d", datetimeFormula, messageID))
 	if err != nil {
-		return "", false, errors.Wrapf(err, "query message table for ID %d", messageID)
+		return "", false, fmt.Errorf("query message table for ID %d: %w", messageID, err)
 	}
 	defer messages.Close()
 	messages.Next()
@@ -92,7 +90,7 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bo
 	var text, attributedBody sql.NullString
 	var date string
 	if err := messages.Scan(&fromMe, &handleID, &text, &attributedBody, &date); err != nil {
-		return "", false, errors.Wrapf(err, "read data for message ID %d", messageID)
+		return "", false, fmt.Errorf("read data for message ID %d: %w", messageID, err)
 	}
 	if messages.Next() {
 		return "", false, fmt.Errorf("multiple messages with the same ID: %d - message ID uniqueness assumption violated - %s", messageID, _githubIssueMsg)
@@ -111,7 +109,7 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bo
 			valid = false
 			slog.Warn("failed to get plain text for message",
 				"messageID", messageID,
-				"err", errors.Wrap(err, "decode typedstream"),
+				"err", fmt.Errorf("decode typedstream: %w", err),
 			)
 		}
 	} else {

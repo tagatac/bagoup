@@ -4,12 +4,12 @@
 package bagoup
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"

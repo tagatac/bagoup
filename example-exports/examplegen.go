@@ -4,10 +4,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/imgconv"
 	"github.com/tagatac/bagoup/v2/opsys"
@@ -36,7 +36,7 @@ func main() {
 	}
 	wd, err := os.Getwd()
 	if err != nil {
-		panic(errors.Wrap(err, "get working directory"))
+		panic(fmt.Errorf("get working directory: %w", err))
 	}
 	parentDir := filepath.Dir(wd)
 	attachmentPath := filepath.Join(
@@ -53,7 +53,7 @@ func main() {
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	tempDir, err := s.GetTempDir()
 	if err != nil {
-		panic(errors.Wrap(err, "get temporary directory"))
+		panic(fmt.Errorf("get temporary directory: %w", err))
 	}
 	defer s.RmTempDir()
 	ic := imgconv.NewImgConverter(tempDir)
@@ -76,12 +76,12 @@ func main() {
 		},
 	}
 	if err != nil {
-		panic(errors.Wrap(err, "convert HEIC image"))
+		panic(fmt.Errorf("convert HEIC image: %w", err))
 	}
 	for _, params := range runs {
 		chatPath := filepath.Join(params.exportPath, _entityName)
 		if err := s.MkdirAll(chatPath, os.ModePerm); err != nil {
-			panic(errors.Wrap(err, "create export directory"))
+			panic(fmt.Errorf("create export directory: %w", err))
 		}
 		chatFilePrefix := filepath.Join(chatPath, "iMessage,-,+3815555555555")
 		var of opsys.OutFile
@@ -93,26 +93,26 @@ func main() {
 		}
 		defer cf.Close()
 		if err := of.WriteMessage(firstMsg); err != nil {
-			panic(errors.Wrapf(err, "write message %q", firstMsg))
+			panic(fmt.Errorf("write message %q: %w", firstMsg, err))
 		}
 		if _, err := of.WriteAttachment(params.attachmentPath); err != nil {
-			panic(errors.Wrap(err, "include attachment"))
+			panic(fmt.Errorf("include attachment: %w", err))
 		}
 		for _, msg := range moreMsgs {
 			if err := of.WriteMessage(msg); err != nil {
-				panic(errors.Wrapf(err, "write message %q", msg))
+				panic(fmt.Errorf("write message %q: %w", msg, err))
 			}
 		}
 		if _, err := of.Stage(); err != nil {
-			panic(errors.Wrap(err, "stage outfile"))
+			panic(fmt.Errorf("stage outfile: %w", err))
 		}
 		if err := of.Flush(); err != nil {
-			panic(errors.Wrap(err, "flush outfile"))
+			panic(fmt.Errorf("flush outfile: %w", err))
 		}
 	}
 	err = s.RmTempDir()
 	if err != nil {
-		panic(errors.Wrap(err, "remove temporary directory"))
+		panic(fmt.Errorf("remove temporary directory: %w", err))
 	}
 }
 
@@ -123,12 +123,12 @@ func createPDFFile(
 ) (opsys.OutFile, afero.File) {
 	cf, err := s.Create(chatFilePrefix + ".pdf")
 	if err != nil {
-		panic(errors.Wrap(err, "create PDF chat file"))
+		panic(fmt.Errorf("create PDF chat file: %w", err))
 	}
 	if wkhtml {
 		pdfg, err := pdfgen.NewPDFGenerator(cf)
 		if err != nil {
-			panic(errors.Wrap(err, "create PDF generator"))
+			panic(fmt.Errorf("create PDF generator: %w", err))
 		}
 		return s.NewWkhtmltopdfFile(_entityName, cf, pdfg, false), cf
 	}
@@ -141,7 +141,7 @@ func createTxtFile(
 ) (opsys.OutFile, afero.File) {
 	cf, err := s.Create(chatFilePrefix + ".txt")
 	if err != nil {
-		panic(errors.Wrap(err, "create text chat file"))
+		panic(fmt.Errorf("create text chat file: %w", err))
 	}
 	return s.NewTxtOutFile(cf), cf
 }

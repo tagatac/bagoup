@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	semver "github.com/Masterminds/semver"
+	semver "github.com/Masterminds/semver/v3"
 	vcard "github.com/emersion/go-vcard"
 	afero "github.com/spf13/afero"
 	opsys "github.com/tagatac/bagoup/v2/opsys"

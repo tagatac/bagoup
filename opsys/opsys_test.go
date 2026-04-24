@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/emersion/go-vcard"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/exectest"
@@ -128,7 +128,7 @@ func TestGetMacOSVersion(t *testing.T) {
 		{
 			msg:          "bad version",
 			swVersOutput: "asdf",
-			wantErr:      `parse semantic version "asdf": Invalid Semantic Version`,
+			wantErr:      `parse semantic version "asdf": invalid semantic version`,
 		},
 	}
 

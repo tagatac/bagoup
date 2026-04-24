@@ -1,6 +1,6 @@
 package bagoup
 
-import "github.com/pkg/errors"
+import "errors"
 
 type // Options are the commandline options that can be passed to the bagoup
 // command.

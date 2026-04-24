@@ -14,9 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/emersion/go-vcard"
-	"github.com/pkg/errors"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/imgconv"
 	"github.com/tagatac/bagoup/v2/opsys"
@@ -80,7 +79,7 @@ func NewConfiguration(
 		tef := filepath.Join(opts.AttachmentsPath, PreservedPathTildeExpansionFile)
 		homeDir, err := s.ReadFile(tef)
 		if err != nil {
-			return nil, errors.Wrapf(err, "read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually %q)", tef, PreservedPathDir)
+			return nil, fmt.Errorf("read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually %q): %w", tef, PreservedPathDir, err)
 		}
 		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
 	}
@@ -106,11 +105,11 @@ func (cfg *configuration) Run() error {
 	}
 
 	if err := cfg.OS.MkdirAll(cfg.logDir, os.ModePerm); err != nil {
-		return errors.Wrap(err, "make log directory")
+		return fmt.Errorf("make log directory: %w", err)
 	}
 	logFile, err := cfg.OS.Create(filepath.Join(cfg.logDir, "out.log"))
 	if err != nil {
-		return errors.Wrap(err, "create log file")
+		return fmt.Errorf("create log file: %w", err)
 	}
 	defer logFile.Close()
 	w := log.Writer()
@@ -120,33 +119,33 @@ func (cfg *configuration) Run() error {
 	if cfg.Options.MacOSVersion != nil {
 		cfg.macOSVersion, err = semver.NewVersion(*cfg.Options.MacOSVersion)
 		if err != nil {
-			return errors.Wrapf(err, "parse macOS version %q", *cfg.Options.MacOSVersion)
+			return fmt.Errorf("parse macOS version %q: %w", *cfg.Options.MacOSVersion, err)
 		}
 	} else if cfg.macOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
-		return errors.Wrap(err, "get macOS version - FIX: specify the macOS version from which chat.db was copied with the --mac-os-version option")
+		return fmt.Errorf("get macOS version - FIX: specify the macOS version from which chat.db was copied with the --mac-os-version option: %w", err)
 	}
 
 	var contactMap map[string]*vcard.Card
 	if cfg.Options.ContactsPath != nil {
 		contactMap, err = cfg.OS.GetContactMap(*cfg.Options.ContactsPath)
 		if err != nil {
-			return errors.Wrapf(err, "get contacts from vcard file %q", *cfg.Options.ContactsPath)
+			return fmt.Errorf("get contacts from vcard file %q: %w", *cfg.Options.ContactsPath, err)
 		}
 	}
 
 	if err := cfg.ChatDB.Init(cfg.macOSVersion); err != nil {
-		return errors.Wrapf(err, "initialize the database for reading on macOS version %s", cfg.macOSVersion.String())
+		return fmt.Errorf("initialize the database for reading on macOS version %s: %w", cfg.macOSVersion.String(), err)
 	}
 
 	cfg.handleMap, err = cfg.ChatDB.GetHandleMap(contactMap)
 	if err != nil {
-		return errors.Wrap(err, "get handle map")
+		return fmt.Errorf("get handle map: %w", err)
 	}
 
 	if cfg.Options.OutputPDF {
 		tempDir, err := cfg.OS.GetTempDir()
 		if err != nil {
-			return errors.Wrap(err, "get temporary directory")
+			return fmt.Errorf("get temporary directory: %w", err)
 		}
 		defer cfg.OS.RmTempDir()
 		cfg.ImgConverter = imgconv.NewImgConverter(tempDir)
@@ -155,32 +154,32 @@ func (cfg *configuration) Run() error {
 	err = cfg.exportChats(contactMap)
 	printResults(cfg.version, cfg.Options.ExportPath, cfg.counts, time.Since(cfg.startTime))
 	if err != nil {
-		return errors.Wrap(err, "export chats")
+		return fmt.Errorf("export chats: %w", err)
 	}
 	if err = cfg.writeTildeExpansionFile(); err != nil {
-		return errors.Wrap(err, "write out tilde expansion file")
+		return fmt.Errorf("write out tilde expansion file: %w", err)
 	}
 	return cfg.OS.RmTempDir()
 }
 
 func (cfg *configuration) validatePaths() error {
 	if err := cfg.OS.FileAccess(cfg.Options.DBPath); err != nil {
-		return errors.Wrapf(err, "test DB file %q - FIX: %s", cfg.Options.DBPath, _readmeURL)
+		return fmt.Errorf("test DB file %q - FIX: %s: %w", cfg.Options.DBPath, _readmeURL, err)
 	}
 	var err error
 	var exportPathAbs string
 	if exportPathAbs, err = filepath.Abs(cfg.Options.ExportPath); err != nil {
-		return errors.Wrapf(err, "convert export path %q to an absolute path", cfg.Options.ExportPath)
+		return fmt.Errorf("convert export path %q to an absolute path: %w", cfg.Options.ExportPath, err)
 	}
 	cfg.Options.ExportPath = exportPathAbs
 	if ok, err := cfg.OS.FileExist(exportPathAbs); err != nil {
-		return errors.Wrapf(err, "check export path %q", exportPathAbs)
+		return fmt.Errorf("check export path %q: %w", exportPathAbs, err)
 	} else if ok {
 		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", exportPathAbs)
 	}
 	var attPathAbs string
 	if attPathAbs, err = filepath.Abs(cfg.Options.AttachmentsPath); err != nil {
-		return errors.Wrapf(err, "convert attachments path %q to an absolute path", cfg.Options.AttachmentsPath)
+		return fmt.Errorf("convert attachments path %q to an absolute path: %w", cfg.Options.AttachmentsPath, err)
 	}
 	cfg.Options.AttachmentsPath = attPathAbs
 	return nil

@@ -1,10 +1,9 @@
 package imgconv
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 //go:generate mockgen -destination=mock_imgconv/mock_imgconv.go github.com/tagatac/bagoup/v2/imgconv ImgConverter
@@ -23,7 +22,7 @@ func (i *imgConverter) ConvertHEIC(src string) (string, error) {
 	jpgFilename := strings.TrimRight(filepath.Base(src), "HEICheic") + "jpeg"
 	dst := filepath.Join(i.tempDir, jpgFilename)
 	if err := i.convert(src, dst); err != nil {
-		return src, errors.Wrapf(err, "convert HEIC file to JPG file %q", dst)
+		return src, fmt.Errorf("convert HEIC file to JPG file %q: %w", dst, err)
 	}
 	return dst, nil
 }

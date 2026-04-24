@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"
@@ -211,7 +211,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 				)
 			},
-			wantErr: `parse macOS version "10.10.10.10": Invalid Semantic Version`,
+			wantErr: `parse macOS version "10.10.10.10": invalid semantic version`,
 		},
 		{
 			msg: "contacts file specified",

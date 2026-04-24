@@ -6,11 +6,10 @@
 package pathtools
 
 import (
+	"fmt"
 	"os/user"
 	"path/filepath"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 //go:generate mockgen -destination=mock_pathtools/mock_pathtools.go github.com/tagatac/bagoup/v2/pathtools PathTools
@@ -33,7 +32,7 @@ type (
 func NewPathTools() (PathTools, error) {
 	usr, err := user.Current()
 	if err != nil {
-		return nil, errors.Wrap(err, "get current user")
+		return nil, fmt.Errorf("get current user: %w", err)
 	}
 	return ptools{homeDir: usr.HomeDir}, nil
 }

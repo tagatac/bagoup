@@ -27,7 +27,6 @@ import (
 
 	"github.com/jessevdk/go-flags"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/internal/bagoup"
@@ -54,39 +53,39 @@ func main() {
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
 		return
 	}
-	panicOnErr(errors.Wrap(err, "parse flags"))
-	panicOnErr(errors.Wrap(bagoup.ValidateOptions(opts), "validate options"))
+	panicOnErr(fmt.Errorf("parse flags: %w", err))
+	panicOnErr(fmt.Errorf("validate options: %w", bagoup.ValidateOptions(opts)))
 	if opts.PrintVersion {
 		fmt.Printf("bagoup version %s\n%s\n", _version, _license)
 		return
 	}
 
 	ptools, err := pathtools.NewPathTools()
-	panicOnErr(errors.Wrap(err, "create pathtools"))
+	panicOnErr(fmt.Errorf("create pathtools: %w", err))
 	opts.DBPath = ptools.ReplaceTilde(opts.DBPath)
 
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	db, err := sql.Open("sqlite3", opts.DBPath)
-	panicOnErr(errors.Wrapf(err, "open DB file %q", opts.DBPath))
+	panicOnErr(fmt.Errorf("open DB file %q: %w", opts.DBPath, err))
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
 	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, logDir, startTime, _version)
-	panicOnErr(errors.Wrap(err, "create bagoup configuration"))
+	panicOnErr(fmt.Errorf("create bagoup configuration: %w", err))
 	panicOnErr(cfg.Run())
-	panicOnErr(errors.Wrapf(db.Close(), "close DB file %q", opts.DBPath))
+	panicOnErr(fmt.Errorf("close DB file %q: %w", opts.DBPath, db.Close()))
 	dbf, err := os.Open(opts.DBPath)
-	panicOnErr(errors.Wrapf(err, "open DB file %q for copying", opts.DBPath))
+	panicOnErr(fmt.Errorf("open DB file %q for copying: %w", opts.DBPath, err))
 	defer dbf.Close()
 	dbfNewPath := filepath.Join(logDir, filepath.Base(opts.DBPath))
 	dbfNew, err := os.Create(dbfNewPath)
-	panicOnErr(errors.Wrapf(err, "create file %q to copy chat DB into", dbfNewPath))
+	panicOnErr(fmt.Errorf("create file %q to copy chat DB into: %w", dbfNewPath, err))
 	defer dbfNew.Close()
 	_, err = io.Copy(dbfNew, dbf)
-	panicOnErr(errors.Wrapf(err, "copy DB file from %q to %q", opts.DBPath, dbfNewPath))
-	panicOnErr(errors.Wrapf(dbf.Close(), "close DB file %q after copying", opts.DBPath))
-	panicOnErr(errors.Wrapf(dbfNew.Close(), "close DB copy %q", dbfNewPath))
+	panicOnErr(fmt.Errorf("copy DB file from %q to %q: %w", opts.DBPath, dbfNewPath, err))
+	panicOnErr(fmt.Errorf("close DB file %q after copying: %w", opts.DBPath, dbf.Close()))
+	panicOnErr(fmt.Errorf("close DB copy %q: %w", dbfNewPath, dbfNew.Close()))
 }
 
 func panicOnErr(err error) {

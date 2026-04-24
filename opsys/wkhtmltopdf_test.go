@@ -1,10 +1,10 @@
 package opsys
 
 import (
+	"errors"
 	"html/template"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen/mock_pdfgen"
 	"go.uber.org/mock/gomock"
