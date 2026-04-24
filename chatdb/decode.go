@@ -16,32 +16,54 @@ func (d *chatDB) decodeTypedStream(s string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("decode all: %w", err)
 	}
-	// The top-level group has one value: the NSMutableAttributedString object.
+	obj, err := extractArchivedObject(groups)
+	if err != nil {
+		return "", err
+	}
+	baseStr, err := extractBaseString(obj)
+	if err != nil {
+		return "", err
+	}
+	extras := collectExtras(obj)
+	if len(extras) > 0 {
+		return baseStr + "{\n" + strings.Join(extras, "\n") + "\n}", nil
+	}
+	return baseStr, nil
+}
+
+// extractArchivedObject pulls the top-level NSMutableAttributedString object
+// out of the decoded typedstream groups.
+func extractArchivedObject(groups []*ts.TypedGroup) (*ts.GenericArchivedObject, error) {
 	if len(groups) == 0 || len(groups[0].Values) == 0 {
-		return "", fmt.Errorf("empty stream")
+		return nil, fmt.Errorf("empty stream")
 	}
 	obj, ok := groups[0].Values[0].(*ts.GenericArchivedObject)
 	if !ok {
-		return "", fmt.Errorf("unexpected top-level type %T", groups[0].Values[0])
+		return nil, fmt.Errorf("unexpected top-level type %T", groups[0].Values[0])
 	}
-	// The first content group holds the NSMutableString / NSString.
+	return obj, nil
+}
+
+// extractBaseString pulls the NSMutableString / NSString value from the first
+// content group of the archived object.
+func extractBaseString(obj *ts.GenericArchivedObject) (string, error) {
 	if len(obj.Contents) == 0 || len(obj.Contents[0].Values) == 0 {
 		return "", fmt.Errorf("no string content")
 	}
-	var baseStr string
 	switch v := obj.Contents[0].Values[0].(type) {
 	case *ts.NSMutableString:
-		baseStr = v.Value
+		return v.Value, nil
 	case *ts.NSString:
-		baseStr = v.Value
+		return v.Value, nil
 	default:
 		return "", fmt.Errorf("unexpected string type %T", obj.Contents[0].Values[0])
 	}
+}
 
-	// Scan remaining content groups for an NSDictionary containing attributes.
-	// Collect key=value pairs for keys that do NOT start with "__kIM", mirroring
-	// the Darwin regex that strips __kIM* keys and keeps the rest (e.g. IMAudioTranscription).
-	// Format in ObjC description style for cross-platform consistency.
+// collectExtras scans remaining content groups for NSDictionary attributes,
+// returning formatted key=value pairs for keys that don't start with "__kIM"
+// (e.g. IMAudioTranscription). Format mirrors ObjC description style.
+func collectExtras(obj *ts.GenericArchivedObject) []string {
 	var extras []string
 	for _, group := range obj.Contents[1:] {
 		for _, val := range group.Values {
@@ -60,8 +82,5 @@ func (d *chatDB) decodeTypedStream(s string) (string, error) {
 			}
 		}
 	}
-	if len(extras) > 0 {
-		return baseStr + "{\n" + strings.Join(extras, "\n") + "\n}", nil
-	}
-	return baseStr, nil
+	return extras
 }
