@@ -30,8 +30,8 @@ func TestConvertHEIC(t *testing.T) {
 		{
 			msg:     "conversion error",
 			src:     "testfile.heic",
-			sipsErr: "this is a sips error",
-			wantErr: "convert HEIC file to JPG file ",
+			sipsErr: "this is a conversion error",
+			wantErr: "convert HEIC file to JPG file \"testTempDir/testfile.jpeg\": exit status 1: this is a conversion error",
 		},
 	}
 
@@ -48,7 +48,7 @@ func TestConvertHEIC(t *testing.T) {
 
 			converted, err := i.ConvertHEIC(tt.src)
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
