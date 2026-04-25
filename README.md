@@ -20,14 +20,16 @@ $ cat "messages-export/Novak Djokovic/iMessage;-;+3815555555555.txt"
 ### PDF (--pdf flag)
 ![Example PDF Export](example-exports/example-pdf-screenshot.png)
 
-## Prerequisites
-- [WeasyPrint](https://weasyprint.org/) (only needed for PDF export)
+## Prerequisites for PDF Export (`--pdf` flag) Only
+- [WeasyPrint](https://weasyprint.org/)
 ```
 brew install weasyprint
 ```
-- [Noto Color Emoji Font](https://fonts.google.com/noto/specimen/Noto+Color+Emoji) (only needed for PDF export on Linux)
+### Additional prerequisites for PDF export on Linux
+- [ImageMagick](https://imagemagick.org/)
+- [Noto Color Emoji Font](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
 ```
-sudo apt install weasyprint fonts-noto-color-emoji
+sudo apt install weasyprint imagemagick fonts-noto-color-emoji
 ```
 
 ## Installation
