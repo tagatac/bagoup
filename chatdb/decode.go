@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	ts "github.com/tagatac/typedstream-go"
+	ts "github.com/tagatac/go-typedstream"
 )
 
 func (d *chatDB) decodeTypedStream(s string) (string, error) {

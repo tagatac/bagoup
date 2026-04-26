@@ -11,8 +11,8 @@ require (
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/spf13/afero v1.15.0
+	github.com/tagatac/go-typedstream v1.0.0
 	github.com/tagatac/gorecurcopy v1.0.1
-	github.com/tagatac/typedstream-go v0.0.0-20260419125731-cd361d54cae6
 	go.uber.org/mock v0.6.0
 	gotest.tools/v3 v3.5.2
 )
