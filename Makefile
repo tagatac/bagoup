@@ -15,6 +15,9 @@ PKGS_TO_TEST=$(filter-out $(EXCLUDE_PKGS),$(PKGS))
 PKGS_TO_COVER=$(shell echo "$(PKGS_TO_TEST)" | tr ' ' ',')
 
 EXAMPLE_EXPORTS_DIR=example-exports/$(OS)
+EXAMPLE_EXPORTS_TESTDATA=example-exports/testdata
+EXAMPLE_EXPORTS_FLAGS=--db-path $(EXAMPLE_EXPORTS_TESTDATA)/chat.db --mac-os-version 26.4 --contacts-path $(EXAMPLE_EXPORTS_TESTDATA)/contacts.vcf
+EXAMPLE_EXPORTS_PDFFLAGS=--pdf --attachments-path $(EXAMPLE_EXPORTS_TESTDATA)/bagoup-attachments
 TEST_EXPORTS_DIR=test-exports
 
 build: bin/bagoup
@@ -32,9 +35,11 @@ deps:
 download:
 	go mod download
 
-example: example-exports/examplegen.go download
+example: bin/bagoup
 	rm -vrf $(EXAMPLE_EXPORTS_DIR)
-	cd example-exports && go run examplegen.go $(OS)
+	bin/bagoup $(EXAMPLE_EXPORTS_FLAGS) --export-path $(EXAMPLE_EXPORTS_DIR)/messages-export
+	bin/bagoup $(EXAMPLE_EXPORTS_FLAGS) $(EXAMPLE_EXPORTS_PDFFLAGS) --export-path $(EXAMPLE_EXPORTS_DIR)/messages-export-pdf
+	bin/bagoup $(EXAMPLE_EXPORTS_FLAGS) $(EXAMPLE_EXPORTS_PDFFLAGS) --wkhtml --export-path $(EXAMPLE_EXPORTS_DIR)/messages-export-wkhtmltopdf
 
 from-archive:
 	BAGOUP_VERSION=$(shell pwd | sed 's/.*bagoup-//g') make build
@@ -51,6 +56,8 @@ test: download
 	go tool cover -func=$(COVERAGE_FILE)
 
 test-exports: download
+	EXAMPLE_EXPORTS_FLAGS="$(EXAMPLE_EXPORTS_FLAGS)" \
+	EXAMPLE_EXPORTS_PDFFLAGS="$(EXAMPLE_EXPORTS_PDFFLAGS)" \
 	bash scripts/test-exports.sh
 
 clean:

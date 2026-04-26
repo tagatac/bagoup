@@ -53,43 +53,43 @@ func main() {
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
 		return
 	}
-	panicOnErr(fmt.Errorf("parse flags: %w", err))
-	panicOnErr(fmt.Errorf("validate options: %w", bagoup.ValidateOptions(opts)))
+	panicOnErr(err, "parse flags")
+	panicOnErr(bagoup.ValidateOptions(opts), "validate options")
 	if opts.PrintVersion {
 		fmt.Printf("bagoup version %s\n%s\n", _version, _license)
 		return
 	}
 
 	ptools, err := pathtools.NewPathTools()
-	panicOnErr(fmt.Errorf("create pathtools: %w", err))
+	panicOnErr(err, "create pathtools")
 	opts.DBPath = ptools.ReplaceTilde(opts.DBPath)
 
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	db, err := sql.Open("sqlite3", opts.DBPath)
-	panicOnErr(fmt.Errorf("open DB file %q: %w", opts.DBPath, err))
+	panicOnErr(err, "open DB file %q", opts.DBPath)
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
 	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, logDir, startTime, _version)
-	panicOnErr(fmt.Errorf("create bagoup configuration: %w", err))
-	panicOnErr(cfg.Run())
-	panicOnErr(fmt.Errorf("close DB file %q: %w", opts.DBPath, db.Close()))
+	panicOnErr(err, "create bagoup configuration")
+	panicOnErr(cfg.Run(), "run bagoup")
+	panicOnErr(db.Close(), "close DB file %q", opts.DBPath)
 	dbf, err := os.Open(opts.DBPath)
-	panicOnErr(fmt.Errorf("open DB file %q for copying: %w", opts.DBPath, err))
+	panicOnErr(err, "open DB file %q for copying", opts.DBPath)
 	defer dbf.Close()
 	dbfNewPath := filepath.Join(logDir, filepath.Base(opts.DBPath))
 	dbfNew, err := os.Create(dbfNewPath)
-	panicOnErr(fmt.Errorf("create file %q to copy chat DB into: %w", dbfNewPath, err))
+	panicOnErr(err, "create file %q to copy chat DB into", dbfNewPath)
 	defer dbfNew.Close()
 	_, err = io.Copy(dbfNew, dbf)
-	panicOnErr(fmt.Errorf("copy DB file from %q to %q: %w", opts.DBPath, dbfNewPath, err))
-	panicOnErr(fmt.Errorf("close DB file %q after copying: %w", opts.DBPath, dbf.Close()))
-	panicOnErr(fmt.Errorf("close DB copy %q: %w", dbfNewPath, dbfNew.Close()))
+	panicOnErr(err, "copy DB file from %q to %q", opts.DBPath, dbfNewPath)
+	panicOnErr(dbf.Close(), "close DB file %q after copying", opts.DBPath)
+	panicOnErr(dbfNew.Close(), "close DB copy %q", dbfNewPath)
 }
 
-func panicOnErr(err error) {
+func panicOnErr(err error, format string, args ...any) {
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf(format+": %w", append(args, err)...))
 	}
 }

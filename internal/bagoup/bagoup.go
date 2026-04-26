@@ -81,7 +81,7 @@ func NewConfiguration(
 		if err != nil {
 			return nil, fmt.Errorf("read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually %q): %w", tef, PreservedPathDir, err)
 		}
-		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
+		ptools = pathtools.NewPathToolsWithHomeDir(strings.TrimRight(string(homeDir), "\n"))
 	}
 	return &configuration{
 		Options:   opts,
