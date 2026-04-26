@@ -98,6 +98,8 @@ Application Options:
   -c, --contacts-path=    Path to the contacts vCard file
   -s, --self-handle=      Prefix to use for for messages sent by you (default:
                           Me)
+      --timezone=         Timezone for message timestamps, e.g.
+                          "America/New_York" or "UTC" (default: Local)
       --separate-chats    Do not merge chats with the same contact (e.g.
                           iMessage and SMS) into a single file
   -p, --pdf               Export text and images to PDF files (requires full
