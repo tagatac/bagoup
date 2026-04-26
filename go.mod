@@ -12,7 +12,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/spf13/afero v1.15.0
 	github.com/tagatac/go-typedstream v1.0.0
-	github.com/tagatac/gorecurcopy v1.0.1
+	github.com/tagatac/gorecurcopy v1.1.0
 	go.uber.org/mock v0.6.0
 	gotest.tools/v3 v3.5.2
 )
