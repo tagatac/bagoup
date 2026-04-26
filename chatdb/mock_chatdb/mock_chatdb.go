@@ -11,6 +11,7 @@ package mock_chatdb
 
 import (
 	reflect "reflect"
+	time "time"
 
 	semver "github.com/Masterminds/semver/v3"
 	vcard "github.com/emersion/go-vcard"
@@ -120,15 +121,15 @@ func (mr *MockChatDBMockRecorder) GetMessageIDs(chatID any) *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockChatDB) Init(macOSVersion *semver.Version) error {
+func (m *MockChatDB) Init(macOSVersion *semver.Version, loc *time.Location) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", macOSVersion)
+	ret := m.ctrl.Call(m, "Init", macOSVersion, loc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockChatDBMockRecorder) Init(macOSVersion any) *gomock.Call {
+func (mr *MockChatDBMockRecorder) Init(macOSVersion, loc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockChatDB)(nil).Init), macOSVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockChatDB)(nil).Init), macOSVersion, loc)
 }

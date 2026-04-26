@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/emersion/go-vcard"
@@ -33,7 +34,7 @@ type (
 	ChatDB interface {
 		// Init determines the version of the database, preparing it to make the
 		// appropriate queries.
-		Init(macOSVersion *semver.Version) error
+		Init(macOSVersion *semver.Version, loc *time.Location) error
 		// GetHandleMap returns a mapping from handle ID to phone number or email
 		// address. If a contact map is supplied, it will attempt to resolve these
 		// handles to formatted names.
@@ -58,6 +59,7 @@ type (
 		selfHandle     string
 		dateDivisor    int
 		cmJoinHasDates bool
+		loc            *time.Location
 		execCommand    func(string, ...string) *exec.Cmd
 	}
 )
@@ -72,13 +74,14 @@ func NewChatDB(db *sql.DB, selfHandle string) ChatDB {
 	}
 }
 
-func (d *chatDB) Init(macOSVersion *semver.Version) error {
+func (d *chatDB) Init(macOSVersion *semver.Version, loc *time.Location) error {
 	// Set the datetime divisor. Adapted from
 	// https://apple.stackexchange.com/a/300997/267331
 	d.dateDivisor = _modernVersionDateDivisor
 	if macOSVersion != nil && macOSVersion.LessThan(_modernVersion) {
 		d.dateDivisor = 1
 	}
+	d.loc = loc
 
 	// Check if the chat_message_join table has a message_date column. See
 	// https://github.com/tagatac/bagoup/issues/24.

@@ -6,6 +6,7 @@ package chatdb
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -77,7 +78,7 @@ func TestInit(t *testing.T) {
 			tt.setupQuery(query)
 
 			cdb := &chatDB{DB: db}
-			err = cdb.Init(tt.macOSVersion)
+			err = cdb.Init(tt.macOSVersion, time.UTC)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
@@ -85,6 +86,7 @@ func TestInit(t *testing.T) {
 			assert.NilError(t, err)
 			assert.Equal(t, cdb.dateDivisor, tt.wantDivisor)
 			assert.Equal(t, cdb.cmJoinHasDates, tt.wantJoinHasDates)
+			assert.Equal(t, cdb.loc, time.UTC)
 		})
 	}
 }

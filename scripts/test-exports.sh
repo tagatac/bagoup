@@ -4,7 +4,7 @@ set -e -o pipefail
 OS=$(uname -s)
 EXAMPLE_EXPORTS_DIR="example-exports/$OS"
 TEST_EXPORTS_DIR="test-exports"
-EXAMPLE_EXPORT_FILE='Novak Djokovic/iMessage,-,+3815555555555'
+EXAMPLE_EXPORT_FILE='Novak Djokovic/any,-,+3815555555555'
 PDFINFO_IGNORE_PATTERN='Creator|CreationDate|File size|Producer'
 
 TMPDIR_SCRIPT=$(mktemp -d)
@@ -40,7 +40,9 @@ compare_pdf() {
 echo "==> Generating test exports"
 rm -rf "$TEST_EXPORTS_DIR"
 mkdir -p "$TEST_EXPORTS_DIR"
-(cd example-exports && go run examplegen.go "../$TEST_EXPORTS_DIR")
+bin/bagoup $EXAMPLE_EXPORTS_FLAGS --export-path $TEST_EXPORTS_DIR/messages-export
+bin/bagoup $EXAMPLE_EXPORTS_FLAGS $EXAMPLE_EXPORTS_PDFFLAGS --export-path $TEST_EXPORTS_DIR/messages-export-pdf
+bin/bagoup $EXAMPLE_EXPORTS_FLAGS $EXAMPLE_EXPORTS_PDFFLAGS --wkhtml --export-path $TEST_EXPORTS_DIR/messages-export-wkhtmltopdf
 
 echo "==> Comparing text export"
 diff "$EXAMPLE_EXPORTS_DIR/messages-export/$EXAMPLE_EXPORT_FILE.txt" \

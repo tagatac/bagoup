@@ -38,6 +38,7 @@ type (
 		imgconv.ImgConverter
 		logDir          string
 		macOSVersion    *semver.Version
+		loc             *time.Location
 		handleMap       map[int]string
 		attachmentPaths map[int][]chatdb.Attachment
 		counts
@@ -75,13 +76,17 @@ func NewConfiguration(
 	startTime time.Time,
 	version string,
 ) (Configuration, error) {
+	loc, err := time.LoadLocation(opts.Timezone)
+	if err != nil {
+		return nil, fmt.Errorf("load timezone %q: %w", opts.Timezone, err)
+	}
 	if opts.AttachmentsPath != "/" {
 		tef := filepath.Join(opts.AttachmentsPath, PreservedPathTildeExpansionFile)
 		homeDir, err := s.ReadFile(tef)
 		if err != nil {
 			return nil, fmt.Errorf("read tilde expansion file %q - POSSIBLE FIX: create a file .tildeexpansion with the expanded home directory from the previous run and place it at the root of the preserved-paths copied attachments directory (usually %q): %w", tef, PreservedPathDir, err)
 		}
-		ptools = pathtools.NewPathToolsWithHomeDir(string(homeDir))
+		ptools = pathtools.NewPathToolsWithHomeDir(strings.TrimRight(string(homeDir), "\n"))
 	}
 	return &configuration{
 		Options:   opts,
@@ -89,6 +94,7 @@ func NewConfiguration(
 		ChatDB:    cdb,
 		PathTools: ptools,
 		logDir:    logDir,
+		loc:       loc,
 		counts: counts{
 			attachments:         map[string]int{},
 			attachmentsCopied:   map[string]int{},
@@ -133,7 +139,7 @@ func (cfg *configuration) Run() error {
 		}
 	}
 
-	if err := cfg.ChatDB.Init(cfg.macOSVersion); err != nil {
+	if err := cfg.ChatDB.Init(cfg.macOSVersion, cfg.loc); err != nil {
 		return fmt.Errorf("initialize the database for reading on macOS version %s: %w", cfg.macOSVersion.String(), err)
 	}
 

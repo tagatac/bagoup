@@ -3,6 +3,7 @@ package chatdb
 import (
 	_ "embed"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"gotest.tools/v3/assert"
@@ -24,6 +25,15 @@ func TestDecode(t *testing.T) {
 	handleMap := map[int]string{
 		10: "testhandle1",
 	}
+	// Apple nanosecond timestamps for each expected UTC date:
+	//   2019-10-04 18:26:31 UTC = Unix 1570213591 → Apple ns 591906391000000000
+	//   2023-12-17 21:27:07 UTC = Unix 1702848427 → Apple ns 724541227000000000
+	//   2024-01-01 12:00:00 UTC = Unix 1704110400 → Apple ns 725803200000000000
+	const (
+		date20191004 int64 = 591906391000000000
+		date20231217 int64 = 724541227000000000
+		date20240101 int64 = 725803200000000000
+	)
 
 	tests := []struct {
 		msg         string
@@ -36,7 +46,7 @@ func TestDecode(t *testing.T) {
 			msg: "typical iMessage",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, string(_attributedBodyNSString), "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, string(_attributedBodyNSString), date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: no, should i?\n",
@@ -46,7 +56,7 @@ func TestDecode(t *testing.T) {
 			msg: "2FA code",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, string(_attributedBodyVenmo), "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, string(_attributedBodyVenmo), date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: Venmo here! NEVER share this code via call/text. ONLY YOU should enter the code. BEWARE: If someone asks for the code, it's a scam. Code: 975002\n",
@@ -56,7 +66,7 @@ func TestDecode(t *testing.T) {
 			msg: "Google 2FA code",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, string(_attributedBodyGoogle), "2023-12-17 21:27:07")
+					AddRow(0, 10, nil, string(_attributedBodyGoogle), date20231217)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2023-12-17 21:27:07] testhandle1: G-913121 is your Google verification code.\n",
@@ -66,17 +76,17 @@ func TestDecode(t *testing.T) {
 			msg: "audio transcription",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, string(_attributedBodyAudio), "2024-01-01 12:00:00")
+					AddRow(0, 10, nil, string(_attributedBodyAudio), date20240101)
 				query.WillReturnRows(rows)
 			},
-			wantMessage: "[2024-01-01 12:00:00] testhandle1: \ufffc{\n    IMAudioTranscription = \"I don't think it's correct that I have the option to buy whatever number shares at the same price as the other doesn't make any sense How am I winning here? Am I getting those chairs?\"\n}\n",
+			wantMessage: "[2024-01-01 12:00:00] testhandle1: ￼{\n    IMAudioTranscription = \"I don't think it's correct that I have the option to buy whatever number shares at the same price as the other doesn't make any sense How am I winning here? Am I getting those chairs?\"\n}\n",
 			wantValid:   true,
 		},
 		{
 			msg: "failure creating unarchiver",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, "", date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
@@ -85,7 +95,7 @@ func TestDecode(t *testing.T) {
 			msg: "failure to decode all",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x85", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x85", date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
@@ -94,7 +104,7 @@ func TestDecode(t *testing.T) {
 			msg: "empty stream",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62", date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
@@ -103,7 +113,7 @@ func TestDecode(t *testing.T) {
 			msg: "wrong top-level value type",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x01i\x01", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x01i\x01", date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
@@ -112,7 +122,7 @@ func TestDecode(t *testing.T) {
 			msg: "no contents in the first group",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x01@\x84\x84\x84\x01Z\x00\x85\x86", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x01@\x84\x84\x84\x01Z\x00\x85\x86", date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
@@ -121,7 +131,7 @@ func TestDecode(t *testing.T) {
 			msg: "no string in the contents",
 			setupQuery: func(query *sqlmock.ExpectedQuery) {
 				rows := sqlmock.NewRows([]string{"is_from_me", "handle_id", "text", "attributedBody", "date"}).
-					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x01@\x84\x84\x84\x01Z\x00\x85\x84\x01i\x01\x86", "2019-10-04 18:26:31")
+					AddRow(0, 10, nil, "\x04\x0bstreamtyped\x62\x84\x01@\x84\x84\x84\x01Z\x00\x85\x84\x01i\x01\x86", date20191004)
 				query.WillReturnRows(rows)
 			},
 			wantMessage: "[2019-10-04 18:26:31] testhandle1: \n",
@@ -133,12 +143,13 @@ func TestDecode(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
 			defer db.Close()
-			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, text, attributedBody, DATETIME\(\(date\/1000000000\) \+ STRFTIME\('%s', '2001\-01\-01 00\:00\:00'\), 'unixepoch', 'localtime'\) FROM message WHERE ROWID\=42`)
+			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, text, attributedBody, date FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
 			cdb := &chatDB{
 				DB:             db,
 				selfHandle:     "Me",
 				dateDivisor:    _modernVersionDateDivisor,
+				loc:            time.UTC,
 				cmJoinHasDates: true,
 			}
 
