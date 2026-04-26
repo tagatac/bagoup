@@ -10,6 +10,7 @@ Options struct {
 	MacOSVersion    *string  `short:"m" long:"mac-os-version" description:"Version of macOS, e.g. '10.15', from which the Messages chat database file was copied (not needed if bagoup is running on the same Mac)"`
 	ContactsPath    *string  `short:"c" long:"contacts-path" description:"Path to the contacts vCard file"`
 	SelfHandle      string   `short:"s" long:"self-handle" description:"Prefix to use for for messages sent by you" default:"Me"`
+	Timezone        string   `long:"timezone" description:"Timezone for message timestamps, e.g. \"America/New_York\" or \"UTC\"" default:"Local"`
 	SeparateChats   bool     `long:"separate-chats" description:"Do not merge chats with the same contact (e.g. iMessage and SMS) into a single file"`
 	OutputPDF       bool     `short:"p" long:"pdf" description:"Export text and images to PDF files (requires full disk access)"`
 	UseWkhtmltopdf  bool     `short:"w" long:"wkhtml" description:"Use wkhtmltopdf instead of weasyprint to generate PDFs (requires wkhtmltopdf executable to be on the system path - https://wkhtmltopdf.org/)"`

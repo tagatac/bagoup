@@ -29,6 +29,7 @@ func TestBagoup(t *testing.T) {
 		ExportPath:      "messages-export",
 		SelfHandle:      "Me",
 		AttachmentsPath: "/",
+		Timezone:        "Local",
 	}
 	exportPathAbs := filepath.Join(wd, "messages-export")
 	logDirAbs := filepath.Join(exportPathAbs, ".bagoup")
@@ -57,7 +58,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
@@ -72,6 +73,7 @@ func TestBagoup(t *testing.T) {
 				ExportPath:      "messages-export",
 				SelfHandle:      "Me",
 				AttachmentsPath: "testrelativepath",
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -81,13 +83,24 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
 					osMock.EXPECT().RmTempDir(),
 				)
 			},
+		},
+		{
+			msg: "invalid timezone",
+			opts: Options{
+				DBPath:          "~/Library/Messages/chat.db",
+				ExportPath:      "messages-export",
+				SelfHandle:      "Me",
+				AttachmentsPath: "/",
+				Timezone:        "NotATimezone",
+			},
+			wantCfgErr: `load timezone "NotATimezone": unknown time zone NotATimezone`,
 		},
 		{
 			msg: "error reading tilde expansion file",
@@ -179,6 +192,7 @@ func TestBagoup(t *testing.T) {
 				MacOSVersion:    &tenDotTwelve,
 				SelfHandle:      "Me",
 				AttachmentsPath: "/",
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -186,7 +200,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().FileExist(exportPathAbs),
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
-					dbMock.EXPECT().Init(semver.MustParse("10.12")),
+					dbMock.EXPECT().Init(semver.MustParse("10.12"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
@@ -221,6 +235,7 @@ func TestBagoup(t *testing.T) {
 				ContactsPath:    &contactsPath,
 				SelfHandle:      "Me",
 				AttachmentsPath: "/",
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -230,7 +245,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
 					osMock.EXPECT().GetContactMap("contacts.vcf"),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
@@ -246,6 +261,7 @@ func TestBagoup(t *testing.T) {
 				ContactsPath:    &contactsPath,
 				SelfHandle:      "Me",
 				AttachmentsPath: "/",
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB, _ *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -269,7 +285,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")).Return(errors.New("this is a DB error")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local).Return(errors.New("this is a DB error")),
 				)
 			},
 			wantErr: "initialize the database for reading on macOS version 12.4.0: this is a DB error",
@@ -284,7 +300,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil).Return(nil, errors.New("this is a DB error")),
 				)
 			},
@@ -298,6 +314,7 @@ func TestBagoup(t *testing.T) {
 				SelfHandle:      "Me",
 				OutputPDF:       true,
 				AttachmentsPath: "/",
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -306,7 +323,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					osMock.EXPECT().GetTempDir(),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
@@ -323,6 +340,7 @@ func TestBagoup(t *testing.T) {
 				SelfHandle:      "Me",
 				OutputPDF:       true,
 				AttachmentsPath: "/",
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -331,7 +349,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					osMock.EXPECT().GetTempDir().Return("", errors.New("this is a tempdir error")),
 				)
@@ -348,7 +366,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil).Return(nil, errors.New("this is a DB error")),
@@ -365,6 +383,7 @@ func TestBagoup(t *testing.T) {
 				AttachmentsPath: "/",
 				CopyAttachments: true,
 				PreservePaths:   true,
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -373,7 +392,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
@@ -392,6 +411,7 @@ func TestBagoup(t *testing.T) {
 				AttachmentsPath: "/",
 				CopyAttachments: true,
 				PreservePaths:   true,
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				gomock.InOrder(
@@ -400,7 +420,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
@@ -419,6 +439,7 @@ func TestBagoup(t *testing.T) {
 				AttachmentsPath: "/",
 				CopyAttachments: true,
 				PreservePaths:   true,
+				Timezone:        "Local",
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS, dbMock *mock_chatdb.MockChatDB, ptMock *mock_pathtools.MockPathTools) {
 				rwfs := afero.NewMemMapFs()
@@ -431,7 +452,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
 					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
 					osMock.EXPECT().GetMacOSVersion().Return(semver.MustParse("12.4"), nil),
-					dbMock.EXPECT().Init(semver.MustParse("12.4")),
+					dbMock.EXPECT().Init(semver.MustParse("12.4"), time.Local),
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
@@ -450,7 +471,9 @@ func TestBagoup(t *testing.T) {
 			osMock := mock_opsys.NewMockOS(ctrl)
 			dbMock := mock_chatdb.NewMockChatDB(ctrl)
 			ptMock := mock_pathtools.NewMockPathTools(ctrl)
-			tt.setupMocks(osMock, dbMock, ptMock)
+			if tt.setupMocks != nil {
+				tt.setupMocks(osMock, dbMock, ptMock)
+			}
 
 			cfg, err := NewConfiguration(
 				tt.opts,

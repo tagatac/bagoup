@@ -7,7 +7,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"time"
 )
+
+// appleEpochUnixSec is the Unix timestamp of Apple's reference date 2001-01-01 00:00:00 UTC.
+const appleEpochUnixSec int64 = 978307200
 
 // DatedMessageID pairs a message ID and its date, in the legacy date format.
 type DatedMessageID struct {
@@ -79,8 +83,7 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 }
 
 func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bool, error) {
-	datetimeFormula := fmt.Sprintf("(date/%d) + STRFTIME('%%s', '2001-01-01 00:00:00'), 'unixepoch', 'localtime'", d.dateDivisor)
-	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, attributedBody, DATETIME(%s) FROM message WHERE ROWID=%d", datetimeFormula, messageID))
+	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, attributedBody, date FROM message WHERE ROWID=%d", messageID))
 	if err != nil {
 		return "", false, fmt.Errorf("query message table for ID %d: %w", messageID, err)
 	}
@@ -88,13 +91,15 @@ func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bo
 	messages.Next()
 	var fromMe, handleID int
 	var text, attributedBody sql.NullString
-	var date string
-	if err := messages.Scan(&fromMe, &handleID, &text, &attributedBody, &date); err != nil {
+	var rawDate int64
+	if err := messages.Scan(&fromMe, &handleID, &text, &attributedBody, &rawDate); err != nil {
 		return "", false, fmt.Errorf("read data for message ID %d: %w", messageID, err)
 	}
 	if messages.Next() {
 		return "", false, fmt.Errorf("multiple messages with the same ID: %d - message ID uniqueness assumption violated - %s", messageID, _githubIssueMsg)
 	}
+	unixSec := rawDate/int64(d.dateDivisor) + appleEpochUnixSec
+	date := time.Unix(unixSec, 0).In(d.loc).Format(time.DateTime)
 	handle := handleMap[handleID]
 	if fromMe == 1 {
 		handle = d.selfHandle

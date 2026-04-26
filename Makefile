@@ -16,7 +16,7 @@ PKGS_TO_COVER=$(shell echo "$(PKGS_TO_TEST)" | tr ' ' ',')
 
 EXAMPLE_EXPORTS_DIR=example-exports/$(OS)
 EXAMPLE_EXPORTS_TESTDATA=example-exports/testdata
-EXAMPLE_EXPORTS_FLAGS=--db-path $(EXAMPLE_EXPORTS_TESTDATA)/chat.db --mac-os-version 26.4 --contacts-path $(EXAMPLE_EXPORTS_TESTDATA)/contacts.vcf
+EXAMPLE_EXPORTS_FLAGS=--db-path $(EXAMPLE_EXPORTS_TESTDATA)/chat.db --mac-os-version 26.4 --contacts-path $(EXAMPLE_EXPORTS_TESTDATA)/contacts.vcf --timezone UTC
 EXAMPLE_EXPORTS_PDFFLAGS=--pdf --attachments-path $(EXAMPLE_EXPORTS_TESTDATA)/bagoup-attachments
 TEST_EXPORTS_DIR=test-exports
 
