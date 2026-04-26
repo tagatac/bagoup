@@ -28,7 +28,7 @@ jobs:
         go-version-file: go.mod
 
     - name: Vet
-      run: make vet
+      run: make clean vet
 
     - name: Build (macOS)
       if: runner.os == 'macOS'
