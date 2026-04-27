@@ -24,42 +24,49 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 	}
 	chats = filterEntities(cfg.Options.Entities, chats)
 
+	var allJobs []writeJob
+	for _, ec := range chats {
+		jobs, err := cfg.prepareEntityJobs(ec)
+		if err != nil {
+			return err
+		}
+		allJobs = append(allJobs, jobs...)
+	}
+
 	workers := max(1, runtime.NumCPU()-1)
-	jobs := make(chan chatdb.EntityChats, len(chats))
+	jobsCh := make(chan writeJob, len(allJobs))
 	type result struct {
 		counts counts
 		err    error
 	}
-	results := make(chan result, len(chats))
+	resultsCh := make(chan result, len(allJobs))
 	var wg sync.WaitGroup
 	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for ec := range jobs {
+		wg.Go(func() {
+			for job := range jobsCh {
 				localCfg := *cfg
 				localCfg.counts = newCounts()
-				err := localCfg.exportEntityChats(ec)
-				results <- result{localCfg.counts, err}
+				err := localCfg.writeChunk(job)
+				resultsCh <- result{localCfg.counts, err}
 			}
-		}()
+		})
 	}
 
 	bar := progressbar.NewPBar()
 	bar.SignalHandler()
-	bar.Total = uint16(len(chats))
-	for _, ec := range chats {
-		jobs <- ec
+	bar.Total = uint16(len(allJobs))
+	for _, job := range allJobs {
+		jobsCh <- job
 	}
-	close(jobs)
+	close(jobsCh)
 
 	// Collect results for bar updates. mergeCounts must not run concurrently
 	// with localCfg := *cfg in workers (both access cfg.counts memory).
-	// Draining all len(chats) results guarantees no more jobs remain;
+	// Draining all len(allJobs) results guarantees no more jobs remain;
 	// wg.Wait() guarantees workers have exited before any cfg write.
-	collected := make([]result, 0, len(chats))
-	for i := range chats {
-		r := <-results
+	collected := make([]result, 0, len(allJobs))
+	for i := range allJobs {
+		r := <-resultsCh
 		bar.RenderPBar(i)
 		collected = append(collected, r)
 	}
@@ -114,29 +121,34 @@ func filterEntities(entities []string, chats []chatdb.EntityChats) []chatdb.Enti
 	return result
 }
 
-func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) error {
+func (cfg *configuration) prepareEntityJobs(entityChats chatdb.EntityChats) ([]writeJob, error) {
 	mergeChats := !cfg.Options.SeparateChats
 	var guids []string
 	var entityMessageIDs []chatdb.DatedMessageID
+	var jobs []writeJob
 	for _, chat := range entityChats.Chats {
 		messageIDs, err := cfg.ChatDB.GetMessageIDs(chat.ID)
 		if err != nil {
-			return fmt.Errorf("get message IDs for chat ID %d: %w", chat.ID, err)
+			return nil, fmt.Errorf("get message IDs for chat ID %d: %w", chat.ID, err)
 		}
 		if mergeChats {
 			guids = append(guids, chat.GUID)
 			entityMessageIDs = append(entityMessageIDs, messageIDs...)
 		} else {
-			if err := cfg.writeFile(entityChats.Name, []string{chat.GUID}, messageIDs); err != nil {
-				return err
+			chatJobs, err := cfg.prepareFileJobs(entityChats.Name, []string{chat.GUID}, messageIDs)
+			if err != nil {
+				return nil, err
 			}
+			jobs = append(jobs, chatJobs...)
 		}
 		cfg.counts.chats++
 	}
 	if mergeChats {
-		if err := cfg.writeFile(entityChats.Name, guids, entityMessageIDs); err != nil {
-			return err
+		chatJobs, err := cfg.prepareFileJobs(entityChats.Name, guids, entityMessageIDs)
+		if err != nil {
+			return nil, err
 		}
+		jobs = append(jobs, chatJobs...)
 	}
-	return nil
+	return jobs, nil
 }

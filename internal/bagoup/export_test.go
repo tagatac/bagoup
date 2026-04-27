@@ -32,6 +32,7 @@ func TestExportChats(t *testing.T) {
 		{
 			msg: "two chats for one display name, one for another",
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+				// Prepare pass: fully sequential.
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
@@ -40,31 +41,25 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
-								{
-									ID:   2,
-									GUID: "testguid2",
-								},
+								{ID: 1, GUID: "testguid"},
+								{ID: 2, GUID: "testguid2"},
 							},
 						},
 						{
 							Name: "testdisplayname2",
 							Chats: []chatdb.Chat{
-								{
-									ID:   3,
-									GUID: "testguid3",
-								},
+								{ID: 3, GUID: "testguid3"},
 							},
 						},
 					}, nil),
-				)
-				gomock.InOrder(
 					dbMock.EXPECT().GetMessageIDs(1),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
+					dbMock.EXPECT().GetMessageIDs(3),
+					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
+				)
+				// Write pass: one InOrder per job (may run in parallel).
+				gomock.InOrder(
 					osMock.EXPECT().Create("messages-export/testdisplayname/testguid;;;testguid2.txt").Return(chatFile, nil),
 					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
 					ofMocks[0].EXPECT().Stage(),
@@ -72,8 +67,6 @@ func TestExportChats(t *testing.T) {
 					ofMocks[0].EXPECT().Flush(),
 				)
 				gomock.InOrder(
-					dbMock.EXPECT().GetMessageIDs(3),
-					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/testdisplayname2/testguid3.txt").Return(chatFile, nil),
 					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[1]),
 					ofMocks[1].EXPECT().Stage(),
@@ -94,23 +87,14 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
-								{
-									ID:   2,
-									GUID: "testguid2",
-								},
+								{ID: 1, GUID: "testguid"},
+								{ID: 2, GUID: "testguid2"},
 							},
 						},
 						{
 							Name: "testdisplayname2",
 							Chats: []chatdb.Chat{
-								{
-									ID:   3,
-									GUID: "testguid3",
-								},
+								{ID: 3, GUID: "testguid3"},
 							},
 						},
 					}, nil),
@@ -129,6 +113,7 @@ func TestExportChats(t *testing.T) {
 			msg:      "specify both entities, so don't filter any",
 			entities: []string{"testdisplayname", "testdisplayname2"},
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+				// Prepare pass: fully sequential.
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
@@ -137,31 +122,25 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
-								{
-									ID:   2,
-									GUID: "testguid2",
-								},
+								{ID: 1, GUID: "testguid"},
+								{ID: 2, GUID: "testguid2"},
 							},
 						},
 						{
 							Name: "testdisplayname2",
 							Chats: []chatdb.Chat{
-								{
-									ID:   3,
-									GUID: "testguid3",
-								},
+								{ID: 3, GUID: "testguid3"},
 							},
 						},
 					}, nil),
-				)
-				gomock.InOrder(
 					dbMock.EXPECT().GetMessageIDs(1),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
+					dbMock.EXPECT().GetMessageIDs(3),
+					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
+				)
+				// Write pass: one InOrder per job.
+				gomock.InOrder(
 					osMock.EXPECT().Create("messages-export/testdisplayname/testguid;;;testguid2.txt").Return(chatFile, nil),
 					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
 					ofMocks[0].EXPECT().Stage(),
@@ -169,8 +148,6 @@ func TestExportChats(t *testing.T) {
 					ofMocks[0].EXPECT().Flush(),
 				)
 				gomock.InOrder(
-					dbMock.EXPECT().GetMessageIDs(3),
-					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/testdisplayname2/testguid3.txt").Return(chatFile, nil),
 					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[1]),
 					ofMocks[1].EXPECT().Stage(),
@@ -183,6 +160,7 @@ func TestExportChats(t *testing.T) {
 			msg:           "separate chats",
 			separateChats: true,
 			setupMocks: func(dbMock *mock_chatdb.MockChatDB, osMock *mock_opsys.MockOS, ofMocks []*mock_opsys.MockOutFile) {
+				// Prepare pass: fully sequential.
 				gomock.InOrder(
 					dbMock.EXPECT().GetAttachmentPaths(nil).Return(map[int][]chatdb.Attachment{
 						100: {{Filename: "attachmentpath"}},
@@ -191,26 +169,25 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
-								{
-									ID:   2,
-									GUID: "testguid2",
-								},
+								{ID: 1, GUID: "testguid"},
+								{ID: 2, GUID: "testguid2"},
 							},
 						},
 					}, nil),
 					dbMock.EXPECT().GetMessageIDs(1),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
+					dbMock.EXPECT().GetMessageIDs(2),
+					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
+				)
+				// Write pass: one InOrder per job.
+				gomock.InOrder(
 					osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt").Return(chatFile, nil),
 					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[0]),
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMocks[0].EXPECT().Flush(),
-					dbMock.EXPECT().GetMessageIDs(2),
-					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
+				)
+				gomock.InOrder(
 					osMock.EXPECT().Create("messages-export/testdisplayname/testguid2.txt").Return(chatFile, nil),
 					osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMocks[1]),
 					ofMocks[1].EXPECT().Stage(),
@@ -232,10 +209,7 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
+								{ID: 1, GUID: "testguid"},
 							},
 						},
 					}, nil),
@@ -262,10 +236,7 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
+								{ID: 1, GUID: "testguid"},
 							},
 						},
 					}, nil),
@@ -292,10 +263,7 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
+								{ID: 1, GUID: "testguid"},
 							},
 						},
 					}, nil),
@@ -339,10 +307,7 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
+								{ID: 1, GUID: "testguid"},
 							},
 						},
 					}, nil),
@@ -360,10 +325,7 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
+								{ID: 1, GUID: "testguid"},
 							},
 						},
 					}, nil),
@@ -383,14 +345,8 @@ func TestExportChats(t *testing.T) {
 						{
 							Name: "testdisplayname",
 							Chats: []chatdb.Chat{
-								{
-									ID:   1,
-									GUID: "testguid",
-								},
-								{
-									ID:   2,
-									GUID: "testguid2",
-								},
+								{ID: 1, GUID: "testguid"},
+								{ID: 2, GUID: "testguid2"},
 							},
 						},
 					}, nil),

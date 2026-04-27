@@ -11,11 +11,14 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/opsys"
 	"github.com/tagatac/bagoup/v2/opsys/pdfgen"
 )
+
+var openFilesLimitMu sync.Mutex
 
 const (
 	_filenamePrefixMaxLength = 251
@@ -23,10 +26,17 @@ const (
 	_pdfMaxMessages          = 3072
 )
 
-func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
+type writeJob struct {
+	entityName string
+	chatPath   string
+	messageIDs []chatdb.DatedMessageID
+	attDir     string
+}
+
+func (cfg *configuration) prepareFileJobs(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) ([]writeJob, error) {
 	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-		return fmt.Errorf("create directory %q: %w", chatDirPath, err)
+		return nil, fmt.Errorf("create directory %q: %w", chatDirPath, err)
 	}
 	filename := strings.Join(guids, ";;;")
 	if len(filename) > _filenamePrefixMaxLength {
@@ -36,73 +46,53 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	attDir := filepath.Join(chatDirPath, "attachments")
 	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
-			return fmt.Errorf("create directory %q: %w", attDir, err)
+			return nil, fmt.Errorf("create directory %q: %w", attDir, err)
 		}
 	}
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
-	if cfg.Options.OutputPDF {
-		return cfg.writePDFs(entityName, messageIDs, chatPathNoExt, attDir)
+	if !cfg.Options.OutputPDF {
+		return []writeJob{{entityName, chatPathNoExt + ".txt", messageIDs, attDir}}, nil
 	}
-	return cfg.writeTxt(messageIDs, chatPathNoExt, attDir)
-}
-
-func (cfg *configuration) writeTxt(messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
-	chatPath := chatPathNoExt + ".txt"
-	chatFile, err := cfg.OS.Create(chatPath)
-	if err != nil {
-		return fmt.Errorf("create file %q: %w", chatPath, err)
-	}
-	defer chatFile.Close()
-	outFile := cfg.OS.NewTxtOutFile(chatFile)
-	return cfg.handleFileContents(outFile, messageIDs, attDir)
-}
-
-func (cfg *configuration) writePDFs(entityName string, messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
-	type messageIDsAndChatPath struct {
-		messageIDs []chatdb.DatedMessageID
-		chatPath   string
-	}
-	idsAndPaths := []messageIDsAndChatPath{}
+	var jobs []writeJob
 	fileIdx := 1
 	var msgIdx int
 	for msgIdx = 0; len(messageIDs)-_pdfMaxMessages > msgIdx; msgIdx += _pdfPreferredMessages {
-		idsAndPaths = append(idsAndPaths, messageIDsAndChatPath{
-			messageIDs: messageIDs[msgIdx : msgIdx+_pdfPreferredMessages],
+		jobs = append(jobs, writeJob{
+			entityName: entityName,
 			chatPath:   fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx),
+			messageIDs: messageIDs[msgIdx : msgIdx+_pdfPreferredMessages],
+			attDir:     attDir,
 		})
 		fileIdx++
 	}
-	lastChatPath := chatPathNoExt + ".pdf"
+	lastPath := chatPathNoExt + ".pdf"
 	if fileIdx > 1 {
-		lastChatPath = fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx)
+		lastPath = fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx)
 	}
-	idsAndPaths = append(idsAndPaths, messageIDsAndChatPath{
-		messageIDs: messageIDs[msgIdx:],
-		chatPath:   lastChatPath,
-	})
+	return append(jobs, writeJob{entityName, lastPath, messageIDs[msgIdx:], attDir}), nil
+}
 
-	for _, idsAndPath := range idsAndPaths {
-		chatPath := idsAndPath.chatPath
-		chatFile, err := cfg.OS.Create(chatPath)
-		if err != nil {
-			return fmt.Errorf("create file %q: %w", chatPath, err)
-		}
-		defer chatFile.Close()
-		var outFile opsys.OutFile
+func (cfg *configuration) writeChunk(job writeJob) error {
+	chatFile, err := cfg.OS.Create(job.chatPath)
+	if err != nil {
+		return fmt.Errorf("create file %q: %w", job.chatPath, err)
+	}
+	defer chatFile.Close()
+	var outFile opsys.OutFile
+	if cfg.Options.OutputPDF {
 		if cfg.Options.UseWkhtmltopdf {
 			pdfg, err := pdfgen.NewPDFGenerator(chatFile)
 			if err != nil {
 				return fmt.Errorf("create PDF generator: %w", err)
 			}
-			outFile = cfg.OS.NewWkhtmltopdfFile(entityName, chatFile, pdfg, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWkhtmltopdfFile(job.entityName, chatFile, pdfg, cfg.Options.IncludePPA)
 		} else {
-			outFile = cfg.OS.NewWeasyPrintFile(entityName, chatFile, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWeasyPrintFile(job.entityName, chatFile, cfg.Options.IncludePPA)
 		}
-		if err := cfg.handleFileContents(outFile, idsAndPath.messageIDs, attDir); err != nil {
-			return err
-		}
+	} else {
+		outFile = cfg.OS.NewTxtOutFile(chatFile)
 	}
-	return nil
+	return cfg.handleFileContents(outFile, job.messageIDs, job.attDir)
 }
 
 func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs []chatdb.DatedMessageID, attDir string) error {
@@ -128,6 +118,21 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 	if err != nil {
 		return fmt.Errorf("stage chat file %q for writing: %w", outFile.Name(), err)
 	}
+	if err := cfg.ensureOpenFilesLimit(imgCount, outFile); err != nil {
+		return err
+	}
+	if err := outFile.Flush(); err != nil {
+		return fmt.Errorf("flush chat file %q to disk: %w", outFile.Name(), err)
+	}
+	cfg.counts.files++
+	cfg.counts.messages += msgCount
+	cfg.counts.messagesInvalid += invalidCount
+	return nil
+}
+
+func (cfg *configuration) ensureOpenFilesLimit(imgCount int, outFile opsys.OutFile) error {
+	openFilesLimitMu.Lock()
+	defer openFilesLimitMu.Unlock()
 	openFilesLimit, err := cfg.OS.GetOpenFilesLimit()
 	if err != nil {
 		return err
@@ -137,12 +142,6 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 			return fmt.Errorf("chat file %q - increase the open file limit from %d to %d to support %d embedded images: %w", outFile.Name(), openFilesLimit, imgCount*2, imgCount, err)
 		}
 	}
-	if err := outFile.Flush(); err != nil {
-		return fmt.Errorf("flush chat file %q to disk: %w", outFile.Name(), err)
-	}
-	cfg.counts.files++
-	cfg.counts.messages += msgCount
-	cfg.counts.messagesInvalid += invalidCount
 	return nil
 }
 
