@@ -41,27 +41,29 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 }
 
 func (cfg *configuration) runPool(ctx context.Context, jobs []writeJob) error {
+	if len(jobs) == 0 {
+		return nil
+	}
 	jobsCh := make(chan writeJob, len(jobs))
 	for _, job := range jobs {
 		jobsCh <- job
 	}
-	close(jobsCh)
 
 	bar := progressbar.NewPBar()
 	bar.SignalHandler()
 	bar.Total = uint16(len(jobs))
 
-	g, ctx := errgroup.WithContext(ctx)
+	allDoneCtx, cancelAllDone := context.WithCancel(ctx)
+	defer cancelAllDone()
+
+	g, gCtx := errgroup.WithContext(allDoneCtx)
 	var mu sync.Mutex
 	var done int
 	for range max(1, runtime.NumCPU()-1) {
 		g.Go(func() error {
 			for {
 				select {
-				case job, ok := <-jobsCh:
-					if !ok {
-						return nil
-					}
+				case job := <-jobsCh:
 					c := newCounts()
 					if err := cfg.writeChunk(job, c); err != nil {
 						return err
@@ -70,8 +72,11 @@ func (cfg *configuration) runPool(ctx context.Context, jobs []writeJob) error {
 					cfg.mergeCounts(c)
 					done++
 					bar.RenderPBar(done)
+					if done == len(jobs) {
+						cancelAllDone()
+					}
 					mu.Unlock()
-				case <-ctx.Done():
+				case <-gCtx.Done():
 					return nil
 				}
 			}
