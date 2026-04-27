@@ -508,15 +508,15 @@ func TestBagoup(t *testing.T) {
 
 func TestMergeCounts(t *testing.T) {
 	tests := []struct {
-		msg       string
-		base      counts
-		incoming  counts
+		msg        string
+		base       *counts
+		incoming   *counts
 		wantCounts counts
 	}{
 		{
 			msg:  "merge into empty",
 			base: newCounts(),
-			incoming: counts{
+			incoming: &counts{
 				files:               2,
 				chats:               3,
 				messages:            10,
@@ -543,14 +543,14 @@ func TestMergeCounts(t *testing.T) {
 		},
 		{
 			msg: "accumulate existing map keys",
-			base: counts{
+			base: &counts{
 				files:               1,
 				messages:            5,
 				attachments:         map[string]int{"image/jpeg": 3},
 				attachmentsCopied:   map[string]int{"image/jpeg": 1},
 				attachmentsEmbedded: map[string]int{"image/jpeg": 1},
 			},
-			incoming: counts{
+			incoming: &counts{
 				files:               2,
 				messages:            7,
 				attachments:         map[string]int{"image/jpeg": 4},
@@ -567,12 +567,12 @@ func TestMergeCounts(t *testing.T) {
 		},
 		{
 			msg: "add new map keys",
-			base: counts{
+			base: &counts{
 				attachments:         map[string]int{"image/jpeg": 1},
 				attachmentsCopied:   map[string]int{},
 				attachmentsEmbedded: map[string]int{},
 			},
-			incoming: counts{
+			incoming: &counts{
 				attachments:         map[string]int{"image/heic": 2},
 				attachmentsCopied:   map[string]int{"image/heic": 1},
 				attachmentsEmbedded: map[string]int{"image/heic": 1},
@@ -584,9 +584,9 @@ func TestMergeCounts(t *testing.T) {
 			},
 		},
 		{
-			msg:  "merge zero counts",
-			base: counts{files: 5, messages: 10, attachments: map[string]int{"image/jpeg": 3}, attachmentsCopied: map[string]int{}, attachmentsEmbedded: map[string]int{}},
-			incoming: newCounts(),
+			msg:        "merge zero counts",
+			base:       &counts{files: 5, messages: 10, attachments: map[string]int{"image/jpeg": 3}, attachmentsCopied: map[string]int{}, attachmentsEmbedded: map[string]int{}},
+			incoming:   newCounts(),
 			wantCounts: counts{files: 5, messages: 10, attachments: map[string]int{"image/jpeg": 3}, attachmentsCopied: map[string]int{}, attachmentsEmbedded: map[string]int{}},
 		},
 	}
@@ -595,7 +595,7 @@ func TestMergeCounts(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			cfg := &configuration{counts: tt.base}
 			cfg.mergeCounts(tt.incoming)
-			assert.DeepEqual(t, cfg.counts, tt.wantCounts, cmp.AllowUnexported(counts{}))
+			assert.DeepEqual(t, *cfg.counts, tt.wantCounts, cmp.AllowUnexported(counts{}))
 		})
 	}
 }

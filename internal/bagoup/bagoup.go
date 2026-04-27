@@ -11,6 +11,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
+	"runtime/trace"
 	"strings"
 	"time"
 
@@ -41,9 +44,9 @@ type (
 		loc             *time.Location
 		handleMap       map[int]string
 		attachmentPaths map[int][]chatdb.Attachment
-		counts
-		startTime time.Time
-		version   string
+		counts          *counts
+		startTime       time.Time
+		version         string
 	}
 	counts struct {
 		files               int
@@ -66,15 +69,15 @@ type (
 	}
 )
 
-func newCounts() counts {
-	return counts{
+func newCounts() *counts {
+	return &counts{
 		attachments:         map[string]int{},
 		attachmentsCopied:   map[string]int{},
 		attachmentsEmbedded: map[string]int{},
 	}
 }
 
-func (cfg *configuration) mergeCounts(c counts) {
+func (cfg *configuration) mergeCounts(c *counts) {
 	cfg.counts.files += c.files
 	cfg.counts.chats += c.chats
 	cfg.counts.messages += c.messages
@@ -132,54 +135,31 @@ func (cfg *configuration) Run() error {
 	if err := cfg.validatePaths(); err != nil {
 		return err
 	}
-
-	if err := cfg.OS.MkdirAll(cfg.logDir, os.ModePerm); err != nil {
-		return fmt.Errorf("make log directory: %w", err)
-	}
-	logFile, err := cfg.OS.Create(filepath.Join(cfg.logDir, "out.log"))
+	stopLogging, err := cfg.setupLogging()
 	if err != nil {
-		return fmt.Errorf("create log file: %w", err)
+		return err
 	}
-	defer logFile.Close()
-	w := log.Writer()
-	log.SetOutput(io.MultiWriter(logFile, w))
-	defer log.SetOutput(w)
-
-	if cfg.Options.MacOSVersion != nil {
-		cfg.macOSVersion, err = semver.NewVersion(*cfg.Options.MacOSVersion)
-		if err != nil {
-			return fmt.Errorf("parse macOS version %q: %w", *cfg.Options.MacOSVersion, err)
-		}
-	} else if cfg.macOSVersion, err = cfg.OS.GetMacOSVersion(); err != nil {
-		return fmt.Errorf("get macOS version - FIX: specify the macOS version from which chat.db was copied with the --mac-os-version option: %w", err)
-	}
-
-	var contactMap map[string]*vcard.Card
-	if cfg.Options.ContactsPath != nil {
-		contactMap, err = cfg.OS.GetContactMap(*cfg.Options.ContactsPath)
-		if err != nil {
-			return fmt.Errorf("get contacts from vcard file %q: %w", *cfg.Options.ContactsPath, err)
-		}
-	}
-
-	if err := cfg.ChatDB.Init(cfg.macOSVersion, cfg.loc); err != nil {
-		return fmt.Errorf("initialize the database for reading on macOS version %s: %w", cfg.macOSVersion.String(), err)
-	}
-
-	cfg.handleMap, err = cfg.ChatDB.GetHandleMap(contactMap)
+	defer stopLogging()
+	stopProfiling, err := cfg.startProfiling()
 	if err != nil {
-		return fmt.Errorf("get handle map: %w", err)
+		return err
 	}
-
-	if cfg.Options.OutputPDF {
-		tempDir, err := cfg.OS.GetTempDir()
-		if err != nil {
-			return fmt.Errorf("get temporary directory: %w", err)
-		}
-		defer cfg.OS.RmTempDir()
-		cfg.ImgConverter = imgconv.NewImgConverter(tempDir)
+	defer stopProfiling()
+	if err := cfg.resolveMacOSVersion(); err != nil {
+		return err
 	}
-
+	contactMap, err := cfg.loadContactMap()
+	if err != nil {
+		return err
+	}
+	if err := cfg.initDB(contactMap); err != nil {
+		return err
+	}
+	stopImgConverter, err := cfg.setupImgConverter()
+	if err != nil {
+		return err
+	}
+	defer stopImgConverter()
 	err = cfg.exportChats(contactMap)
 	printResults(cfg.version, cfg.Options.ExportPath, cfg.counts, time.Since(cfg.startTime))
 	if err != nil {
@@ -191,13 +171,125 @@ func (cfg *configuration) Run() error {
 	return cfg.OS.RmTempDir()
 }
 
+// setupLogging creates the log file and redirects log output to it. The
+// returned func restores the original log writer and closes the file.
+func (cfg *configuration) setupLogging() (func(), error) {
+	if err := cfg.OS.MkdirAll(cfg.logDir, os.ModePerm); err != nil {
+		return nil, fmt.Errorf("make log directory: %w", err)
+	}
+	logFile, err := cfg.OS.Create(filepath.Join(cfg.logDir, "out.log"))
+	if err != nil {
+		return nil, fmt.Errorf("create log file: %w", err)
+	}
+	w := log.Writer()
+	log.SetOutput(io.MultiWriter(logFile, w))
+	return func() {
+		logFile.Close()
+		log.SetOutput(w)
+	}, nil
+}
+
+// startProfiling starts any configured profiling. The returned func stops
+// cpu/trace profiling and writes the memory profile.
+func (cfg *configuration) startProfiling() (func(), error) {
+	var stops []func()
+	if cfg.Options.Profiling.Trace != "" {
+		f, err := cfg.OS.Create(cfg.Options.Profiling.Trace)
+		if err != nil {
+			return nil, fmt.Errorf("create trace file: %w", err)
+		}
+		if err := trace.Start(f); err != nil {
+			return nil, fmt.Errorf("start trace: %w", err)
+		}
+		stops = append(stops, func() { trace.Stop(); f.Close() })
+	}
+	if cfg.Options.Profiling.CPUProfile != "" {
+		f, err := cfg.OS.Create(cfg.Options.Profiling.CPUProfile)
+		if err != nil {
+			return nil, fmt.Errorf("create CPU profile: %w", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			return nil, fmt.Errorf("start CPU profile: %w", err)
+		}
+		stops = append(stops, func() { pprof.StopCPUProfile(); f.Close() })
+	}
+	return func() {
+		for _, s := range stops {
+			s()
+		}
+		if cfg.Options.Profiling.MemProfile != "" {
+			f, err := cfg.OS.Create(cfg.Options.Profiling.MemProfile)
+			if err != nil {
+				return
+			}
+			runtime.GC()
+			_ = pprof.WriteHeapProfile(f)
+			f.Close()
+		}
+	}, nil
+}
+
+func (cfg *configuration) resolveMacOSVersion() error {
+	if cfg.Options.MacOSVersion != nil {
+		v, err := semver.NewVersion(*cfg.Options.MacOSVersion)
+		if err != nil {
+			return fmt.Errorf("parse macOS version %q: %w", *cfg.Options.MacOSVersion, err)
+		}
+		cfg.macOSVersion = v
+		return nil
+	}
+	v, err := cfg.OS.GetMacOSVersion()
+	if err != nil {
+		return fmt.Errorf("get macOS version - FIX: specify the macOS version from which chat.db was copied with the --mac-os-version option: %w", err)
+	}
+	cfg.macOSVersion = v
+	return nil
+}
+
+func (cfg *configuration) loadContactMap() (map[string]*vcard.Card, error) {
+	if cfg.Options.ContactsPath == nil {
+		return nil, nil
+	}
+	contactMap, err := cfg.OS.GetContactMap(*cfg.Options.ContactsPath)
+	if err != nil {
+		return nil, fmt.Errorf("get contacts from vcard file %q: %w", *cfg.Options.ContactsPath, err)
+	}
+	return contactMap, nil
+}
+
+func (cfg *configuration) initDB(contactMap map[string]*vcard.Card) error {
+	if err := cfg.ChatDB.Init(cfg.macOSVersion, cfg.loc); err != nil {
+		return fmt.Errorf("initialize the database for reading on macOS version %s: %w", cfg.macOSVersion.String(), err)
+	}
+	handleMap, err := cfg.ChatDB.GetHandleMap(contactMap)
+	if err != nil {
+		return fmt.Errorf("get handle map: %w", err)
+	}
+	cfg.handleMap = handleMap
+	return nil
+}
+
+// setupImgConverter initialises the image converter for PDF exports. The
+// returned func calls RmTempDir for PDF (matching the original deferred call)
+// or is a no-op for text exports.
+func (cfg *configuration) setupImgConverter() (func(), error) {
+	if !cfg.Options.OutputPDF {
+		return func() {}, nil
+	}
+	tempDir, err := cfg.OS.GetTempDir()
+	if err != nil {
+		return nil, fmt.Errorf("get temporary directory: %w", err)
+	}
+	cfg.ImgConverter = imgconv.NewImgConverter(tempDir)
+	return func() { cfg.OS.RmTempDir() }, nil
+}
+
 func (cfg *configuration) validatePaths() error {
 	if err := cfg.OS.FileAccess(cfg.Options.DBPath); err != nil {
 		return fmt.Errorf("test DB file %q - FIX: %s: %w", cfg.Options.DBPath, _readmeURL, err)
 	}
-	var err error
-	var exportPathAbs string
-	if exportPathAbs, err = filepath.Abs(cfg.Options.ExportPath); err != nil {
+	exportPathAbs, err := filepath.Abs(cfg.Options.ExportPath)
+	if err != nil {
 		return fmt.Errorf("convert export path %q to an absolute path: %w", cfg.Options.ExportPath, err)
 	}
 	cfg.Options.ExportPath = exportPathAbs
@@ -206,15 +298,15 @@ func (cfg *configuration) validatePaths() error {
 	} else if ok {
 		return fmt.Errorf("export folder %q already exists - FIX: move it or specify a different export path with the --export-path option", exportPathAbs)
 	}
-	var attPathAbs string
-	if attPathAbs, err = filepath.Abs(cfg.Options.AttachmentsPath); err != nil {
+	attPathAbs, err := filepath.Abs(cfg.Options.AttachmentsPath)
+	if err != nil {
 		return fmt.Errorf("convert attachments path %q to an absolute path: %w", cfg.Options.AttachmentsPath, err)
 	}
 	cfg.Options.AttachmentsPath = attPathAbs
 	return nil
 }
 
-func printResults(version, exportPath string, c counts, duration time.Duration) {
+func printResults(version, exportPath string, c *counts, duration time.Duration) {
 	log.Printf(`%sBAGOUP RESULTS:
 bagoup version: %s
 Invocation: %s

@@ -677,7 +677,6 @@ func TestWriteChunk(t *testing.T) {
 			ofMock := mock_opsys.NewMockOutFile(ctrl)
 			tt.setupMocks(dbMock, osMock, icMock, ofMock)
 
-			cnts := newCounts()
 			cfg := configuration{
 				Options: Options{
 					ExportPath:      "messages-export",
@@ -686,25 +685,25 @@ func TestWriteChunk(t *testing.T) {
 					CopyAttachments: tt.copyAttachments,
 					PreservePaths:   tt.preservePaths,
 				},
-				OS:           osMock,
-				ChatDB:       dbMock,
-				ImgConverter: icMock,
-				macOSVersion: semver.MustParse("12.4"),
+				OS:              osMock,
+				ChatDB:          dbMock,
+				ImgConverter:    icMock,
+				macOSVersion:    semver.MustParse("12.4"),
 				attachmentPaths: attPaths,
-				counts:          cnts,
 			}
-			err := cfg.writeChunk(tt.job)
+			c := newCounts()
+			err := cfg.writeChunk(tt.job, c)
 			if tt.wantErr != "" {
 				assert.Error(t, err, tt.wantErr)
 				return
 			}
 			assert.NilError(t, err)
-			assert.Equal(t, cfg.counts.messages, 2-tt.wantInvalid)
-			assert.Equal(t, cfg.counts.messagesInvalid, tt.wantInvalid)
-			assert.Equal(t, cfg.counts.attachments["image/jpeg"], tt.wantJPGs)
-			assert.Equal(t, cfg.counts.attachmentsEmbedded["image/jpeg"], tt.wantEmbedded)
-			assert.Equal(t, cfg.counts.conversions, tt.wantConv)
-			assert.Equal(t, cfg.counts.conversionsFailed, tt.wantConvFail)
+			assert.Equal(t, c.messages, 2-tt.wantInvalid)
+			assert.Equal(t, c.messagesInvalid, tt.wantInvalid)
+			assert.Equal(t, c.attachments["image/jpeg"], tt.wantJPGs)
+			assert.Equal(t, c.attachmentsEmbedded["image/jpeg"], tt.wantEmbedded)
+			assert.Equal(t, c.conversions, tt.wantConv)
+			assert.Equal(t, c.conversionsFailed, tt.wantConvFail)
 		})
 	}
 }

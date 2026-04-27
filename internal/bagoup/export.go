@@ -4,6 +4,7 @@
 package bagoup
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	progressbar "github.com/elulcao/progress-bar/cmd"
 	"github.com/emersion/go-vcard"
 	"github.com/tagatac/bagoup/v2/chatdb"
+	"golang.org/x/sync/errgroup"
 )
 
 func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
@@ -33,53 +35,49 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 		allJobs = append(allJobs, jobs...)
 	}
 
-	workers := max(1, runtime.NumCPU()-1)
-	jobsCh := make(chan writeJob, len(allJobs))
-	type result struct {
-		counts counts
-		err    error
-	}
-	resultsCh := make(chan result, len(allJobs))
-	var wg sync.WaitGroup
-	for range workers {
-		wg.Go(func() {
-			for job := range jobsCh {
-				localCfg := *cfg
-				localCfg.counts = newCounts()
-				err := localCfg.writeChunk(job)
-				resultsCh <- result{localCfg.counts, err}
-			}
-		})
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	return cfg.runPool(ctx, allJobs)
+}
 
-	bar := progressbar.NewPBar()
-	bar.SignalHandler()
-	bar.Total = uint16(len(allJobs))
-	for _, job := range allJobs {
+func (cfg *configuration) runPool(ctx context.Context, jobs []writeJob) error {
+	jobsCh := make(chan writeJob, len(jobs))
+	for _, job := range jobs {
 		jobsCh <- job
 	}
 	close(jobsCh)
 
-	// Collect results for bar updates. mergeCounts must not run concurrently
-	// with localCfg := *cfg in workers (both access cfg.counts memory).
-	// Draining all len(allJobs) results guarantees no more jobs remain;
-	// wg.Wait() guarantees workers have exited before any cfg write.
-	collected := make([]result, 0, len(allJobs))
-	for i := range allJobs {
-		r := <-resultsCh
-		bar.RenderPBar(i)
-		collected = append(collected, r)
-	}
-	wg.Wait()
+	bar := progressbar.NewPBar()
+	bar.SignalHandler()
+	bar.Total = uint16(len(jobs))
 
-	var firstErr error
-	for _, r := range collected {
-		cfg.mergeCounts(r.counts)
-		if r.err != nil && firstErr == nil {
-			firstErr = r.err
-		}
+	g, ctx := errgroup.WithContext(ctx)
+	var mu sync.Mutex
+	var done int
+	for range max(1, runtime.NumCPU()-1) {
+		g.Go(func() error {
+			for {
+				select {
+				case job, ok := <-jobsCh:
+					if !ok {
+						return nil
+					}
+					c := newCounts()
+					if err := cfg.writeChunk(job, c); err != nil {
+						return err
+					}
+					mu.Lock()
+					cfg.mergeCounts(c)
+					done++
+					bar.RenderPBar(done)
+					mu.Unlock()
+				case <-ctx.Done():
+					return nil
+				}
+			}
+		})
 	}
-	return firstErr
+	return g.Wait()
 }
 
 func getAttachmentPaths(cfg *configuration) error {

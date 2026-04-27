@@ -20,6 +20,12 @@ Options struct {
 	AttachmentsPath string   `short:"t" long:"attachments-path" description:"Root path to the attachments (useful for re-running bagoup on an export created with the --copy-attachments and --preserve-paths flags)" default:"/"`
 	Entities        []string `short:"e" long:"entity" description:"An entity name to include in the export (matches the folder name in the export, e.g. \"John Smith\" or \"+15551234567\"). If given, other entities' chats will not be exported. If this flag is used multiple times, all entities specified will be exported."`
 	PrintVersion    bool     `short:"v" long:"version" description:"Show the version of bagoup"`
+
+	Profiling struct {
+		CPUProfile string `long:"cpuprofile" description:"Write CPU profile to this file"`
+		MemProfile string `long:"memprofile" description:"Write memory profile to this file"`
+		Trace      string `long:"trace"      description:"Write execution trace to this file"`
+	} `group:"Profiling options"`
 }
 
 func ValidateOptions(opts Options) error {
