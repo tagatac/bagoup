@@ -23,6 +23,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
+	"runtime/trace"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -48,13 +51,18 @@ func main() {
 	}()
 
 	startTime := time.Now()
-	var opts bagoup.Options
+	var opts struct {
+		bagoup.Options
+		CPUProfile string `long:"cpuprofile" description:"Write CPU profile to this file"`
+		MemProfile string `long:"memprofile" description:"Write memory profile to this file"`
+		Trace      string `long:"trace" description:"Write execution trace to this file"`
+	}
 	_, err := flags.Parse(&opts)
 	if err != nil && err.(*flags.Error).Type == flags.ErrHelp {
 		return
 	}
 	panicOnErr(err, "parse flags")
-	panicOnErr(bagoup.ValidateOptions(opts), "validate options")
+	panicOnErr(bagoup.ValidateOptions(opts.Options), "validate options")
 	if opts.PrintVersion {
 		fmt.Printf("bagoup version %s\n%s\n", _version, _license)
 		return
@@ -70,10 +78,34 @@ func main() {
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
+	if opts.Trace != "" {
+		f, err := os.Create(opts.Trace)
+		panicOnErr(err, "create trace file %q", opts.Trace)
+		panicOnErr(trace.Start(f), "start trace")
+		defer trace.Stop()
+		defer f.Close()
+	}
+
+	if opts.CPUProfile != "" {
+		f, err := os.Create(opts.CPUProfile)
+		panicOnErr(err, "create CPU profile %q", opts.CPUProfile)
+		panicOnErr(pprof.StartCPUProfile(f), "start CPU profile")
+		defer pprof.StopCPUProfile()
+		defer f.Close()
+	}
+
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
-	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, logDir, startTime, _version)
+	cfg, err := bagoup.NewConfiguration(opts.Options, s, cdb, ptools, logDir, startTime, _version)
 	panicOnErr(err, "create bagoup configuration")
 	panicOnErr(cfg.Run(), "run bagoup")
+
+	if opts.MemProfile != "" {
+		f, err := os.Create(opts.MemProfile)
+		panicOnErr(err, "create memory profile %q", opts.MemProfile)
+		runtime.GC()
+		panicOnErr(pprof.WriteHeapProfile(f), "write memory profile")
+		panicOnErr(f.Close(), "close memory profile %q", opts.MemProfile)
+	}
 	panicOnErr(db.Close(), "close DB file %q", opts.DBPath)
 	dbf, err := os.Open(opts.DBPath)
 	panicOnErr(err, "open DB file %q for copying", opts.DBPath)
