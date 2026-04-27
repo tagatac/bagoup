@@ -75,6 +75,7 @@ func main() {
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	panicOnErr(err, "open DB file %q", opts.DBPath)
+	db.SetMaxOpenConns(max(1, runtime.NumCPU()-1))
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 

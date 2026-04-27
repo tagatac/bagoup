@@ -60,6 +60,8 @@ func TestExportChats(t *testing.T) {
 							},
 						},
 					}, nil),
+				)
+				gomock.InOrder(
 					dbMock.EXPECT().GetMessageIDs(1),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
@@ -68,6 +70,8 @@ func TestExportChats(t *testing.T) {
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMocks[0].EXPECT().Flush(),
+				)
+				gomock.InOrder(
 					dbMock.EXPECT().GetMessageIDs(3),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/testdisplayname2/testguid3.txt").Return(chatFile, nil),
@@ -153,6 +157,8 @@ func TestExportChats(t *testing.T) {
 							},
 						},
 					}, nil),
+				)
+				gomock.InOrder(
 					dbMock.EXPECT().GetMessageIDs(1),
 					dbMock.EXPECT().GetMessageIDs(2),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
@@ -161,6 +167,8 @@ func TestExportChats(t *testing.T) {
 					ofMocks[0].EXPECT().Stage(),
 					osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 					ofMocks[0].EXPECT().Flush(),
+				)
+				gomock.InOrder(
 					dbMock.EXPECT().GetMessageIDs(3),
 					osMock.EXPECT().MkdirAll("messages-export/testdisplayname2", os.ModePerm),
 					osMock.EXPECT().Create("messages-export/testdisplayname2/testguid3.txt").Return(chatFile, nil),
@@ -407,10 +415,7 @@ func TestExportChats(t *testing.T) {
 			}
 			tt.setupMocks(dbMock, osMock, ofMocks)
 
-			cnts := counts{
-				attachments:         map[string]int{},
-				attachmentsEmbedded: map[string]int{},
-			}
+			cnts := newCounts()
 			cfg := configuration{
 				Options: Options{
 					ExportPath:      "messages-export",

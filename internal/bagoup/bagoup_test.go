@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"
@@ -501,6 +502,100 @@ func TestBagoup(t *testing.T) {
 			if !strings.HasPrefix(attPathIn, "/") {
 				assert.Equal(t, cfg.(*configuration).Options.AttachmentsPath, filepath.Join(wd, attPathIn))
 			}
+		})
+	}
+}
+
+func TestMergeCounts(t *testing.T) {
+	tests := []struct {
+		msg       string
+		base      counts
+		incoming  counts
+		wantCounts counts
+	}{
+		{
+			msg:  "merge into empty",
+			base: newCounts(),
+			incoming: counts{
+				files:               2,
+				chats:               3,
+				messages:            10,
+				messagesInvalid:     1,
+				attachmentsMissing:  2,
+				conversions:         4,
+				conversionsFailed:   1,
+				attachments:         map[string]int{"image/jpeg": 5},
+				attachmentsCopied:   map[string]int{"image/jpeg": 3},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 2},
+			},
+			wantCounts: counts{
+				files:               2,
+				chats:               3,
+				messages:            10,
+				messagesInvalid:     1,
+				attachmentsMissing:  2,
+				conversions:         4,
+				conversionsFailed:   1,
+				attachments:         map[string]int{"image/jpeg": 5},
+				attachmentsCopied:   map[string]int{"image/jpeg": 3},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 2},
+			},
+		},
+		{
+			msg: "accumulate existing map keys",
+			base: counts{
+				files:               1,
+				messages:            5,
+				attachments:         map[string]int{"image/jpeg": 3},
+				attachmentsCopied:   map[string]int{"image/jpeg": 1},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 1},
+			},
+			incoming: counts{
+				files:               2,
+				messages:            7,
+				attachments:         map[string]int{"image/jpeg": 4},
+				attachmentsCopied:   map[string]int{"image/jpeg": 2},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 2},
+			},
+			wantCounts: counts{
+				files:               3,
+				messages:            12,
+				attachments:         map[string]int{"image/jpeg": 7},
+				attachmentsCopied:   map[string]int{"image/jpeg": 3},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 3},
+			},
+		},
+		{
+			msg: "add new map keys",
+			base: counts{
+				attachments:         map[string]int{"image/jpeg": 1},
+				attachmentsCopied:   map[string]int{},
+				attachmentsEmbedded: map[string]int{},
+			},
+			incoming: counts{
+				attachments:         map[string]int{"image/heic": 2},
+				attachmentsCopied:   map[string]int{"image/heic": 1},
+				attachmentsEmbedded: map[string]int{"image/heic": 1},
+			},
+			wantCounts: counts{
+				attachments:         map[string]int{"image/jpeg": 1, "image/heic": 2},
+				attachmentsCopied:   map[string]int{"image/heic": 1},
+				attachmentsEmbedded: map[string]int{"image/heic": 1},
+			},
+		},
+		{
+			msg:  "merge zero counts",
+			base: counts{files: 5, messages: 10, attachments: map[string]int{"image/jpeg": 3}, attachmentsCopied: map[string]int{}, attachmentsEmbedded: map[string]int{}},
+			incoming: newCounts(),
+			wantCounts: counts{files: 5, messages: 10, attachments: map[string]int{"image/jpeg": 3}, attachmentsCopied: map[string]int{}, attachmentsEmbedded: map[string]int{}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			cfg := &configuration{counts: tt.base}
+			cfg.mergeCounts(tt.incoming)
+			assert.DeepEqual(t, cfg.counts, tt.wantCounts, cmp.AllowUnexported(counts{}))
 		})
 	}
 }

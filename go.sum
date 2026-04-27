@@ -27,8 +27,6 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/tagatac/go-typedstream v1.0.0 h1:Ne9CtFlC5HQ+poZ8Yyn9dAr5ozXFIxMkP6HYZ6wvQ3Y=
 github.com/tagatac/go-typedstream v1.0.0/go.mod h1:lqs2XfY9i9QMpb8Kd1B+nH2UiemhbTg1X5ElmEkeWX8=
-github.com/tagatac/gorecurcopy v1.0.1 h1:wvcj485SG5yYKClvGcrags/S1NGPo+749gzCGM9GpXM=
-github.com/tagatac/gorecurcopy v1.0.1/go.mod h1:VDqfQZOif6FlcR/MfxTOqsd3O+K4BI1PSGZUMb66b/E=
 github.com/tagatac/gorecurcopy v1.1.0 h1:UMIwQqROaMEFv9BVMepjuLVOXsLq4bhf94Y1enIwj1I=
 github.com/tagatac/gorecurcopy v1.1.0/go.mod h1:yrjAUCucLU689xkGtJ5fROkkN7cXE/CY+Od/IRFZvUk=
 go.uber.org/mock v0.6.0 h1:hyF9dfmbgIX5EfOdasqLsWD6xqpNZlXblLB/Dbnwv3Y=

@@ -66,6 +66,33 @@ type (
 	}
 )
 
+func newCounts() counts {
+	return counts{
+		attachments:         map[string]int{},
+		attachmentsCopied:   map[string]int{},
+		attachmentsEmbedded: map[string]int{},
+	}
+}
+
+func (cfg *configuration) mergeCounts(c counts) {
+	cfg.counts.files += c.files
+	cfg.counts.chats += c.chats
+	cfg.counts.messages += c.messages
+	cfg.counts.messagesInvalid += c.messagesInvalid
+	cfg.counts.attachmentsMissing += c.attachmentsMissing
+	cfg.counts.conversions += c.conversions
+	cfg.counts.conversionsFailed += c.conversionsFailed
+	for k, v := range c.attachments {
+		cfg.counts.attachments[k] += v
+	}
+	for k, v := range c.attachmentsCopied {
+		cfg.counts.attachmentsCopied[k] += v
+	}
+	for k, v := range c.attachmentsEmbedded {
+		cfg.counts.attachmentsEmbedded[k] += v
+	}
+}
+
 // NewConfiguration returns an intitialized bagoup configuration.
 func NewConfiguration(
 	opts Options,
@@ -95,11 +122,7 @@ func NewConfiguration(
 		PathTools: ptools,
 		logDir:    logDir,
 		loc:       loc,
-		counts: counts{
-			attachments:         map[string]int{},
-			attachmentsCopied:   map[string]int{},
-			attachmentsEmbedded: map[string]int{},
-		},
+		counts:    newCounts(),
 		startTime: startTime,
 		version:   version,
 	}, nil
