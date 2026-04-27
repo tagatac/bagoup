@@ -82,16 +82,16 @@ func main() {
 		f, err := os.Create(opts.Trace)
 		panicOnErr(err, "create trace file %q", opts.Trace)
 		panicOnErr(trace.Start(f), "start trace")
-		defer trace.Stop()
 		defer f.Close()
+		defer trace.Stop()
 	}
 
 	if opts.CPUProfile != "" {
 		f, err := os.Create(opts.CPUProfile)
 		panicOnErr(err, "create CPU profile %q", opts.CPUProfile)
 		panicOnErr(pprof.StartCPUProfile(f), "start CPU profile")
-		defer pprof.StopCPUProfile()
 		defer f.Close()
+		defer pprof.StopCPUProfile()
 	}
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
