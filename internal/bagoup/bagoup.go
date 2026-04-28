@@ -168,7 +168,7 @@ func (cfg *configuration) Run() error {
 	if err = cfg.writeTildeExpansionFile(); err != nil {
 		return fmt.Errorf("write out tilde expansion file: %w", err)
 	}
-	return cfg.OS.RmTempDir()
+	return nil
 }
 
 // setupLogging creates the log file and redirects log output to it. The
@@ -269,7 +269,7 @@ func (cfg *configuration) initDB(contactMap map[string]*vcard.Card) error {
 	return nil
 }
 
-// setupImgConverter initialises the image converter for PDF exports. The
+// setupImgConverter initializes the image converter for PDF exports. The
 // returned func calls RmTempDir for PDF (matching the original deferred call)
 // or is a no-op for text exports.
 func (cfg *configuration) setupImgConverter() (func(), error) {

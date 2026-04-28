@@ -63,7 +63,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -88,7 +87,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -205,7 +203,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -250,7 +247,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -329,7 +325,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().GetTempDir(),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir().Times(2),
+					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -399,7 +395,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetChats(nil),
 					ptMock.EXPECT().GetHomeDir(),
 					osMock.EXPECT().Create(tildeexpansionAbs).Return(afero.NewMemMapFs().Create("dummy")),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -462,6 +457,27 @@ func TestBagoup(t *testing.T) {
 				)
 			},
 			wantErr: "write out tilde expansion file: write dummy: file handle is read only",
+		},
+		{
+			msg: "start profiling error",
+			opts: Options{
+				DBPath:          "~/Library/Messages/chat.db",
+				ExportPath:      "messages-export",
+				SelfHandle:      "Me",
+				AttachmentsPath: "/",
+				Timezone:        "Local",
+				Profiling:       profiling{Trace: "trace.out"},
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB, _ *mock_pathtools.MockPathTools) {
+				gomock.InOrder(
+					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
+					osMock.EXPECT().FileExist(exportPathAbs),
+					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
+					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
+					osMock.EXPECT().Create("trace.out").Return(nil, errors.New("perm error")),
+				)
+			},
+			wantErr: "create trace file: perm error",
 		},
 	}
 
@@ -686,43 +702,4 @@ func TestStartProfiling(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestRun_startProfilingError(t *testing.T) {
-	wd, err := os.Getwd()
-	assert.NilError(t, err)
-	exportPathAbs := filepath.Join(wd, "messages-export")
-	logDirAbs := filepath.Join(exportPathAbs, ".bagoup")
-	logFileAbs := filepath.Join(logDirAbs, "out.log")
-	devnull, err := os.Open(os.DevNull)
-	assert.NilError(t, err)
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	osMock := mock_opsys.NewMockOS(ctrl)
-	dbMock := mock_chatdb.NewMockChatDB(ctrl)
-	ptMock := mock_pathtools.NewMockPathTools(ctrl)
-
-	gomock.InOrder(
-		osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
-		osMock.EXPECT().FileExist(exportPathAbs),
-		osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
-		osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
-		osMock.EXPECT().Create("trace.out").Return(nil, errors.New("perm error")),
-	)
-
-	opts := Options{
-		DBPath:          "~/Library/Messages/chat.db",
-		ExportPath:      "messages-export",
-		SelfHandle:      "Me",
-		AttachmentsPath: "/",
-		Timezone:        "Local",
-	}
-	opts.Profiling.Trace = "trace.out"
-
-	cfg, err := NewConfiguration(opts, osMock, dbMock, ptMock, logDirAbs, time.Now(), "")
-	assert.NilError(t, err)
-	cfg.(*configuration).PathTools = ptMock
-	err = cfg.Run()
-	assert.Error(t, err, "create trace file: perm error")
 }

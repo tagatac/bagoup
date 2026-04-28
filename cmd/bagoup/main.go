@@ -23,7 +23,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -68,7 +67,6 @@ func main() {
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	panicOnErr(err, "open DB file %q", opts.DBPath)
-	db.SetMaxOpenConns(max(1, runtime.NumCPU()-1))
 	defer db.Close()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
@@ -76,7 +74,6 @@ func main() {
 	cfg, err := bagoup.NewConfiguration(opts, s, cdb, ptools, logDir, startTime, _version)
 	panicOnErr(err, "create bagoup configuration")
 	panicOnErr(cfg.Run(), "run bagoup")
-
 	panicOnErr(db.Close(), "close DB file %q", opts.DBPath)
 	dbf, err := os.Open(opts.DBPath)
 	panicOnErr(err, "open DB file %q for copying", opts.DBPath)
