@@ -775,11 +775,12 @@ func TestExportChats_writeChunkErrorIsFirst(t *testing.T) {
 		dbMock.EXPECT().GetMessageIDs(2),
 		osMock.EXPECT().MkdirAll("messages-export/b", os.ModePerm),
 	)
+	// GetOpenFilesLimit is unordered relative to other jobs to avoid cross-chain races.
+	osMock.EXPECT().GetOpenFilesLimit().Return(256, nil).AnyTimes()
 	gomock.InOrder(
 		osMock.EXPECT().Create("messages-export/a/g1.txt").Return(chatFile1, nil),
 		osMock.EXPECT().NewTxtOutFile(chatFile1).Return(ofMock1),
 		ofMock1.EXPECT().Stage(),
-		osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 		ofMock1.EXPECT().Flush().Return(errors.New("error from job 1")),
 		ofMock1.EXPECT().Name().Return("messages-export/a/g1.txt"),
 	)
@@ -787,7 +788,6 @@ func TestExportChats_writeChunkErrorIsFirst(t *testing.T) {
 		osMock.EXPECT().Create("messages-export/b/g2.txt").Return(chatFile2, nil),
 		osMock.EXPECT().NewTxtOutFile(chatFile2).Return(ofMock2),
 		ofMock2.EXPECT().Stage(),
-		osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
 		ofMock2.EXPECT().Flush(),
 	)
 
