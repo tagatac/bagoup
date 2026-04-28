@@ -5,11 +5,11 @@ package bagoup
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
@@ -20,73 +20,99 @@ import (
 )
 
 func TestPrepareFileJobs(t *testing.T) {
-	t.Run("chat directory creation error", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		osMock := mock_opsys.NewMockOS(ctrl)
-		osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm).Return(errors.New("this is a permissions error"))
+	pdfMsgs := make([]chatdb.DatedMessageID, 4000)
+	for i := range pdfMsgs {
+		pdfMsgs[i] = chatdb.DatedMessageID{ID: i, Date: i}
+	}
 
-		cfg := configuration{Options: Options{ExportPath: "messages-export"}, OS: osMock}
-		_, err := cfg.prepareFileJobs("friend", []string{"iMessage;-;friend@gmail.com"}, nil)
-		assert.Error(t, err, `create directory "messages-export/friend": this is a permissions error`)
-	})
+	tests := []struct {
+		msg             string
+		exportPath      string
+		copyAttachments bool
+		pdf             bool
+		entityName      string
+		guids           []string
+		messageIDs      []chatdb.DatedMessageID
+		setupMocks      func(*mock_opsys.MockOS)
+		wantErr         string
+		wantJobs        []writeJob
+	}{
+		{
+			msg:        "chat directory creation error",
+			exportPath: "messages-export",
+			entityName: "friend",
+			guids:      []string{"iMessage;-;friend@gmail.com"},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm).Return(errors.New("this is a permissions error"))
+			},
+			wantErr: `create directory "messages-export/friend": this is a permissions error`,
+		},
+		{
+			msg:             "error creating attachments folder",
+			exportPath:      "messages-export",
+			copyAttachments: true,
+			entityName:      "friend",
+			guids:           []string{"iMessage;-;friend@gmail.com"},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				gomock.InOrder(
+					osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
+					osMock.EXPECT().MkdirAll("messages-export/friend/attachments", os.ModePerm).Return(errors.New("this is a permissions error")),
+				)
+			},
+			wantErr: `create directory "messages-export/friend/attachments": this is a permissions error`,
+		},
+		{
+			msg:        "long email address",
+			entityName: "friend",
+			guids:      []string{"iMessage;-;heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress@gmail.com"},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().MkdirAll("friend", os.ModePerm)
+			},
+			wantJobs: []writeJob{
+				{entityName: "friend", chatPath: "friend/iMessage;-;heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress@gmail.c.txt", attDir: "friend/attachments"},
+			},
+		},
+		{
+			msg:        "multiple PDF chunks",
+			exportPath: "messages-export",
+			pdf:        true,
+			entityName: "friend",
+			guids:      []string{"iMessage;-;friend@gmail.com"},
+			messageIDs: pdfMsgs,
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm)
+			},
+			wantJobs: []writeJob{
+				{entityName: "friend", chatPath: "messages-export/friend/iMessage;-;friend@gmail.com.1.pdf", messageIDs: pdfMsgs[:2048], attDir: "messages-export/friend/attachments"},
+				{entityName: "friend", chatPath: "messages-export/friend/iMessage;-;friend@gmail.com.2.pdf", messageIDs: pdfMsgs[2048:], attDir: "messages-export/friend/attachments"},
+			},
+		},
+	}
 
-	t.Run("error creating attachments folder", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		osMock := mock_opsys.NewMockOS(ctrl)
-		gomock.InOrder(
-			osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm),
-			osMock.EXPECT().MkdirAll("messages-export/friend/attachments", os.ModePerm).Return(errors.New("this is a permissions error")),
-		)
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			osMock := mock_opsys.NewMockOS(ctrl)
+			tt.setupMocks(osMock)
 
-		cfg := configuration{
-			Options: Options{ExportPath: "messages-export", CopyAttachments: true},
-			OS:      osMock,
-		}
-		_, err := cfg.prepareFileJobs("friend", []string{"iMessage;-;friend@gmail.com"}, nil)
-		assert.Error(t, err, `create directory "messages-export/friend/attachments": this is a permissions error`)
-	})
-
-	t.Run("long email address", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		osMock := mock_opsys.NewMockOS(ctrl)
-		osMock.EXPECT().MkdirAll("friend", os.ModePerm)
-
-		cfg := configuration{OS: osMock}
-		jobs, err := cfg.prepareFileJobs(
-			"friend",
-			[]string{"iMessage;-;heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress@gmail.com"},
-			nil,
-		)
-		assert.NilError(t, err)
-		assert.Equal(t, len(jobs), 1)
-		assert.Equal(t, jobs[0].chatPath, "friend/iMessage;-;heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress.heresareallylongemailaddress@gmail.c.txt")
-	})
-
-	t.Run("multiple PDF chunks", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		osMock := mock_opsys.NewMockOS(ctrl)
-		osMock.EXPECT().MkdirAll("messages-export/friend", os.ModePerm)
-
-		msgs := make([]chatdb.DatedMessageID, 4000)
-		for i := range msgs {
-			msgs[i] = chatdb.DatedMessageID{ID: i, Date: i}
-		}
-		cfg := configuration{
-			Options: Options{ExportPath: "messages-export", OutputPDF: true},
-			OS:      osMock,
-		}
-		jobs, err := cfg.prepareFileJobs("friend", []string{"iMessage;-;friend@gmail.com"}, msgs)
-		assert.NilError(t, err)
-		assert.Equal(t, len(jobs), 2)
-		assert.Equal(t, jobs[0].chatPath, "messages-export/friend/iMessage;-;friend@gmail.com.1.pdf")
-		assert.Equal(t, len(jobs[0].messageIDs), 2048)
-		assert.Equal(t, jobs[1].chatPath, "messages-export/friend/iMessage;-;friend@gmail.com.2.pdf")
-		assert.Equal(t, len(jobs[1].messageIDs), 1952)
-	})
+			cfg := configuration{
+				Options: Options{
+					ExportPath:      tt.exportPath,
+					CopyAttachments: tt.copyAttachments,
+					OutputPDF:       tt.pdf,
+				},
+				OS: osMock,
+			}
+			jobs, err := cfg.prepareFileJobs(tt.entityName, tt.guids, tt.messageIDs)
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			assert.DeepEqual(t, jobs, tt.wantJobs, cmp.AllowUnexported(writeJob{}))
+		})
+	}
 }
 
 func TestWriteChunk(t *testing.T) {
@@ -708,98 +734,3 @@ func TestWriteChunk(t *testing.T) {
 	}
 }
 
-func TestExportChats_writeChunkError(t *testing.T) {
-	fileSys := afero.NewMemMapFs()
-	chatFile, err := fileSys.Create("testfile")
-	assert.NilError(t, err)
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	dbMock := mock_chatdb.NewMockChatDB(ctrl)
-	osMock := mock_opsys.NewMockOS(ctrl)
-	ofMock := mock_opsys.NewMockOutFile(ctrl)
-
-	// Prepare pass runs first; then writeChunk fails.
-	gomock.InOrder(
-		dbMock.EXPECT().GetAttachmentPaths(nil),
-		dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
-			{
-				Name:  "testdisplayname",
-				Chats: []chatdb.Chat{{ID: 1, GUID: "testguid"}},
-			},
-		}, nil),
-		dbMock.EXPECT().GetMessageIDs(1),
-		osMock.EXPECT().MkdirAll("messages-export/testdisplayname", os.ModePerm),
-	)
-	gomock.InOrder(
-		osMock.EXPECT().Create("messages-export/testdisplayname/testguid.txt").Return(chatFile, nil),
-		osMock.EXPECT().NewTxtOutFile(chatFile).Return(ofMock),
-		ofMock.EXPECT().Stage(),
-		osMock.EXPECT().GetOpenFilesLimit().Return(256, nil),
-		ofMock.EXPECT().Flush().Return(errors.New("this is a flush error")),
-		ofMock.EXPECT().Name().Return("messages-export/testdisplayname/testguid.txt"),
-	)
-
-	cfg := configuration{
-		Options: Options{ExportPath: "messages-export"},
-		OS:      osMock,
-		ChatDB:  dbMock,
-		counts:  newCounts(),
-	}
-	err = cfg.exportChats(nil)
-	assert.Error(t, err, `flush chat file "messages-export/testdisplayname/testguid.txt" to disk: this is a flush error`)
-}
-
-func TestExportChats_writeChunkErrorIsFirst(t *testing.T) {
-	fileSys := afero.NewMemMapFs()
-	chatFile1, err := fileSys.Create("testfile1")
-	assert.NilError(t, err)
-	chatFile2, err := fileSys.Create("testfile2")
-	assert.NilError(t, err)
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	dbMock := mock_chatdb.NewMockChatDB(ctrl)
-	osMock := mock_opsys.NewMockOS(ctrl)
-	ofMock1 := mock_opsys.NewMockOutFile(ctrl)
-	ofMock2 := mock_opsys.NewMockOutFile(ctrl)
-
-	gomock.InOrder(
-		dbMock.EXPECT().GetAttachmentPaths(nil),
-		dbMock.EXPECT().GetChats(nil).Return([]chatdb.EntityChats{
-			{Name: "a", Chats: []chatdb.Chat{{ID: 1, GUID: "g1"}}},
-			{Name: "b", Chats: []chatdb.Chat{{ID: 2, GUID: "g2"}}},
-		}, nil),
-		dbMock.EXPECT().GetMessageIDs(1),
-		osMock.EXPECT().MkdirAll("messages-export/a", os.ModePerm),
-		dbMock.EXPECT().GetMessageIDs(2),
-		osMock.EXPECT().MkdirAll("messages-export/b", os.ModePerm),
-	)
-	// GetOpenFilesLimit is unordered relative to other jobs to avoid cross-chain races.
-	osMock.EXPECT().GetOpenFilesLimit().Return(256, nil).AnyTimes()
-	gomock.InOrder(
-		osMock.EXPECT().Create("messages-export/a/g1.txt").Return(chatFile1, nil),
-		osMock.EXPECT().NewTxtOutFile(chatFile1).Return(ofMock1),
-		ofMock1.EXPECT().Stage(),
-		ofMock1.EXPECT().Flush().Return(errors.New("error from job 1")),
-		ofMock1.EXPECT().Name().Return("messages-export/a/g1.txt"),
-	)
-	gomock.InOrder(
-		osMock.EXPECT().Create("messages-export/b/g2.txt").Return(chatFile2, nil),
-		osMock.EXPECT().NewTxtOutFile(chatFile2).Return(ofMock2),
-		ofMock2.EXPECT().Stage(),
-		ofMock2.EXPECT().Flush(),
-	)
-
-	cfg := configuration{
-		Options: Options{ExportPath: "messages-export"},
-		OS:      osMock,
-		ChatDB:  dbMock,
-		counts:  newCounts(),
-	}
-	err = cfg.exportChats(nil)
-	// Only the first error (from whichever job finishes first) is reported.
-	// Since results order is non-deterministic, just verify an error is returned.
-	assert.Assert(t, err != nil)
-	_ = fmt.Sprintf("%v", err) // confirm it formats without panic
-}

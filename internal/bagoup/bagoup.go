@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -220,10 +221,13 @@ func (cfg *configuration) startProfiling() (func(), error) {
 		if cfg.Options.Profiling.MemProfile != "" {
 			f, err := cfg.OS.Create(cfg.Options.Profiling.MemProfile)
 			if err != nil {
+				slog.Error("create mem profile file", "err", err)
 				return
 			}
 			runtime.GC()
-			_ = pprof.WriteHeapProfile(f)
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				slog.Error("write mem profile", "err", err)
+			}
 			f.Close()
 		}
 	}, nil

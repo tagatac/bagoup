@@ -621,6 +621,9 @@ func TestStartProfiling(t *testing.T) {
 	assert.NilError(t, err)
 	memFile, err := os.CreateTemp(t.TempDir(), "mem*.prof")
 	assert.NilError(t, err)
+	closedMemFile, err := os.CreateTemp(t.TempDir(), "mem*.prof")
+	assert.NilError(t, err)
+	closedMemFile.Close()
 
 	tests := []struct {
 		msg        string
@@ -676,6 +679,16 @@ func TestStartProfiling(t *testing.T) {
 			},
 			setupMocks: func(osMock *mock_opsys.MockOS) {
 				osMock.EXPECT().Create("mem.prof").Return(nil, errors.New("perm error"))
+			},
+			callStop: true,
+		},
+		{
+			msg: "mem profile write error in stop",
+			setupCfg: func(cfg *configuration) {
+				cfg.Options.Profiling.MemProfile = "mem.prof"
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().Create("mem.prof").Return(closedMemFile, nil)
 			},
 			callStop: true,
 		},
