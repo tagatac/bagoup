@@ -27,8 +27,16 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - name: Vet
-      run: make clean vet
+    - name: Go Reportcard
+      run: |
+        make clean
+        gh repo clone gojp/goreportcard
+        cd goreportcard
+        make install
+        go install ./cmd/goreportcard-cli
+        cd ..
+        rm -rf goreportcard
+        make reportcard
 
     - name: Build (macOS)
       if: runner.os == 'macOS'

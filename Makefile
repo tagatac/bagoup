@@ -46,8 +46,8 @@ generate:
 	go install go.uber.org/mock/mockgen@latest
 	go generate ./...
 
-vet:
-	go vet ./...
+reportcard:
+	goreportcard-cli -v -t 100
 
 test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
