@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -67,6 +68,7 @@ type (
 // NewChatDB returns a ChatDB interface using the given DB. Init must be called
 // on it before use.
 func NewChatDB(db *sql.DB, selfHandle string) ChatDB {
+	db.SetMaxOpenConns(max(1, runtime.NumCPU()-1))
 	return &chatDB{
 		DB:          db,
 		selfHandle:  selfHandle,

@@ -4,12 +4,17 @@
 package bagoup
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	progressbar "github.com/elulcao/progress-bar/cmd"
 	"github.com/emersion/go-vcard"
 	"github.com/tagatac/bagoup/v2/chatdb"
+	"golang.org/x/sync/errgroup"
 )
 
 func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
@@ -22,16 +27,64 @@ func (cfg *configuration) exportChats(contactMap map[string]*vcard.Card) error {
 	}
 	chats = filterEntities(cfg.Options.Entities, chats)
 
-	bar := progressbar.NewPBar()
-	bar.SignalHandler()
-	bar.Total = uint16(len(chats))
-	for i, entityChats := range chats {
-		bar.RenderPBar(i)
-		if err := cfg.exportEntityChats(entityChats); err != nil {
+	var allJobs []writeJob
+	for _, ec := range chats {
+		jobs, err := cfg.prepareEntityJobs(ec)
+		if err != nil {
 			return err
 		}
+		allJobs = append(allJobs, jobs...)
 	}
-	return nil
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	return cfg.runPool(ctx, allJobs)
+}
+
+func (cfg *configuration) runPool(ctx context.Context, jobs []writeJob) error {
+	if len(jobs) == 0 {
+		return nil
+	}
+	jobsCh := make(chan writeJob, len(jobs))
+	for _, job := range jobs {
+		jobsCh <- job
+	}
+
+	bar := progressbar.NewPBar()
+	bar.SignalHandler()
+	bar.Total = uint16(len(jobs))
+
+	allDoneCtx, cancelAllDone := context.WithCancel(ctx)
+	defer cancelAllDone()
+
+	g, gCtx := errgroup.WithContext(allDoneCtx)
+	var mu sync.Mutex
+	var done int
+	for range max(1, runtime.NumCPU()-1) {
+		g.Go(func() error {
+			for {
+				select {
+				case job := <-jobsCh:
+					c := newCounts()
+					if err := cfg.writeChunk(job, c); err != nil {
+						slog.Error("write chunk", "chat path", job.chatPath, "err", err)
+						return err
+					}
+					mu.Lock()
+					cfg.mergeCounts(c)
+					done++
+					bar.RenderPBar(done)
+					if done == len(jobs) {
+						cancelAllDone()
+					}
+					mu.Unlock()
+				case <-gCtx.Done():
+					return nil
+				}
+			}
+		})
+	}
+	return g.Wait()
 }
 
 func getAttachmentPaths(cfg *configuration) error {
@@ -73,29 +126,34 @@ func filterEntities(entities []string, chats []chatdb.EntityChats) []chatdb.Enti
 	return result
 }
 
-func (cfg *configuration) exportEntityChats(entityChats chatdb.EntityChats) error {
+func (cfg *configuration) prepareEntityJobs(entityChats chatdb.EntityChats) ([]writeJob, error) {
 	mergeChats := !cfg.Options.SeparateChats
 	var guids []string
 	var entityMessageIDs []chatdb.DatedMessageID
+	var jobs []writeJob
 	for _, chat := range entityChats.Chats {
 		messageIDs, err := cfg.ChatDB.GetMessageIDs(chat.ID)
 		if err != nil {
-			return fmt.Errorf("get message IDs for chat ID %d: %w", chat.ID, err)
+			return nil, fmt.Errorf("get message IDs for chat ID %d: %w", chat.ID, err)
 		}
 		if mergeChats {
 			guids = append(guids, chat.GUID)
 			entityMessageIDs = append(entityMessageIDs, messageIDs...)
 		} else {
-			if err := cfg.writeFile(entityChats.Name, []string{chat.GUID}, messageIDs); err != nil {
-				return err
+			chatJobs, err := cfg.prepareFileJobs(entityChats.Name, []string{chat.GUID}, messageIDs)
+			if err != nil {
+				return nil, err
 			}
+			jobs = append(jobs, chatJobs...)
 		}
 		cfg.counts.chats++
 	}
 	if mergeChats {
-		if err := cfg.writeFile(entityChats.Name, guids, entityMessageIDs); err != nil {
-			return err
+		chatJobs, err := cfg.prepareFileJobs(entityChats.Name, guids, entityMessageIDs)
+		if err != nil {
+			return nil, err
 		}
+		jobs = append(jobs, chatJobs...)
 	}
-	return nil
+	return jobs, nil
 }

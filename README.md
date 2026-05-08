@@ -136,12 +136,13 @@ for each option.
 ## Performance
 ### Plaintext
 Export to plaintext is very fast. For example, on an M3 MBP, exporting
-**18,774 messages**, as well as copying **2.0GB of attachments**, from 167 chats
-to 164 files took **4.94s**.
+**19,066 messages**, as well as copying **2.0GB of attachments**, from 168 chats
+to 165 files, took **4.99s**.
 ### PDF
-Export to PDF is slower, bottlenecked by PDF creation with `weasyprint`.
-Exporting the same data from above on the same MacBook took **5m8s**, over
-60x slower than the export to plaintext.
+Export to PDF is slower, bottlenecked by PDF creation with `weasyprint` and
+HEIC image conversion with `sips`.
+Exporting the same data from above on the same MacBook took **1m3s**, over
+12x slower than the export to plaintext.
 
 ## Author
 Copyright (C) 2020-2025  [David Tagatac](mailto:david@tagatac.net)  

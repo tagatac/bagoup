@@ -24,14 +24,15 @@ func TestConvertHEIC(t *testing.T) {
 			wantName: "testfile.png",
 		},
 		{
-			msg: "HEIC file",
-			src: "testfile.heic",
+			msg:      "HEIC file",
+			src:      "testfile.heic",
+			wantName: "testTempDir/5e71bbb03bd4bb80_testfile.jpeg",
 		},
 		{
 			msg:     "conversion error",
 			src:     "testfile.heic",
 			sipsErr: "this is a conversion error",
-			wantErr: "convert HEIC file to JPG file \"testTempDir/testfile.jpeg\": exit status 1: this is a conversion error",
+			wantErr: "convert HEIC file to JPG file \"testTempDir/5e71bbb03bd4bb80_testfile.jpeg\": exit status 1: this is a conversion error",
 		},
 	}
 
@@ -52,11 +53,7 @@ func TestConvertHEIC(t *testing.T) {
 				return
 			}
 			assert.NilError(t, err)
-			if tt.wantName == "" {
-				assert.Equal(t, converted, "testTempDir/testfile.jpeg")
-			} else {
-				assert.Equal(t, converted, tt.wantName)
-			}
+			assert.Equal(t, converted, tt.wantName)
 		})
 	}
 }

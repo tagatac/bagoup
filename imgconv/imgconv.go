@@ -8,6 +8,7 @@ package imgconv
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,10 @@ func (i *imgConverter) ConvertHEIC(src string) (string, error) {
 	if strings.ToLower(filepath.Ext(src)) != ".heic" {
 		return src, nil
 	}
-	jpgFilename := strings.TrimRight(filepath.Base(src), "HEICheic") + "jpeg"
+	h := fnv.New64a()
+	h.Write([]byte(src))
+	base := strings.TrimRight(filepath.Base(src), "HEICheic")
+	jpgFilename := fmt.Sprintf("%016x_%s", h.Sum64(), base) + "jpeg"
 	dst := filepath.Join(i.tempDir, jpgFilename)
 	var stderr bytes.Buffer
 	cmd := i.convCmd(src, dst)

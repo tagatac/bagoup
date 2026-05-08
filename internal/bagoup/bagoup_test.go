@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
 	"github.com/tagatac/bagoup/v2/chatdb/mock_chatdb"
 	"github.com/tagatac/bagoup/v2/opsys/mock_opsys"
@@ -62,7 +63,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -87,7 +87,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -204,7 +203,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -249,7 +247,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetHandleMap(nil),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -328,7 +325,7 @@ func TestBagoup(t *testing.T) {
 					osMock.EXPECT().GetTempDir(),
 					dbMock.EXPECT().GetAttachmentPaths(ptMock),
 					dbMock.EXPECT().GetChats(nil),
-					osMock.EXPECT().RmTempDir().Times(2),
+					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -398,7 +395,6 @@ func TestBagoup(t *testing.T) {
 					dbMock.EXPECT().GetChats(nil),
 					ptMock.EXPECT().GetHomeDir(),
 					osMock.EXPECT().Create(tildeexpansionAbs).Return(afero.NewMemMapFs().Create("dummy")),
-					osMock.EXPECT().RmTempDir(),
 				)
 			},
 		},
@@ -462,6 +458,27 @@ func TestBagoup(t *testing.T) {
 			},
 			wantErr: "write out tilde expansion file: write dummy: file handle is read only",
 		},
+		{
+			msg: "start profiling error",
+			opts: Options{
+				DBPath:          "~/Library/Messages/chat.db",
+				ExportPath:      "messages-export",
+				SelfHandle:      "Me",
+				AttachmentsPath: "/",
+				Timezone:        "Local",
+				Profiling:       profiling{Trace: "trace.out"},
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS, _ *mock_chatdb.MockChatDB, _ *mock_pathtools.MockPathTools) {
+				gomock.InOrder(
+					osMock.EXPECT().FileAccess("~/Library/Messages/chat.db"),
+					osMock.EXPECT().FileExist(exportPathAbs),
+					osMock.EXPECT().MkdirAll(logDirAbs, os.ModePerm),
+					osMock.EXPECT().Create(logFileAbs).Return(devnull, nil),
+					osMock.EXPECT().Create("trace.out").Return(nil, errors.New("perm error")),
+				)
+			},
+			wantErr: "create trace file: perm error",
+		},
 	}
 
 	for _, tt := range tests {
@@ -500,6 +517,201 @@ func TestBagoup(t *testing.T) {
 			assert.NilError(t, err)
 			if !strings.HasPrefix(attPathIn, "/") {
 				assert.Equal(t, cfg.(*configuration).Options.AttachmentsPath, filepath.Join(wd, attPathIn))
+			}
+		})
+	}
+}
+
+func TestMergeCounts(t *testing.T) {
+	tests := []struct {
+		msg        string
+		base       *counts
+		incoming   *counts
+		wantCounts counts
+	}{
+		{
+			msg:  "merge into empty",
+			base: newCounts(),
+			incoming: &counts{
+				files:               2,
+				chats:               3,
+				messages:            10,
+				messagesInvalid:     1,
+				attachmentsMissing:  2,
+				conversions:         4,
+				conversionsFailed:   1,
+				attachments:         map[string]int{"image/jpeg": 5},
+				attachmentsCopied:   map[string]int{"image/jpeg": 3},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 2},
+			},
+			wantCounts: counts{
+				files:               2,
+				chats:               3,
+				messages:            10,
+				messagesInvalid:     1,
+				attachmentsMissing:  2,
+				conversions:         4,
+				conversionsFailed:   1,
+				attachments:         map[string]int{"image/jpeg": 5},
+				attachmentsCopied:   map[string]int{"image/jpeg": 3},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 2},
+			},
+		},
+		{
+			msg: "accumulate existing map keys",
+			base: &counts{
+				files:               1,
+				messages:            5,
+				attachments:         map[string]int{"image/jpeg": 3},
+				attachmentsCopied:   map[string]int{"image/jpeg": 1},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 1},
+			},
+			incoming: &counts{
+				files:               2,
+				messages:            7,
+				attachments:         map[string]int{"image/jpeg": 4},
+				attachmentsCopied:   map[string]int{"image/jpeg": 2},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 2},
+			},
+			wantCounts: counts{
+				files:               3,
+				messages:            12,
+				attachments:         map[string]int{"image/jpeg": 7},
+				attachmentsCopied:   map[string]int{"image/jpeg": 3},
+				attachmentsEmbedded: map[string]int{"image/jpeg": 3},
+			},
+		},
+		{
+			msg: "add new map keys",
+			base: &counts{
+				attachments:         map[string]int{"image/jpeg": 1},
+				attachmentsCopied:   map[string]int{},
+				attachmentsEmbedded: map[string]int{},
+			},
+			incoming: &counts{
+				attachments:         map[string]int{"image/heic": 2},
+				attachmentsCopied:   map[string]int{"image/heic": 1},
+				attachmentsEmbedded: map[string]int{"image/heic": 1},
+			},
+			wantCounts: counts{
+				attachments:         map[string]int{"image/jpeg": 1, "image/heic": 2},
+				attachmentsCopied:   map[string]int{"image/heic": 1},
+				attachmentsEmbedded: map[string]int{"image/heic": 1},
+			},
+		},
+		{
+			msg:        "merge zero counts",
+			base:       &counts{files: 5, messages: 10, attachments: map[string]int{"image/jpeg": 3}, attachmentsCopied: map[string]int{}, attachmentsEmbedded: map[string]int{}},
+			incoming:   newCounts(),
+			wantCounts: counts{files: 5, messages: 10, attachments: map[string]int{"image/jpeg": 3}, attachmentsCopied: map[string]int{}, attachmentsEmbedded: map[string]int{}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			cfg := &configuration{counts: tt.base}
+			cfg.mergeCounts(tt.incoming)
+			assert.DeepEqual(t, *cfg.counts, tt.wantCounts, cmp.AllowUnexported(counts{}))
+		})
+	}
+}
+
+func TestStartProfiling(t *testing.T) {
+	traceFile, err := os.CreateTemp(t.TempDir(), "trace*.out")
+	assert.NilError(t, err)
+	memFile, err := os.CreateTemp(t.TempDir(), "mem*.prof")
+	assert.NilError(t, err)
+	closedMemFile, err := os.CreateTemp(t.TempDir(), "mem*.prof")
+	assert.NilError(t, err)
+	closedMemFile.Close()
+
+	tests := []struct {
+		msg        string
+		setupCfg   func(*configuration)
+		setupMocks func(*mock_opsys.MockOS)
+		callStop   bool
+		wantErr    string
+	}{
+		{
+			msg:        "no profiling",
+			setupCfg:   func(*configuration) {},
+			setupMocks: func(*mock_opsys.MockOS) {},
+			callStop:   true,
+		},
+		{
+			msg: "trace file creation error",
+			setupCfg: func(cfg *configuration) {
+				cfg.Options.Profiling.Trace = "trace.out"
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().Create("trace.out").Return(nil, errors.New("perm error"))
+			},
+			wantErr: "create trace file: perm error",
+		},
+		{
+			msg: "cpu profile file creation error",
+			setupCfg: func(cfg *configuration) {
+				cfg.Options.Profiling.CPUProfile = "cpu.prof"
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().Create("cpu.prof").Return(nil, errors.New("perm error"))
+			},
+			wantErr: "create CPU profile: perm error",
+		},
+		{
+			msg: "trace + mem profile success",
+			setupCfg: func(cfg *configuration) {
+				cfg.Options.Profiling.Trace = "trace.out"
+				cfg.Options.Profiling.MemProfile = "mem.prof"
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				gomock.InOrder(
+					osMock.EXPECT().Create("trace.out").Return(traceFile, nil),
+					osMock.EXPECT().Create("mem.prof").Return(memFile, nil),
+				)
+			},
+			callStop: true,
+		},
+		{
+			msg: "mem profile creation error in stop",
+			setupCfg: func(cfg *configuration) {
+				cfg.Options.Profiling.MemProfile = "mem.prof"
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().Create("mem.prof").Return(nil, errors.New("perm error"))
+			},
+			callStop: true,
+		},
+		{
+			msg: "mem profile write error in stop",
+			setupCfg: func(cfg *configuration) {
+				cfg.Options.Profiling.MemProfile = "mem.prof"
+			},
+			setupMocks: func(osMock *mock_opsys.MockOS) {
+				osMock.EXPECT().Create("mem.prof").Return(closedMemFile, nil)
+			},
+			callStop: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			osMock := mock_opsys.NewMockOS(ctrl)
+			tt.setupMocks(osMock)
+
+			cfg := &configuration{OS: osMock}
+			tt.setupCfg(cfg)
+
+			stop, err := cfg.startProfiling()
+			if tt.wantErr != "" {
+				assert.Error(t, err, tt.wantErr)
+				return
+			}
+			assert.NilError(t, err)
+			if tt.callStop {
+				stop()
 			}
 		})
 	}

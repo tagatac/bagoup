@@ -8,9 +8,7 @@ TEMPLATES=$(shell find . -type f -wholename './opsys/templates/*.tmpl')
 LDFLAGS=-ldflags '-X "main._version=$(BAGOUP_VERSION) $(OS)/$(HW)"'
 
 PKGS=$(shell go list ./... | grep --invert-match '/mock_' | tr '\n' ' ')
-EXCLUDE_PKGS=\
-	github.com/tagatac/bagoup/v2/example-exports \
-	github.com/tagatac/bagoup/v2/exectest
+EXCLUDE_PKGS=github.com/tagatac/bagoup/v2/exectest
 PKGS_TO_TEST=$(filter-out $(EXCLUDE_PKGS),$(PKGS))
 PKGS_TO_COVER=$(shell echo "$(PKGS_TO_TEST)" | tr ' ' ',')
 

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/tagatac/bagoup/v2/chatdb"
 	"github.com/tagatac/bagoup/v2/opsys"
@@ -23,10 +24,19 @@ const (
 	_pdfMaxMessages          = 3072
 )
 
-func (cfg *configuration) writeFile(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) error {
+var _openFilesLimitMu sync.Mutex
+
+type writeJob struct {
+	entityName string
+	chatPath   string
+	messageIDs []chatdb.DatedMessageID
+	attDir     string
+}
+
+func (cfg *configuration) prepareFileJobs(entityName string, guids []string, messageIDs []chatdb.DatedMessageID) ([]writeJob, error) {
 	chatDirPath := filepath.Join(cfg.Options.ExportPath, entityName)
 	if err := cfg.OS.MkdirAll(chatDirPath, os.ModePerm); err != nil {
-		return fmt.Errorf("create directory %q: %w", chatDirPath, err)
+		return nil, fmt.Errorf("create directory %q: %w", chatDirPath, err)
 	}
 	filename := strings.Join(guids, ";;;")
 	if len(filename) > _filenamePrefixMaxLength {
@@ -36,76 +46,56 @@ func (cfg *configuration) writeFile(entityName string, guids []string, messageID
 	attDir := filepath.Join(chatDirPath, "attachments")
 	if cfg.Options.CopyAttachments && !cfg.Options.PreservePaths {
 		if err := cfg.OS.MkdirAll(attDir, os.ModePerm); err != nil {
-			return fmt.Errorf("create directory %q: %w", attDir, err)
+			return nil, fmt.Errorf("create directory %q: %w", attDir, err)
 		}
 	}
 	sort.SliceStable(messageIDs, func(i, j int) bool { return messageIDs[i].Date < messageIDs[j].Date })
-	if cfg.Options.OutputPDF {
-		return cfg.writePDFs(entityName, messageIDs, chatPathNoExt, attDir)
+	if !cfg.Options.OutputPDF {
+		return []writeJob{{entityName, chatPathNoExt + ".txt", messageIDs, attDir}}, nil
 	}
-	return cfg.writeTxt(messageIDs, chatPathNoExt, attDir)
-}
-
-func (cfg *configuration) writeTxt(messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
-	chatPath := chatPathNoExt + ".txt"
-	chatFile, err := cfg.OS.Create(chatPath)
-	if err != nil {
-		return fmt.Errorf("create file %q: %w", chatPath, err)
-	}
-	defer chatFile.Close()
-	outFile := cfg.OS.NewTxtOutFile(chatFile)
-	return cfg.handleFileContents(outFile, messageIDs, attDir)
-}
-
-func (cfg *configuration) writePDFs(entityName string, messageIDs []chatdb.DatedMessageID, chatPathNoExt, attDir string) error {
-	type messageIDsAndChatPath struct {
-		messageIDs []chatdb.DatedMessageID
-		chatPath   string
-	}
-	idsAndPaths := []messageIDsAndChatPath{}
+	var jobs []writeJob
 	fileIdx := 1
 	var msgIdx int
 	for msgIdx = 0; len(messageIDs)-_pdfMaxMessages > msgIdx; msgIdx += _pdfPreferredMessages {
-		idsAndPaths = append(idsAndPaths, messageIDsAndChatPath{
-			messageIDs: messageIDs[msgIdx : msgIdx+_pdfPreferredMessages],
+		jobs = append(jobs, writeJob{
+			entityName: entityName,
 			chatPath:   fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx),
+			messageIDs: messageIDs[msgIdx : msgIdx+_pdfPreferredMessages],
+			attDir:     attDir,
 		})
 		fileIdx++
 	}
-	lastChatPath := chatPathNoExt + ".pdf"
+	lastPath := chatPathNoExt + ".pdf"
 	if fileIdx > 1 {
-		lastChatPath = fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx)
+		lastPath = fmt.Sprintf("%s.%d.pdf", chatPathNoExt, fileIdx)
 	}
-	idsAndPaths = append(idsAndPaths, messageIDsAndChatPath{
-		messageIDs: messageIDs[msgIdx:],
-		chatPath:   lastChatPath,
-	})
+	return append(jobs, writeJob{entityName, lastPath, messageIDs[msgIdx:], attDir}), nil
+}
 
-	for _, idsAndPath := range idsAndPaths {
-		chatPath := idsAndPath.chatPath
-		chatFile, err := cfg.OS.Create(chatPath)
-		if err != nil {
-			return fmt.Errorf("create file %q: %w", chatPath, err)
-		}
-		defer chatFile.Close()
-		var outFile opsys.OutFile
+func (cfg *configuration) writeChunk(job writeJob, c *counts) error {
+	chatFile, err := cfg.OS.Create(job.chatPath)
+	if err != nil {
+		return fmt.Errorf("create file %q: %w", job.chatPath, err)
+	}
+	defer chatFile.Close()
+	var outFile opsys.OutFile
+	if cfg.Options.OutputPDF {
 		if cfg.Options.UseWkhtmltopdf {
 			pdfg, err := pdfgen.NewPDFGenerator(chatFile)
 			if err != nil {
 				return fmt.Errorf("create PDF generator: %w", err)
 			}
-			outFile = cfg.OS.NewWkhtmltopdfFile(entityName, chatFile, pdfg, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWkhtmltopdfFile(job.entityName, chatFile, pdfg, cfg.Options.IncludePPA)
 		} else {
-			outFile = cfg.OS.NewWeasyPrintFile(entityName, chatFile, cfg.Options.IncludePPA)
+			outFile = cfg.OS.NewWeasyPrintFile(job.entityName, chatFile, cfg.Options.IncludePPA)
 		}
-		if err := cfg.handleFileContents(outFile, idsAndPath.messageIDs, attDir); err != nil {
-			return err
-		}
+	} else {
+		outFile = cfg.OS.NewTxtOutFile(chatFile)
 	}
-	return nil
+	return cfg.handleFileContents(outFile, job.messageIDs, job.attDir, c)
 }
 
-func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs []chatdb.DatedMessageID, attDir string) error {
+func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs []chatdb.DatedMessageID, attDir string, c *counts) error {
 	msgCount, invalidCount := 0, 0
 	for _, messageID := range messageIDs {
 		msg, ok, err := cfg.ChatDB.GetMessage(messageID.ID, cfg.handleMap)
@@ -115,7 +105,7 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 		if err := outFile.WriteMessage(msg); err != nil {
 			return fmt.Errorf("write message %q to file %q: %w", msg, outFile.Name(), err)
 		}
-		if err := cfg.handleAttachments(outFile, messageID.ID, attDir); err != nil {
+		if err := cfg.handleAttachments(outFile, messageID.ID, attDir, c); err != nil {
 			return fmt.Errorf("chat file %q - message %d: %w", outFile.Name(), messageID.ID, err)
 		}
 		if ok {
@@ -128,6 +118,21 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 	if err != nil {
 		return fmt.Errorf("stage chat file %q for writing: %w", outFile.Name(), err)
 	}
+	if err := cfg.ensureOpenFilesLimit(imgCount, outFile); err != nil {
+		return err
+	}
+	if err := outFile.Flush(); err != nil {
+		return fmt.Errorf("flush chat file %q to disk: %w", outFile.Name(), err)
+	}
+	c.files++
+	c.messages += msgCount
+	c.messagesInvalid += invalidCount
+	return nil
+}
+
+func (cfg *configuration) ensureOpenFilesLimit(imgCount int, outFile opsys.OutFile) error {
+	_openFilesLimitMu.Lock()
+	defer _openFilesLimitMu.Unlock()
 	openFilesLimit, err := cfg.OS.GetOpenFilesLimit()
 	if err != nil {
 		return err
@@ -137,16 +142,10 @@ func (cfg *configuration) handleFileContents(outFile opsys.OutFile, messageIDs [
 			return fmt.Errorf("chat file %q - increase the open file limit from %d to %d to support %d embedded images: %w", outFile.Name(), openFilesLimit, imgCount*2, imgCount, err)
 		}
 	}
-	if err := outFile.Flush(); err != nil {
-		return fmt.Errorf("flush chat file %q to disk: %w", outFile.Name(), err)
-	}
-	cfg.counts.files++
-	cfg.counts.messages += msgCount
-	cfg.counts.messagesInvalid += invalidCount
 	return nil
 }
 
-func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, attDir string) error {
+func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, attDir string, c *counts) error {
 	msgPaths, ok := cfg.attachmentPaths[msgID]
 	if !ok {
 		return nil
@@ -156,7 +155,7 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 		err := cfg.validateAttachmentPath(att)
 		if _, ok := err.(errorMissingAttachment); ok {
 			// Attachment is missing. Just reference it, and skip copying/embedding.
-			cfg.counts.attachmentsMissing++
+			c.attachmentsMissing++
 			slog.Warn(err.Error(),
 				"chat file", outFile.Name(),
 				"message ID", msgID,
@@ -168,15 +167,15 @@ func (cfg *configuration) handleAttachments(outFile opsys.OutFile, msgID int, at
 			if err := outFile.ReferenceAttachment(att.TransferName); err != nil {
 				return fmt.Errorf("reference attachment %q: %w", att.TransferName, err)
 			}
-			cfg.counts.attachments[att.MIMEType]++
+			c.attachments[att.MIMEType]++
 			continue
 		} else if err != nil {
 			return err
 		}
-		if err := cfg.copyAttachment(&att, attDir); err != nil {
+		if err := cfg.copyAttachment(&att, attDir, c); err != nil {
 			return err
 		}
-		if err := cfg.writeAttachment(outFile, att); err != nil {
+		if err := cfg.writeAttachment(outFile, att, c); err != nil {
 			return err
 		}
 	}
@@ -199,7 +198,7 @@ func (cfg configuration) validateAttachmentPath(att chatdb.Attachment) error {
 	return nil
 }
 
-func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string) error {
+func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string, c *counts) error {
 	if !cfg.Options.CopyAttachments {
 		return nil
 	}
@@ -216,22 +215,22 @@ func (cfg *configuration) copyAttachment(att *chatdb.Attachment, attDir string) 
 		return fmt.Errorf("copy attachment %q to %q: %w", att.Filepath, attDir, err)
 	}
 	att.Filepath = dstPath
-	cfg.counts.attachmentsCopied[att.MIMEType]++
+	c.attachmentsCopied[att.MIMEType]++
 	return nil
 }
 
-func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment) error {
+func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Attachment, c *counts) error {
 	attPath, mimeType := att.Filepath, att.MIMEType
 	if cfg.Options.OutputPDF {
 		if jpgPath, err := cfg.ImgConverter.ConvertHEIC(attPath); err != nil {
-			cfg.counts.conversionsFailed++
+			c.conversionsFailed++
 			slog.Warn("failed to convert HEIC file to JPEG",
 				"err", err,
 				"chat file", outFile.Name(),
 				"HEIC file", attPath,
 			)
 		} else if jpgPath != attPath {
-			cfg.counts.conversions++
+			c.conversions++
 			attPath, mimeType = jpgPath, "image/jpeg"
 		}
 	}
@@ -240,8 +239,8 @@ func (cfg *configuration) writeAttachment(outFile opsys.OutFile, att chatdb.Atta
 		return fmt.Errorf("include attachment %q: %w", attPath, err)
 	}
 	if embedded {
-		cfg.counts.attachmentsEmbedded[mimeType]++
+		c.attachmentsEmbedded[mimeType]++
 	}
-	cfg.counts.attachments[mimeType]++
+	c.attachments[mimeType]++
 	return nil
 }
