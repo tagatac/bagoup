@@ -6,6 +6,7 @@ package bagoup
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -66,6 +67,7 @@ func (cfg *configuration) runPool(ctx context.Context, jobs []writeJob) error {
 				case job := <-jobsCh:
 					c := newCounts()
 					if err := cfg.writeChunk(job, c); err != nil {
+						slog.Error("write chunk", "chat path", job.chatPath, "err", err)
 						return err
 					}
 					mu.Lock()
