@@ -53,7 +53,7 @@ test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)
 	go tool cover -func=$(COVERAGE_FILE)
 
-test-exports: download
+test-exports: build
 	EXAMPLE_EXPORTS_FLAGS="$(EXAMPLE_EXPORTS_FLAGS)" \
 	EXAMPLE_EXPORTS_PDFFLAGS="$(EXAMPLE_EXPORTS_PDFFLAGS)" \
 	bash scripts/test-exports.sh
