@@ -1,4 +1,4 @@
-# bagoup [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][card-img]][card] [![Release][release-img]][release]
+# bagoup [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Release][release-img]][release]
 
 bagoup is an export utility for macOS Messages, implemented in Go, inspired by
 [Baskup](https://github.com/PeterKaminski09/baskup).
@@ -152,7 +152,5 @@ See cmd/bagoup/main.go for usage terms.
 [ci]: https://github.com/tagatac/bagoup/actions?query=branch%3Amain
 [cov-img]: https://codecov.io/gh/tagatac/bagoup/branch/main/graph/badge.svg?token=BADYXN4Z5D
 [cov]: https://codecov.io/gh/tagatac/bagoup
-[card-img]: https://goreportcard.com/badge/github.com/tagatac/bagoup/v2
-[card]: https://goreportcard.com/report/github.com/tagatac/bagoup/v2
 [release-img]: https://img.shields.io/github/v/release/tagatac/bagoup?cache_seconds=3600
 [release]: https://github.com/tagatac/bagoup/releases/latest
