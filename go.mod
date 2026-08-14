@@ -10,16 +10,16 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20260618161152-d854b7e0e2d3
 	github.com/google/go-cmp v0.7.0
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/mattn/go-sqlite3 v1.14.47
+	github.com/mattn/go-sqlite3 v1.14.49
 	github.com/spf13/afero v1.15.0
 	github.com/tagatac/go-typedstream v1.0.0
 	github.com/tagatac/gorecurcopy v1.1.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/sync v0.21.0
+	golang.org/x/sync v0.22.0
 	gotest.tools/v3 v3.5.2
 )
 
 require (
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )
