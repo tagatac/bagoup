@@ -67,7 +67,9 @@ func main() {
 	s := opsys.NewOS(afero.NewOsFs(), os.Stat, _version)
 	db, err := sql.Open("sqlite3", opts.DBPath)
 	panicOnErr(err, "open DB file %q", opts.DBPath)
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 	cdb := chatdb.NewChatDB(db, opts.SelfHandle)
 
 	logDir := filepath.Join(opts.ExportPath, ".bagoup")
@@ -77,11 +79,15 @@ func main() {
 	panicOnErr(db.Close(), "close DB file %q", opts.DBPath)
 	dbf, err := os.Open(opts.DBPath)
 	panicOnErr(err, "open DB file %q for copying", opts.DBPath)
-	defer dbf.Close()
+	defer func() {
+		_ = dbf.Close()
+	}()
 	dbfNewPath := filepath.Join(logDir, filepath.Base(opts.DBPath))
 	dbfNew, err := os.Create(dbfNewPath)
 	panicOnErr(err, "create file %q to copy chat DB into", dbfNewPath)
-	defer dbfNew.Close()
+	defer func() {
+		_ = dbfNew.Close()
+	}()
 	_, err = io.Copy(dbfNew, dbf)
 	panicOnErr(err, "copy DB file from %q to %q", opts.DBPath, dbfNewPath)
 	panicOnErr(dbf.Close(), "close DB file %q after copying", opts.DBPath)

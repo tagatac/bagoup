@@ -22,7 +22,7 @@ var _embedFS embed.FS
 
 //go:generate mockgen -destination=mock_opsys/mock_outfile.go github.com/tagatac/bagoup/v2/opsys OutFile
 
-// Outfile represents single messages export file, either text or PDF.
+// OutFile represents single messages export file, either text or PDF.
 type OutFile interface {
 	// Name returns the filepath of the Outfile.
 	Name() string
@@ -51,7 +51,7 @@ func (opSys) NewTxtOutFile(chatFile afero.File) OutFile {
 }
 
 func (f txtFile) WriteMessage(msg string) error {
-	_, err := f.File.WriteString(msg)
+	_, err := f.WriteString(msg)
 	return err
 }
 

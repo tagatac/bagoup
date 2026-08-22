@@ -28,11 +28,13 @@ type (
 )
 
 func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, error) {
-	chatRows, err := d.DB.Query("SELECT ROWID, guid, chat_identifier, COALESCE(display_name, '') FROM chat")
+	chatRows, err := d.Query("SELECT ROWID, guid, chat_identifier, COALESCE(display_name, '') FROM chat")
 	if err != nil {
 		return nil, fmt.Errorf("query chats table: %w", err)
 	}
-	defer chatRows.Close()
+	defer func() {
+		_ = chatRows.Close()
+	}()
 	contactChats := map[*vcard.Card]EntityChats{}
 	addressChats := map[string]EntityChats{}
 	for chatRows.Next() {
@@ -53,6 +55,9 @@ func (d chatDB) GetChats(contactMap map[string]*vcard.Card) ([]EntityChats, erro
 			continue
 		}
 		addAddressChat(chatIdentifier, displayName, chat, addressChats)
+	}
+	if err = chatRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate through chats table rows: %w", err)
 	}
 	chats := []EntityChats{}
 	for _, entityChats := range contactChats {

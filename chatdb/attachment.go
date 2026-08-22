@@ -22,11 +22,13 @@ type Attachment struct {
 }
 
 func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attachment, error) {
-	attachmentJoins, err := d.DB.Query("SELECT message_id, attachment_id FROM message_attachment_join")
+	attachmentJoins, err := d.Query("SELECT message_id, attachment_id FROM message_attachment_join")
 	if err != nil {
 		return nil, fmt.Errorf("scan message_attachment_join table: %w", err)
 	}
-	defer attachmentJoins.Close()
+	defer func() {
+		_ = attachmentJoins.Close()
+	}()
 
 	atts := map[int][]Attachment{}
 	for attachmentJoins.Next() {
@@ -40,15 +42,17 @@ func (d *chatDB) GetAttachmentPaths(ptools pathtools.PathTools) (map[int][]Attac
 		}
 		atts[msgID] = append(atts[msgID], att)
 	}
-	return atts, nil
+	return atts, attachmentJoins.Err()
 }
 
 func (d *chatDB) getAttachmentPath(attachmentID int, ptools pathtools.PathTools) (Attachment, error) {
-	attachments, err := d.DB.Query(fmt.Sprintf("SELECT filename, mime_type, transfer_name FROM attachment WHERE ROWID=%d", attachmentID))
+	attachments, err := d.Query(fmt.Sprintf("SELECT filename, mime_type, transfer_name FROM attachment WHERE ROWID=%d", attachmentID))
 	if err != nil {
 		return Attachment{}, fmt.Errorf("query attachment table for ID %d: %w", attachmentID, err)
 	}
-	defer attachments.Close()
+	defer func() {
+		_ = attachments.Close()
+	}()
 	attachments.Next()
 	var filenameOrNull, mimeTypeOrNull, transferNameOrNull sql.NullString
 	if err := attachments.Scan(&filenameOrNull, &mimeTypeOrNull, &transferNameOrNull); err != nil {

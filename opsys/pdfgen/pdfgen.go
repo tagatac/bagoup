@@ -1,6 +1,7 @@
 // Copyright (C) 2022  David Tagatac <david@tagatac.net>
 // See cmd/bagoup/main.go for usage terms.
 
+// Package pdfgen provides a thin wrapper for wkhtmltopdf.PDFGenerator.
 package pdfgen
 
 import (

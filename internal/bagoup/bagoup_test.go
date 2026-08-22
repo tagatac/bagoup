@@ -623,7 +623,7 @@ func TestStartProfiling(t *testing.T) {
 	assert.NilError(t, err)
 	closedMemFile, err := os.CreateTemp(t.TempDir(), "mem*.prof")
 	assert.NilError(t, err)
-	closedMemFile.Close()
+	assert.NilError(t, closedMemFile.Close())
 
 	tests := []struct {
 		msg        string

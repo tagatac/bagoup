@@ -209,7 +209,7 @@ func TestGetContactMap(t *testing.T) {
 		{
 			msg: "two contacts",
 			setupFs: func(fs afero.Fs) {
-				afero.WriteFile(fs, "contacts.vcf", []byte(
+				assert.NilError(t, afero.WriteFile(fs, "contacts.vcf", []byte(
 					`BEGIN:VCARD
 VERSION:3.0
 FN:David Tagatac
@@ -226,7 +226,7 @@ TEL;TYPE=CELL:+3815555555
 EMAIL;TYPE=INTERNET:info@novakdjokovic.com
 CATEGORIES:myContacts
 END:VCARD
-`), 0644)
+`), 0644))
 			},
 			wantMap: map[string]*vcard.Card{
 				"+1415555555":            tagCard,
@@ -242,14 +242,14 @@ END:VCARD
 		{
 			msg: "bad vcard file",
 			setupFs: func(fs afero.Fs) {
-				afero.WriteFile(fs, "contacts.vcf", []byte("BEGIN::VCARD\n"), 0644)
+				assert.NilError(t, afero.WriteFile(fs, "contacts.vcf", []byte("BEGIN::VCARD\n"), 0644))
 			},
 			wantErr: "decode vcard: vcard: invalid BEGIN value",
 		},
 		{
 			msg: "shared email address",
 			setupFs: func(fs afero.Fs) {
-				afero.WriteFile(fs, "contacts.vcf", []byte(
+				assert.NilError(t, afero.WriteFile(fs, "contacts.vcf", []byte(
 					`BEGIN:VCARD
 VERSION:3.0
 FN:Novak Djokovic
@@ -263,7 +263,7 @@ FN:Jelena Djokovic
 N:Djokovic;Jelena;;;
 EMAIL;TYPE=INTERNET:info@novakdjokovic.com
 END:VCARD
-`), 0644)
+`), 0644))
 			},
 			wantMap: map[string]*vcard.Card{
 				"+3815555555":            noleCard,
@@ -377,10 +377,10 @@ func TestCopyFile(t *testing.T) {
 				assert.NilError(t, fs.Mkdir("destinationdir", os.ModePerm))
 				f, err := fs.Create("destinationdir/testfile.txt")
 				assert.NilError(t, err)
-				f.Close()
+				assert.NilError(t, f.Close())
 				f, err = fs.Create("destinationdir/testfile-1.txt")
 				assert.NilError(t, err)
-				f.Close()
+				assert.NilError(t, f.Close())
 			},
 			unique:      true,
 			wantDstPath: "destinationdir/testfile-2.txt",
