@@ -7,10 +7,10 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/elulcao/progress-bar v0.1.6
-	github.com/emersion/go-vcard v0.0.0-20260618161152-d854b7e0e2d3
+	github.com/emersion/go-vcard v0.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/mattn/go-sqlite3 v1.14.49
+	github.com/mattn/go-sqlite3 v1.14.50
 	github.com/spf13/afero v1.15.0
 	github.com/tagatac/go-typedstream v1.0.0
 	github.com/tagatac/gorecurcopy v1.1.0
