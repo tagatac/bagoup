@@ -92,8 +92,7 @@ func (s opSys) FileAccess(fp string) error {
 	if err != nil {
 		return err
 	}
-	f.Close()
-	return nil
+	return f.Close()
 }
 
 func (s opSys) FileExist(fp string) (bool, error) {
@@ -126,7 +125,9 @@ func (s opSys) GetContactMap(contactsFilePath string) (map[string]*vcard.Card, e
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	dec := vcard.NewDecoder(f)
 	contactMap := map[string]*vcard.Card{}

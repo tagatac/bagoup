@@ -24,7 +24,7 @@ bin/bagoup: $(SRC) $(TEMPLATES) download
 	mkdir -vp bin
 	go build $(LDFLAGS) -o $@ cmd/bagoup/main.go
 
-.PHONY: deps download from-archive generate vet test test-exports clean
+.PHONY: deps download example from-archive generate lint test test-exports clean
 
 deps:
 	go get -u -t -v ./...
@@ -46,8 +46,8 @@ generate:
 	go install go.uber.org/mock/mockgen@latest
 	go generate ./...
 
-reportcard:
-	goreportcard-cli -v -t 100
+lint:
+	golangci-lint run
 
 test: download
 	go test -race -coverprofile=$(COVERAGE_FILE) -coverpkg=$(PKGS_TO_COVER) $(PKGS_TO_TEST)

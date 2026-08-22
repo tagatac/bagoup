@@ -166,7 +166,9 @@ func TestGetAttachmentPaths(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
-			defer db.Close()
+			defer func() {
+				_ = db.Close()
+			}()
 			tt.setupMock(sMock)
 			cdb := &chatDB{DB: db}
 

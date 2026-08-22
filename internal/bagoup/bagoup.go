@@ -185,8 +185,12 @@ func (cfg *configuration) setupLogging() (func(), error) {
 	w := log.Writer()
 	log.SetOutput(io.MultiWriter(logFile, w))
 	return func() {
-		logFile.Close()
+		err := logFile.Close()
 		log.SetOutput(w)
+		slog.Error("failed to close log file",
+			"log file", logFile.Name(),
+			"err", err,
+		)
 	}, nil
 }
 
@@ -202,7 +206,7 @@ func (cfg *configuration) startProfiling() (func(), error) {
 		if err := trace.Start(f); err != nil {
 			return nil, fmt.Errorf("start trace: %w", err)
 		}
-		stops = append(stops, func() { trace.Stop(); f.Close() })
+		stops = append(stops, func() { trace.Stop(); _ = f.Close() })
 	}
 	if cfg.Options.Profiling.CPUProfile != "" {
 		f, err := cfg.OS.Create(cfg.Options.Profiling.CPUProfile)
@@ -212,7 +216,7 @@ func (cfg *configuration) startProfiling() (func(), error) {
 		if err := pprof.StartCPUProfile(f); err != nil {
 			return nil, fmt.Errorf("start CPU profile: %w", err)
 		}
-		stops = append(stops, func() { pprof.StopCPUProfile(); f.Close() })
+		stops = append(stops, func() { pprof.StopCPUProfile(); _ = f.Close() })
 	}
 	return func() {
 		for _, s := range stops {
@@ -221,14 +225,19 @@ func (cfg *configuration) startProfiling() (func(), error) {
 		if cfg.Options.Profiling.MemProfile != "" {
 			f, err := cfg.OS.Create(cfg.Options.Profiling.MemProfile)
 			if err != nil {
-				slog.Error("create mem profile file", "err", err)
+				slog.Error("failed to create mem profile file", "err", err)
 				return
 			}
 			runtime.GC()
 			if err := pprof.WriteHeapProfile(f); err != nil {
-				slog.Error("write mem profile", "err", err)
+				slog.Error("failed to write mem profile", "err", err)
 			}
-			f.Close()
+			if err = f.Close(); err != nil {
+				slog.Error("failed to close mem profile file",
+					"mem profile file", f.Name(),
+					"err", err,
+				)
+			}
 		}
 	}, nil
 }
@@ -285,7 +294,7 @@ func (cfg *configuration) setupImgConverter() (func(), error) {
 		return nil, fmt.Errorf("get temporary directory: %w", err)
 	}
 	cfg.ImgConverter = imgconv.NewImgConverter(tempDir)
-	return func() { cfg.OS.RmTempDir() }, nil
+	return func() { _ = cfg.OS.RmTempDir() }, nil
 }
 
 func (cfg *configuration) validatePaths() error {
@@ -367,7 +376,9 @@ func (cfg configuration) writeTildeExpansionFile() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	if _, err = f.WriteString(homeDir); err != nil {
 		return err
 	}

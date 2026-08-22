@@ -65,7 +65,7 @@ func RunExecCmd() {
 	if os.Getenv(_envvarRunTestFlag) != "1" {
 		return
 	}
-	fmt.Fprint(os.Stdout, os.Getenv(_envvarOutput))
+	_, _ = fmt.Fprint(os.Stdout, os.Getenv(_envvarOutput))
 	err := os.Getenv(_envvarError)
 	if err != "" {
 		fmt.Fprint(os.Stderr, err)

@@ -17,7 +17,9 @@ func TestTxtFile(t *testing.T) {
 	rwOS := &opSys{Fs: rwFS}
 	rwFile, err := rwOS.Create("testfile.txt")
 	assert.NilError(t, err)
-	defer rwFile.Close()
+	defer func() {
+		_ = rwFile.Close()
+	}()
 	rwOF := opSys{}.NewTxtOutFile(rwFile)
 	assert.NilError(t, err)
 

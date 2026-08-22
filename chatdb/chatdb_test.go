@@ -73,7 +73,9 @@ func TestInit(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
-			defer db.Close()
+			defer func() {
+				_ = db.Close()
+			}()
 			query := sMock.ExpectQuery(`PRAGMA table_info\(chat_message_join\)`)
 			tt.setupQuery(query)
 
@@ -165,7 +167,9 @@ func TestGetHandleMap(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
-			defer db.Close()
+			defer func() {
+				_ = db.Close()
+			}()
 			query := sMock.ExpectQuery("SELECT ROWID, id FROM handle")
 			tt.setupQuery(query)
 

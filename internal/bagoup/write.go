@@ -77,7 +77,9 @@ func (cfg *configuration) writeChunk(job writeJob, c *counts) error {
 	if err != nil {
 		return fmt.Errorf("create file %q: %w", job.chatPath, err)
 	}
-	defer chatFile.Close()
+	defer func() {
+		_ = chatFile.Close()
+	}()
 	var outFile opsys.OutFile
 	if cfg.Options.OutputPDF {
 		if cfg.Options.UseWkhtmltopdf {

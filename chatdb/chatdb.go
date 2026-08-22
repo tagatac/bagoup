@@ -87,15 +87,17 @@ func (d *chatDB) Init(macOSVersion *semver.Version, loc *time.Location) error {
 
 	// Check if the chat_message_join table has a message_date column. See
 	// https://github.com/tagatac/bagoup/issues/24.
-	columns, err := d.DB.Query("PRAGMA table_info(chat_message_join)")
+	columns, err := d.Query("PRAGMA table_info(chat_message_join)")
 	if err != nil {
 		return fmt.Errorf("get chat_message_join table info: %w", err)
 	}
-	defer columns.Close()
+	defer func() {
+		_ = columns.Close()
+	}()
 	for columns.Next() {
 		var cid, notnull, pk int
-		var name, typ, dflt_value sql.NullString
-		if err := columns.Scan(&cid, &name, &typ, &notnull, &dflt_value, &pk); err != nil {
+		var name, typ, defaultVal sql.NullString
+		if err := columns.Scan(&cid, &name, &typ, &notnull, &defaultVal, &pk); err != nil {
 			return fmt.Errorf("read chat_message_join column info: %w", err)
 		}
 		if name.String == "message_date" {
@@ -104,16 +106,18 @@ func (d *chatDB) Init(macOSVersion *semver.Version, loc *time.Location) error {
 		}
 	}
 
-	return nil
+	return columns.Err()
 }
 
 func (d chatDB) GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string, error) {
 	handleMap := make(map[int]string)
-	handles, err := d.DB.Query("SELECT ROWID, id FROM handle")
+	handles, err := d.Query("SELECT ROWID, id FROM handle")
 	if err != nil {
 		return nil, fmt.Errorf("get handles from DB: %w", err)
 	}
-	defer handles.Close()
+	defer func() {
+		_ = handles.Close()
+	}()
 	for handles.Next() {
 		var handleID int
 		var handle string
@@ -131,5 +135,5 @@ func (d chatDB) GetHandleMap(contactMap map[string]*vcard.Card) (map[int]string,
 		}
 		handleMap[handleID] = handle
 	}
-	return handleMap, nil
+	return handleMap, handles.Err()
 }

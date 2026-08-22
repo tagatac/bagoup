@@ -23,11 +23,13 @@ func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
 	if !d.cmJoinHasDates {
 		return d.getMessageIDsLegacy(chatID)
 	}
-	rows, err := d.DB.Query(fmt.Sprintf("SELECT message_id, message_date FROM chat_message_join WHERE chat_id=%d", chatID))
+	rows, err := d.Query(fmt.Sprintf("SELECT message_id, message_date FROM chat_message_join WHERE chat_id=%d", chatID))
 	if err != nil {
 		return nil, fmt.Errorf("query chat_message_join table for chat ID %d: %w", chatID, err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 	msgIDs := []DatedMessageID{}
 	for rows.Next() {
 		var id int
@@ -42,17 +44,19 @@ func (d chatDB) GetMessageIDs(chatID int) ([]DatedMessageID, error) {
 		}
 		msgIDs = append(msgIDs, DatedMessageID{id, date})
 	}
-	return msgIDs, nil
+	return msgIDs, rows.Err()
 }
 
 // Older chat.db files do not have the chat_message_join.message_date column, so
 // we need to also query the message table in this case to get dates.
 func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
-	rows, err := d.DB.Query(fmt.Sprintf("SELECT message_id FROM chat_message_join WHERE chat_id=%d", chatID))
+	rows, err := d.Query(fmt.Sprintf("SELECT message_id FROM chat_message_join WHERE chat_id=%d", chatID))
 	if err != nil {
 		return nil, fmt.Errorf("query chat_message_join table for chat ID %d: %w", chatID, err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 	msgIDs := []DatedMessageID{}
 	for rows.Next() {
 		var id int
@@ -61,13 +65,18 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 		}
 		msgIDs = append(msgIDs, DatedMessageID{ID: id})
 	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate through chat_message_join table rows: %w", err)
+	}
 
 	for i, msgID := range msgIDs {
-		messages, err := d.DB.Query(fmt.Sprintf("SELECT date FROM message WHERE ROWID=%d", msgID.ID))
+		messages, err := d.Query(fmt.Sprintf("SELECT date FROM message WHERE ROWID=%d", msgID.ID))
 		if err != nil {
 			return nil, fmt.Errorf("query message table for ID %d: %w", msgID.ID, err)
 		}
-		defer messages.Close()
+		defer func() {
+			_ = messages.Close()
+		}()
 		messages.Next()
 		var date int
 		if err := messages.Scan(&date); err != nil {
@@ -83,11 +92,13 @@ func (d chatDB) getMessageIDsLegacy(chatID int) ([]DatedMessageID, error) {
 }
 
 func (d *chatDB) GetMessage(messageID int, handleMap map[int]string) (string, bool, error) {
-	messages, err := d.DB.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, attributedBody, date FROM message WHERE ROWID=%d", messageID))
+	messages, err := d.Query(fmt.Sprintf("SELECT is_from_me, handle_id, text, attributedBody, date FROM message WHERE ROWID=%d", messageID))
 	if err != nil {
 		return "", false, fmt.Errorf("query message table for ID %d: %w", messageID, err)
 	}
-	defer messages.Close()
+	defer func() {
+		_ = messages.Close()
+	}()
 	messages.Next()
 	var fromMe, handleID int
 	var text, attributedBody sql.NullString

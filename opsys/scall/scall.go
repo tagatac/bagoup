@@ -1,6 +1,7 @@
 // Copyright (C) 2022  David Tagatac <david@tagatac.net>
 // See cmd/bagoup/main.go for usage terms.
 
+// Package scall provides a thin wrapper on the standard syscall library.
 package scall
 
 import "syscall"

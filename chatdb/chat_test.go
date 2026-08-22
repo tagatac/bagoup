@@ -157,13 +157,25 @@ func TestGetChats(t *testing.T) {
 			},
 			wantErr: "read chat: sql: Scan error on column index 3, name \"display_name\": converting NULL to string is unsupported",
 		},
+		{
+			msg: "row iterator error",
+			setupQuery: func(query *sqlmock.ExpectedQuery) {
+				rows := sqlmock.NewRows([]string{"ROWID", "guid", "chat_identifier", "display_name"}).
+					AddRow(1, "testguid1", "testchatname1", "testdisplayname1").
+					RowError(0, errors.New("this is a row error"))
+				query.WillReturnRows(rows)
+			},
+			wantErr: "iterate through chats table rows: this is a row error",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
-			defer db.Close()
+			defer func() {
+				_ = db.Close()
+			}()
 			query := sMock.ExpectQuery(`SELECT ROWID, guid, chat_identifier, COALESCE\(display_name, ''\) FROM chat`)
 			tt.setupQuery(query)
 			cdb := NewChatDB(db, "Me")

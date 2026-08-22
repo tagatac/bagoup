@@ -142,7 +142,9 @@ func TestDecode(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			db, sMock, err := sqlmock.New()
 			assert.NilError(t, err)
-			defer db.Close()
+			defer func() {
+				_ = db.Close()
+			}()
 			query := sMock.ExpectQuery(`SELECT is_from_me, handle_id, text, attributedBody, date FROM message WHERE ROWID\=42`)
 			tt.setupQuery(query)
 			cdb := &chatDB{
