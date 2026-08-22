@@ -90,6 +90,17 @@ func TestGetMessageIDs(t *testing.T) {
 			wantErr: `read message ID for chat ID 42: sql: Scan error on column index 0, name "message_id": converting driver.Value type string ("one") to a int: invalid syntax`,
 		},
 		{
+			msg:      "legacy join row iterator error",
+			legacyDB: true,
+			setupMock: func(sMock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"message_id"}).
+					AddRow("one").
+					RowError(0, errors.New("this is a row error"))
+				sMock.ExpectQuery("SELECT message_id FROM chat_message_join WHERE chat_id=42").WillReturnRows(rows)
+			},
+			wantErr: "iterate through chat_message_join table rows: this is a row error",
+		},
+		{
 			msg:      "legacy message table query error",
 			legacyDB: true,
 			setupMock: func(sMock sqlmock.Sqlmock) {
